@@ -1,0 +1,19 @@
+{
+  "dataset": "gaia-benchmark/GAIA",
+  "config": "2023_level1",
+  "split": "validation",
+  "rule": "no file attachment, sorted by task_id, first N",
+  "size": 10,
+  "task_ids": [
+    "0383a3ee-47a7-41a4-b493-519bdefe0488",
+    "11af4e1a-5f45-467d-9aeb-46f4bb0bf034",
+    "23dd907f-1261-4488-b21c-e9185af91d5e",
+    "27d5d136-8563-469e-92bf-fd103c28b57c",
+    "2d83110e-a098-4ebb-9987-066c06fa42d0",
+    "305ac316-eef6-4446-960a-92d80d542f82",
+    "3cef3a44-215e-4aed-8e3b-b1e3f08063b7",
+    "3f57289b-8c60-48be-bd80-01f8099ca449",
+    "42576abe-0deb-4869-8c63-225c2d75a95a",
+    "46719c30-f4c3-4cad-be07-d5cb21eee6bb"
+  ]
+}
