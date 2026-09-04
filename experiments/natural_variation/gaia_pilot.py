@@ -23,20 +23,47 @@ sys.path[:0] = [str(ROOT / "src"), str(ROOT)]
 from agentseism import divergence_tables, scan  # noqa: E402
 from agentseism.localization import correlation_only  # noqa: E402
 from agentseism.features import MISSING, ObservationRole  # noqa: E402
-from agents.gaia import answer_equivalent, build_state, extract_answer, is_correct, outcome  # noqa: E402
+from agents import gaia, gaia_markazhang  # noqa: E402
+from agents.gaia import answer_equivalent, is_correct  # noqa: E402
 from agents.langgraph_adapter import LangGraphAgent  # noqa: E402
 from agents.trajectory import ReActProjector  # noqa: E402
+
+ADAPTERS = {
+    # The multi-node GAIA agent (github.com/MarkAZhang/gaia-agent). Streams,
+    # because its memory_management node rewrites tool results in the state.
+    "gaia-graph": {
+        "projector": gaia_markazhang.GaiaGraphProjector,
+        "build_state": gaia_markazhang.make_build_state,
+        "extract_answer": gaia_markazhang.extract_answer,
+        "outcome": gaia_markazhang.outcome,
+        "stub": "agents.stub_gaia_graph:StubGaiaGraphApp",
+    },
+    # A plain ReAct loop with no post-processing nodes.
+    "react": {
+        "projector": ReActProjector,
+        "build_state": lambda: gaia.build_state,
+        "extract_answer": gaia.extract_answer,
+        "outcome": gaia.outcome,
+        "stub": "agents.stub_react:StubReActApp",
+    },
+}
 
 PILOT_TRIALS = 5
 USEFUL_ASSOCIATION = 0.3
 NOISY_VARIATION = 0.3
 
 
-def load_app(spec: str):
+def load_attr(spec: str):
     module_name, _, attr = spec.partition(":")
     module = importlib.import_module(module_name)
-    app = getattr(module, attr or "app")
-    return app() if callable(app) and not hasattr(app, "invoke") else app
+    return getattr(module, attr)
+
+
+def load_app(spec: str):
+    app = load_attr(spec) if ":" in spec else importlib.import_module(spec).app
+    if callable(app) and not (hasattr(app, "invoke") or hasattr(app, "stream")):
+        app = app()
+    return app
 
 
 def stub_tasks(n: int) -> list[dict]:
@@ -175,27 +202,50 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--app", help="module:attr of a compiled LangGraph app")
     parser.add_argument("--stub", action="store_true", help="run the offline stub agent")
+    parser.add_argument(
+        "--adapter", choices=sorted(ADAPTERS), default="gaia-graph",
+        help="which agent shape to project (default: the multi-node GAIA graph)",
+    )
+    parser.add_argument(
+        "--system-prompt",
+        help="module:attr of the agent repo's own build_system_prompt(file_path)",
+    )
     parser.add_argument("--tasks", type=int, default=10)
     parser.add_argument("--trials", type=int, default=PILOT_TRIALS)
     args = parser.parse_args()
 
+    adapter = ADAPTERS[args.adapter]
     if args.stub:
-        from agents.stub_react import StubReActApp
-
-        app, tasks, agent_id = StubReActApp(), stub_tasks(args.tasks), "stub-react"
+        app = load_app(adapter["stub"])()
+        tasks, agent_id = stub_tasks(args.tasks), f"stub-{args.adapter}"
     elif args.app:
         app, tasks, agent_id = load_app(args.app), gaia_tasks(args.tasks), args.app
     else:
         parser.error("pass --app module:attr, or --stub for an offline plumbing check")
 
-    agent = LangGraphAgent(app, build_state=build_state, extract_answer=extract_answer)
+    build_state = adapter["build_state"]
+    if args.adapter == "gaia-graph":
+        build_state = build_state(
+            load_attr(args.system_prompt) if args.system_prompt else None
+        )
+        if not args.system_prompt and not args.stub:
+            print(
+                "warning: no --system-prompt given, so the agent runs with a generic "
+                "prompt instead of its own. That changes what is being measured."
+            )
+    else:
+        build_state = build_state()
+
+    agent = LangGraphAgent(
+        app, build_state=build_state, extract_answer=adapter["extract_answer"]
+    )
     report = scan(
         agent,
         tasks,
         trials=args.trials,
-        outcome=outcome,
+        outcome=adapter["outcome"],
         comparator=answer_equivalent,
-        projector=ReActProjector(),
+        projector=adapter["projector"](),
         agent_id=agent_id,
         save_to=str(ROOT / "results" / f"gaia_pilot_{_slug(agent_id)}_experiment.json"),
     )

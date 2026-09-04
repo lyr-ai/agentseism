@@ -14,7 +14,9 @@ attach, and the outcome is a single final answer.
 - [x] GAIA answer-equivalence comparator (formatting-insensitive, not a grader)
 - [x] Task slice spec: Level 1, no attachments, sorted by `task_id`
 - [x] Pilot harness with go/no-go checks (`experiments/natural_variation/gaia_pilot.py`)
-- [ ] Run the pilot against a real agent: 10 tasks × 5 runs (§25 checks)
+- [x] Adapter for MarkAZhang/gaia-agent (multi-node LangGraph, stream capture)
+- [x] Runbook incl. GAIA gated-access steps and cost: [`docs/RUNBOOK-gaia-pilot.md`](docs/RUNBOOK-gaia-pilot.md)
+- [ ] Run the pilot against that agent: 10 tasks × 5 runs, ~$30 (§25 checks)
 - [ ] If the pilot passes: 50 tasks × 10 trials → Figure 1
 
 **Pilot before scale-up:** the 10 × 5 pilot exists to find out whether traces

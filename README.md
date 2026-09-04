@@ -144,15 +144,25 @@ Read this as a harness check, not a research result: the synthetic agent is easy
 by construction, and correlation alone already reaches 0.80@1 on it. The number
 that matters comes from real agents with injected interventions (Week 5).
 
-## First agent: GAIA-style LangGraph agent
+## First agent: a multi-node GAIA LangGraph agent
+
+Target: [MarkAZhang/gaia-agent](https://github.com/MarkAZhang/gaia-agent) —
+LangGraph, multi-node, 41/53 on GAIA Level 1 validation. Setup, keys, cost and
+the exact commands are in [`docs/RUNBOOK-gaia-pilot.md`](docs/RUNBOOK-gaia-pilot.md).
 
 ```bash
 # offline plumbing check -- no API keys, not evidence for anything
 python experiments/natural_variation/gaia_pilot.py --stub
 
-# the real pilot: 10 tasks x 5 runs against your compiled LangGraph app
-python experiments/natural_variation/gaia_pilot.py --app my_module:app
+# the real pilot: 10 tasks x 5 runs (~$30 at that agent's reported $0.61/run)
+python experiments/natural_variation/gaia_pilot.py \
+    --app agentseism_entry:app --system-prompt agentseism_entry:build_system_prompt
 ```
+
+**That agent trims its own history.** Its `memory_management` node overwrites
+earlier tool results with `"removed"`, so reading the trajectory from the final
+state would report almost no evidence gathered. The adapter captures the node
+update stream instead, and refuses to project a final-state-only trace.
 
 The pilot answers three questions before the full 50 x 10 slice is worth paying
 for: do traces come back complete, does the answer vary at all, and does the
@@ -165,6 +175,7 @@ Pieces involved:
 | `agents/langgraph_adapter.py` | wraps any compiled LangGraph app; duck-typed, no langchain import |
 | `agents/trajectory.py` | records the raw ReAct trace, and projects it into the §8 feature schema |
 | `agents/gaia.py` | GAIA state, answer extraction, formatting-insensitive answer equivalence |
+| `agents/gaia_markazhang.py` | the multi-node graph's feature schema: evidence, retries, termination |
 | `benchmarks/gaia.py` | Level-1 slice spec (task ids only — GAIA is gated, so no data is vendored) |
 
 **ReAct loops are not fixed workflows.** One run takes three iterations, another

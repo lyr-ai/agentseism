@@ -28,6 +28,13 @@ def test_list_answers_get_element_wise_partial_credit():
     assert answer_equivalent("a; b", "a, b") == 1.0
 
 
+def test_hyphens_join_words_rather_than_vanishing():
+    assert answer_equivalent("New York-based", "New York based") == 1.0
+    assert answer_equivalent("answer-0", "answer 0") == 1.0
+    assert answer_equivalent("state-of-the-art", "state of art") == 1.0
+    assert answer_equivalent("New York-based", "New Yorkbased") == 0.0
+
+
 def test_normalize_answer_shapes():
     assert normalize_answer("1,000") == [1000.0]
     assert normalize_answer("the cat, 2") == ["cat", 2.0]

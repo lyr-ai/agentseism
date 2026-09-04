@@ -22,7 +22,15 @@ import string
 from typing import Any
 
 _ARTICLES = {"a", "an", "the"}
-_PUNCTUATION = str.maketrans("", "", string.punctuation)
+_SEPARATORS = "-_/"
+"""Hyphen-like characters join words: "New York-based" is "New York based", not
+"New Yorkbased". Deleting them instead of spacing them silently makes two
+equivalent answers compare as different."""
+_PUNCTUATION = str.maketrans(
+    _SEPARATORS,
+    " " * len(_SEPARATORS),
+    "".join(c for c in string.punctuation if c not in _SEPARATORS),
+)
 
 SYSTEM_PROMPT = (
     "You are a general AI assistant. I will ask you a question. Report your "

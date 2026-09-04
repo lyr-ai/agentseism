@@ -57,6 +57,51 @@ def record_raw_trace(trace, *, question: Any, steps: list[Step], answer: Any) ->
     return {"n_steps": len(steps)}
 
 
+def record_graph_stream(trace, *, question: Any, updates: list) -> dict:
+    """Record a LangGraph node-update stream as raw events, in order.
+
+    One event per message produced by a node, named after the node that produced
+    it. Capturing here rather than from the final state is what keeps a
+    history-rewriting node (context trimming, summarisation) from erasing the
+    evidence before anyone reads it.
+    """
+    trace.record("transform", "intake", output=question)
+    nodes: list[str] = []
+    for update in updates or []:
+        for node, delta in (update or {}).items():
+            nodes.append(node)
+            for message in _delta_messages(delta):
+                role = _message_kind(message)
+                step = steps_from_messages([message])
+                if not step:
+                    # system / human messages a node injected: still behavior.
+                    trace.record(
+                        "transform", node, output=_text(_attr(message, "content")), role=role
+                    )
+                    continue
+                one = step[0]
+                trace.record(
+                    "model_call" if one.kind == "model" else "tool_call",
+                    node,
+                    input=one.tool_name,
+                    output={
+                        "content": one.content,
+                        "tool": one.tool_name,
+                        "args": one.tool_args,
+                    }
+                    if one.kind == "model"
+                    else one.content,
+                    role=role,
+                )
+    return {"n_updates": len(updates or []), "nodes": nodes}
+
+
+def _delta_messages(delta: Any) -> list:
+    if isinstance(delta, dict):
+        return list(delta.get("messages") or [])
+    return list(getattr(delta, "messages", None) or [])
+
+
 # -- projection --------------------------------------------------------------
 
 SCHEMA = FeatureSchema(

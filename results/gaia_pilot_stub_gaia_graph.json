@@ -1,0 +1,54 @@
+{
+  "agent": "stub-gaia-graph",
+  "trials": 5,
+  "feature_schema_version": "gaia-mz/1",
+  "checks": {
+    "run_ok_rate": 1.0,
+    "feature_completeness": 1.0,
+    "distinct_loop_lengths": 2,
+    "median_consistency": 0.4,
+    "tasks_with_variation": 9,
+    "n_tasks": 10,
+    "features_that_vary": 7,
+    "features_associated_with_outcome": 4,
+    "max_association": 0.8782885527010118,
+    "noisy_but_inconsequential": [
+      "answer_format_retries"
+    ],
+    "comparator_complaints": [],
+    "baseline_comparison": {
+      "positioned": {
+        "agentseism": [
+          "evidence_set",
+          "pre_final_reasoning",
+          "initial_plan"
+        ],
+        "correlation": [
+          "pre_final_reasoning",
+          "evidence_set",
+          "initial_plan"
+        ],
+        "matches": false
+      },
+      "aggregate": {
+        "agentseism": [
+          "tool_set",
+          "tool_sequence",
+          "answer_format_retries"
+        ],
+        "correlation": [
+          "tool_set",
+          "tool_sequence",
+          "answer_format_retries"
+        ],
+        "matches": true
+      }
+    },
+    "correlation_matches_us": [
+      "aggregate"
+    ],
+    "accuracy": 0.52
+  },
+  "passed": true,
+  "reasons": []
+}
