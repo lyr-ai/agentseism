@@ -142,7 +142,7 @@ def _schema_to_dict(schema: FeatureSchema) -> dict:
                 "name": spec.name,
                 "comparator": comparator,
                 "comparator_was_callable": callable(spec.comparator),
-                "order": spec.order,
+                "predecessors": list(spec.predecessors),
                 "role": spec.role.value,
                 "description": spec.description,
             }
@@ -159,7 +159,7 @@ def _schema_from_dict(raw: dict | None) -> FeatureSchema | None:
             FeatureSpec(
                 name=spec["name"],
                 comparator=spec.get("comparator"),
-                order=spec.get("order"),
+                predecessors=tuple(spec.get("predecessors", ())),
                 role=ObservationRole(spec.get("role", "feature")),
                 description=spec.get("description", ""),
             )

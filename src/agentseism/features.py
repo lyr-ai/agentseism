@@ -70,15 +70,24 @@ class ExecutionFeature:
 class FeatureSpec:
     """Declaration of one projected feature.
 
-    ``order`` is optional. Declaring it for every feature makes the schema
-    *ordered*, which is what licenses a propagation term in the weak-point
-    score; leaving it out means the adapter is saying it does not know the
-    topology, and the score must not invent one (§16, §17).
+    ``predecessors`` states execution precedence: the features that necessarily
+    happen before this one. It is a partial order, expressed as a DAG, because
+    real agents have one -- a ReAct agent's plan precedes the evidence it
+    gathers, which precedes the reasoning before submission -- while its
+    whole-trajectory aggregates (tool set, tool sequence, call count) have no
+    position at all.
+
+    A feature with a position gets a propagation term. An aggregate does not,
+    and its propagation is ``None`` -- never silently 0 or 1 (§16, §17).
+
+    Declare precedence only where the execution semantics really have it.
+    Inventing an order to make a score look better would be measuring the
+    metric, not the agent.
     """
 
     name: str
     comparator: Comparator | str | None = None
-    order: int | None = None
+    predecessors: tuple[str, ...] = ()
     role: ObservationRole = ObservationRole.FEATURE
     description: str = ""
 
@@ -95,6 +104,32 @@ class FeatureSchema:
         duplicates = {n for n in names if names.count(n) > 1}
         if duplicates:
             raise ValueError(f"duplicate feature names in schema: {sorted(duplicates)}")
+        declared = set(names)
+        for spec in self.specs:
+            unknown = set(spec.predecessors) - declared
+            if unknown:
+                raise ValueError(
+                    f"feature {spec.name!r} lists undeclared predecessors {sorted(unknown)}"
+                )
+        self._check_acyclic()
+
+    def _check_acyclic(self) -> None:
+        state: dict[str, int] = {}
+
+        def visit(name: str, path: tuple[str, ...]) -> None:
+            if state.get(name) == 2:
+                return
+            if state.get(name) == 1:
+                cycle = " -> ".join(path + (name,))
+                raise ValueError(f"precedence cycle in schema: {cycle}")
+            state[name] = 1
+            spec = self.spec(name)
+            for predecessor in (spec.predecessors if spec else ()):
+                visit(predecessor, path + (name,))
+            state[name] = 2
+
+        for spec in self.specs:
+            visit(spec.name, ())
 
     def spec(self, name: str) -> FeatureSpec | None:
         for candidate in self.specs:
@@ -118,26 +153,62 @@ class FeatureSchema:
     def outcome_names(self) -> list[str]:
         return [s.name for s in self.outcome_specs]
 
-    @property
-    def ordered(self) -> bool:
-        """True when every attributable feature declares its position."""
-        specs = self.feature_specs
-        return bool(specs) and all(s.order is not None for s in specs)
+    # -- precedence ---------------------------------------------------------
 
-    def order_of(self, name: str) -> float:
+    def successors(self, name: str) -> list[str]:
+        """Features that necessarily happen after ``name`` (transitively)."""
+        found: list[str] = []
+        frontier = [s.name for s in self.specs if name in s.predecessors]
+        while frontier:
+            current = frontier.pop()
+            if current in found:
+                continue
+            found.append(current)
+            frontier.extend(s.name for s in self.specs if current in s.predecessors)
+        return found
+
+    def positioned(self, name: str) -> bool:
+        """True when the feature has a place in the precedence DAG.
+
+        A feature is positioned if something precedes it or it precedes
+        something. A whole-trajectory aggregate satisfies neither.
+        """
         spec = self.spec(name)
-        if spec is None or spec.order is None:
-            return float("inf")
-        return float(spec.order)
+        if spec is None:
+            return False
+        return bool(spec.predecessors) or bool(self.successors(name))
 
-    def ordered_names(self) -> list[str]:
-        return sorted(self.feature_names, key=self.order_of)
+    @property
+    def positioned_names(self) -> list[str]:
+        return [n for n in self.feature_names if self.positioned(n)]
+
+    @property
+    def aggregate_names(self) -> list[str]:
+        return [n for n in self.feature_names if not self.positioned(n)]
+
+    @property
+    def has_precedence(self) -> bool:
+        """True when any attributable feature declares a position."""
+        return bool(self.positioned_names)
+
+    def topological_names(self) -> list[str]:
+        """Positioned features, earliest first."""
+        depth = {n: self._depth(n) for n in self.positioned_names}
+        return sorted(depth, key=lambda n: (depth[n], n))
+
+    def _depth(self, name: str, seen: frozenset = frozenset()) -> int:
+        spec = self.spec(name)
+        if spec is None or not spec.predecessors or name in seen:
+            return 0
+        return 1 + max(
+            self._depth(p, seen | {name}) for p in spec.predecessors
+        )
 
 
 def schema_from_names(
     names: Iterable[str], *, version: str = "inferred", outcome: Iterable[str] = ()
 ) -> FeatureSchema:
-    """Build an unordered schema for adapters that only declare names."""
+    """Build a schema with no declared precedence, for adapters that only give names."""
     outcome_set = set(outcome)
     return FeatureSchema(
         version=version,

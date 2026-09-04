@@ -1,4 +1,4 @@
-"""Ground-truth localization (DESIGN.md §17, DESIGN-FEATURE-PROJECTION.md §22-§23).
+"""Ground-truth localization (DESIGN.md §17, DESIGN-FEATURE-PROJECTION.md §16-§23).
 
 Exactly one execution feature is made consequentially stochastic; no ranker sees
 which. These tests are the executable form of the V0 success criterion "our
@@ -8,9 +8,9 @@ ranking beats trivial baselines on controlled experiments".
 import pytest
 
 from agentseism import divergence_tables, run_experiment
-from agentseism.attribution import (
-    ORDERED_MODE,
-    UNORDERED_MODE,
+from agentseism.localization import (
+    AGGREGATE_MODE,
+    POSITIONED_MODE,
     BaselineUnavailable,
     available_baselines,
     credit_at_k,
@@ -39,7 +39,7 @@ def _tables(weak_point, trials=8, seed=0):
 def test_attribution_at_1_recovers_injected_feature(weak_point):
     ranked = rank_weak_points(_tables(weak_point), SCHEMA)
     assert ranked[0].name == weak_point, [(w.name, round(w.score, 3)) for w in ranked]
-    assert ranked.scoring_mode == ORDERED_MODE
+    assert ranked.scoring_mode == POSITIONED_MODE
 
 
 @pytest.mark.parametrize("weak_point", WEAK_POINTS)
@@ -100,12 +100,12 @@ def test_deterministic_agent_has_no_weak_points():
 # -- scoring modes and schema contracts --------------------------------------
 
 
-def test_unordered_schema_scores_without_propagation():
+def test_aggregate_only_schema_scores_without_propagation():
     schema = FeatureSchema(
         version="u/1",
         specs=[FeatureSpec("a"), FeatureSpec("b"), FeatureSpec("out", role=ObservationRole.OUTCOME)],
     )
-    assert not schema.ordered
+    assert not schema.has_precedence
 
     flip = {"n": 0}
 
@@ -123,12 +123,13 @@ def test_unordered_schema_scores_without_propagation():
     ranked = rank_weak_points(
         divergence_tables(experiment, comparator="exact", schema=schema), schema
     )
-    assert ranked.scoring_mode == UNORDERED_MODE
+    assert ranked.scoring_mode == AGGREGATE_MODE
     assert all(w.propagation is None for w in ranked)
+    assert all(w.propagation_text == "N/A (trajectory aggregate)" for w in ranked)
     assert ranked[0].name == "a"
 
 
-def test_first_divergence_is_unavailable_without_declared_order():
+def test_first_divergence_is_unavailable_without_declared_precedence():
     schema = FeatureSchema(version="u/1", specs=[FeatureSpec("a"), FeatureSpec("b")])
     assert "first_divergence" not in available_baselines(schema)
     with pytest.raises(BaselineUnavailable):
@@ -159,3 +160,94 @@ def test_credit_at_k_splits_ties():
 def test_credit_at_k_gives_no_free_win_from_ordering():
     scores = {"a": 0.5, "b": 0.5, "c": 0.5}
     assert credit_at_k(scores, "a", 1) == pytest.approx(1 / 3)
+
+
+# -- partial order ------------------------------------------------------------
+
+
+def test_partial_order_scores_each_group_in_its_own_mode():
+    """A mixed schema: a real precedence chain plus trajectory aggregates."""
+    from agentseism.projection import EventProjector
+
+    schema = FeatureSchema(
+        version="mixed/1",
+        specs=[
+            FeatureSpec("plan"),
+            FeatureSpec("evidence", predecessors=("plan",)),
+            FeatureSpec("summary", predecessors=("evidence",)),
+            FeatureSpec("tool_count", comparator="numeric"),
+            FeatureSpec("answer", role=ObservationRole.OUTCOME),
+        ],
+    )
+    assert schema.positioned_names == ["plan", "evidence", "summary"]
+    assert schema.aggregate_names == ["tool_count"]
+
+    flip = {"n": 0}
+
+    def agent(x, trace):
+        flip["n"] += 1
+        branch = flip["n"] % 2
+        trace.record("model_call", "plan", output=f"plan {flip['n']}")
+        trace.record("retrieval", "evidence", output=["doc-a"] if branch else ["doc-b"])
+        trace.record("model_call", "summary", output=f"because doc-{'a' if branch else 'b'}")
+        trace.record("transform", "tool_count", output=2 + (flip["n"] % 3))
+        answer = "yes" if branch else "no"
+        trace.record("final_submission", "answer", output=answer)
+        return answer
+
+    experiment = run_experiment(agent, CASES, trials=6, projector=EventProjector(schema))
+    ranked = rank_weak_points(
+        divergence_tables(experiment, comparator="exact", schema=schema), schema
+    )
+
+    assert ranked.mixed
+    assert ranked.scoring_mode == f"{POSITIONED_MODE} / {AGGREGATE_MODE}"
+    assert all(w.propagation is not None for w in ranked.positioned)
+    assert all(w.propagation is None for w in ranked.aggregates)
+    assert [w.name for w in ranked.aggregates] == ["tool_count"]
+    assert ranked.positioned[0].name == "evidence"
+
+
+def test_propagation_measures_against_successors_and_the_outcome():
+    """A positioned feature with no successors is still measured, against the outcome."""
+    from agentseism.projection import EventProjector
+
+    schema = FeatureSchema(
+        version="tail/1",
+        specs=[
+            FeatureSpec("early"),
+            FeatureSpec("late", predecessors=("early",)),
+            FeatureSpec("answer", role=ObservationRole.OUTCOME),
+        ],
+    )
+    flip = {"n": 0}
+
+    def agent(x, trace):
+        flip["n"] += 1
+        branch = flip["n"] % 2
+        trace.record("transform", "early", output="stable")
+        trace.record("decision", "late", output="A" if branch else "B")
+        answer = "yes" if branch else "no"
+        trace.record("final_submission", "answer", output=answer)
+        return answer
+
+    experiment = run_experiment(agent, CASES, trials=6, projector=EventProjector(schema))
+    ranked = {
+        w.name: w
+        for w in rank_weak_points(
+            divergence_tables(experiment, comparator="exact", schema=schema), schema
+        )
+    }
+    assert ranked["late"].propagation == 1.0
+    assert ranked["early"].propagation == 0.0  # never diverges
+
+
+def test_declared_precedence_must_describe_the_agent_not_the_metric():
+    """Guard rail: precedence is validated, so it cannot be scribbled in freely."""
+    with pytest.raises(ValueError):
+        FeatureSchema(version="bad/1", specs=[FeatureSpec("a", predecessors=("ghost",))])
+    with pytest.raises(ValueError):
+        FeatureSchema(
+            version="bad/2",
+            specs=[FeatureSpec("a", predecessors=("b",)), FeatureSpec("b", predecessors=("a",))],
+        )

@@ -60,17 +60,23 @@ def test_event_projector_infers_a_schema_from_recorded_names():
 def test_event_projector_honours_a_declared_schema_and_roles():
     schema = FeatureSchema(
         version="declared/1",
-        specs=[FeatureSpec("start", order=0), FeatureSpec("answer", role=ObservationRole.OUTCOME)],
+        specs=[
+            FeatureSpec("start"),
+            FeatureSpec("check", predecessors=("start",)),
+            FeatureSpec("answer", role=ObservationRole.OUTCOME),
+        ],
     )
 
     def agent(x, trace):
         trace.record("transform", "start", output=x)
+        trace.record("decision", "check", output="ok")
         trace.record("final_submission", "answer", output="a")
         return "a"
 
     experiment = run_experiment(agent, ["q"], trials=2, projector=EventProjector(schema))
     assert experiment.schema.version == "declared/1"
-    assert experiment.schema.ordered
+    assert experiment.schema.has_precedence
+    assert experiment.schema.positioned_names == ["start", "check"]
     assert experiment.schema.outcome_names == ["answer"]
 
 
@@ -83,4 +89,4 @@ def test_schema_from_names_marks_outcomes():
     schema = schema_from_names(["a", "final"], outcome=["final"])
     assert schema.feature_names == ["a"]
     assert schema.outcome_names == ["final"]
-    assert not schema.ordered
+    assert not schema.has_precedence

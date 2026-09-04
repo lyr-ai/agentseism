@@ -1,13 +1,18 @@
-"""Weak-point localization and baselines."""
+"""Weak-point localization and baselines.
 
-from agentseism.attribution.weakpoints import (
-    ORDERED_MODE,
-    UNORDERED_MODE,
+V0 localizes: it ranks features whose variation is associated with outcome
+variation. It does not attribute causally -- that needs intervention
+(DESIGN-INTERVENTION.md).
+"""
+
+from agentseism.localization.weakpoints import (
+    AGGREGATE_MODE,
+    POSITIONED_MODE,
     Ranking,
     WeakPoint,
     rank_weak_points,
 )
-from agentseism.attribution.baselines import (
+from agentseism.localization.baselines import (
     BASELINES,
     BASELINE_SCORERS,
     BaselineUnavailable,
@@ -23,8 +28,8 @@ __all__ = [
     "WeakPoint",
     "Ranking",
     "rank_weak_points",
-    "ORDERED_MODE",
-    "UNORDERED_MODE",
+    "POSITIONED_MODE",
+    "AGGREGATE_MODE",
     "BASELINES",
     "BASELINE_SCORERS",
     "BaselineUnavailable",

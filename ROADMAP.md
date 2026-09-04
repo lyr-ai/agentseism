@@ -52,7 +52,8 @@ once there is a result to strengthen).
 
 ## Week 5 — Attribution · Table 1
 
-- [x] Weak-point ranking, with propagation only on ordered schemas
+- [x] Weak-point ranking: propagation from declared precedence (partial order),
+      positioned features and trajectory aggregates scored and reported apart
 - [x] Baselines: random, first-divergence, largest-diff, correlation
 - [x] Ground-truth harness with injected weak points (`experiments/attribution/`)
 - [x] Tie-aware Attribution@k (expected credit under a random tie-break)
@@ -62,6 +63,18 @@ once there is a result to strengthen).
 **Planned falsification test:** if correlation-only matches AgentSeism on real
 agents, the score is not a contribution and the next method must introduce
 controlled intervention or counterfactual replay.
+
+## V1 — Intervention (contract written, not implemented)
+
+- [x] Contract and resumption strategies: [`DESIGN-INTERVENTION.md`](DESIGN-INTERVENTION.md)
+- [x] `agentseism.intervention` protocol, so the V0 trace format is shaped by it
+- [ ] Implement replay-with-substitution for the GAIA adapter
+- [ ] Compliance-rate reporting; effects estimated only over compliant runs
+- [ ] Ground truth: does intervention recover the source where localization
+      ranks the inherited consequence just as highly?
+
+Enter this as soon as the GAIA pilot shows RQ1/RQ2 signal. Do not add score
+terms instead.
 
 ## Week 6 — Actionability · Figure 4
 
@@ -75,8 +88,9 @@ integration · polished CLI · HTML reports · LangSmith and OpenTelemetry adapt
 · cloud execution · team features · telemetry.
 
 Also postponed, and tracked as known limitations: automatic feature discovery,
-and separating a weak point from the features that merely inherit its variation
-— that needs intervention, not association.
+and a second serious agent (AgentLab / WorkArena) — which stays postponed until
+the GAIA pilot answers RQ1/RQ2, because a heavy environment would take attention
+from the question that decides the project.
 
 Each is downstream of the same bet: that consequential variation is concentrated
 and attributable. No feature enters V0 unless a weekly deliverable requires it.

@@ -6,7 +6,8 @@ from dataclasses import dataclass, field
 from statistics import median
 from typing import Sequence
 
-from agentseism.attribution import Ranking, WeakPoint
+from agentseism.localization import Ranking, WeakPoint
+from agentseism.localization.weakpoints import AGGREGATE_MODE, POSITIONED_MODE
 from agentseism.features import FeatureSchema
 from agentseism.types import Experiment
 from agentseism.variation import TaskVariation
@@ -61,6 +62,30 @@ class ScanReport:
     def __str__(self) -> str:
         return self.render()
 
+    def _render_group(self, group: list[WeakPoint]) -> list[str]:
+        lines: list[str] = []
+        for i, wp in enumerate(group, start=1):
+            lines += [
+                f"{i}. Execution feature: {wp.name}",
+                "",
+                f"   {'Local variation':<26}{wp.local_variation:.2f}",
+                f"   {'Downstream propagation':<26}{wp.propagation_text}",
+                f"   {'Outcome association':<26}{wp.outcome_association:.2f}",
+                "",
+                f"   {'Weak-point score':<26}{wp.score:.2f}",
+            ]
+            if len(wp.family_members) > 1:
+                others = [m for m in wp.family_members if m != wp.name]
+                lines += [
+                    "",
+                    f"   Feature family with: {', '.join(others)}",
+                    "   These co-vary; count them as one finding, not several.",
+                ]
+            if wp.score < 0.05:
+                lines += ["", "   Low behavioral impact."]
+            lines.append("")
+        return lines
+
     def render(self, *, top: int = 3) -> str:
         lines = [
             "AgentSeism",
@@ -98,39 +123,25 @@ class ScanReport:
             lines.append("")
 
         if self.weak_points:
-            mode = self.ranking.scoring_mode if self.ranking else ""
-            lines += [
-                "",
-                f"Top Behavioral Weak Points   (score = {mode})",
-                THIN,
-                "",
+            groups = [
+                ("Positioned execution features", POSITIONED_MODE, self.ranking.positioned),
+                ("Trajectory aggregates", AGGREGATE_MODE, self.ranking.aggregates),
             ]
-            for i, wp in enumerate(self.top_weak_points(top), start=1):
+            for title, mode, group in groups:
+                if not group:
+                    continue
+                lines += ["", f"{title}   (score = {mode})", THIN, ""]
+                lines += self._render_group(group[:top])
+            if self.ranking.mixed:
                 lines += [
-                    f"{i}. Execution feature: {wp.name}",
+                    "Scores are comparable within a group, not across them: only a",
+                    "positioned feature carries a propagation factor.",
                     "",
-                    f"   {'Local variation':<26}{wp.local_variation:.2f}",
                 ]
-                if wp.propagation is not None:
-                    lines.append(f"   {'Downstream propagation':<26}{wp.propagation:.2f}")
-                lines += [
-                    f"   {'Outcome association':<26}{wp.outcome_association:.2f}",
-                    "",
-                    f"   {'Weak-point score':<26}{wp.score:.2f}",
-                ]
-                if len(wp.family_members) > 1:
-                    others = [m for m in wp.family_members if m != wp.name]
-                    lines += [
-                        "",
-                        f"   Feature family with: {', '.join(others)}",
-                        "   These co-vary; count them as one finding, not several.",
-                    ]
-                if wp.score < 0.05:
-                    lines += ["", "   Low behavioral impact."]
-                lines.append("")
             lines += [
-                "Association, not causation: these points co-vary with outcome",
-                "variation across runs. Confirm with a controlled intervention.",
+                "Localization, not causal attribution: these features co-vary with",
+                "outcome variation across runs. A feature that merely inherits the",
+                "variation looks the same. Confirm with a controlled intervention.",
                 "",
             ]
             if self.ranking and self.ranking.excluded:

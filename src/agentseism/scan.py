@@ -10,8 +10,8 @@ from __future__ import annotations
 
 from typing import Any, Callable, Sequence
 
-from agentseism.attribution import rank_weak_points
-from agentseism.attribution.weakpoints import DIVERGENCE_THRESHOLD
+from agentseism.localization import rank_weak_points
+from agentseism.localization.weakpoints import DIVERGENCE_THRESHOLD
 from agentseism.features import FeatureSchema
 from agentseism.metrics.comparators import Comparator
 from agentseism.projection import Projector

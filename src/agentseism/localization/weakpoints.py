@@ -1,14 +1,17 @@
 """Weak-point localization (DESIGN-FEATURE-PROJECTION.md §14-§21).
 
-    ordered schema     W_f = V_f x A_f x P_f
-    unordered schema   W_f = V_f x A_f
+    positioned feature   W_f = V_f x A_f x P_f
+    trajectory aggregate W_f = V_f x A_f
 
-Propagation is only used when the adapter declared feature order. When it did
-not, the score has no propagation term rather than an invented one (§16, §17).
+Propagation exists only where the adapter declared execution precedence. A
+whole-trajectory aggregate has no position, so its propagation is ``None`` --
+never silently 1 or 0 -- and its score is on a different scale. The two groups
+are therefore ranked separately and never merged into one ordering.
 
-This is weak-point *localization*, not causal attribution. A feature that merely
-inherits variation from the real source correlates with the outcome just as
-strongly (§21); separating the two needs intervention, which V0 does not do.
+This is **localization**, not causal attribution. A feature that merely inherits
+variation from the real source correlates with the outcome just as strongly
+(§21). Separating source from consequence needs intervention; see
+DESIGN-INTERVENTION.md.
 """
 
 from __future__ import annotations
@@ -28,8 +31,8 @@ FAMILY_CORRELATION = 0.9
 """Features whose divergence patterns correlate at least this strongly are
 reported as one execution-feature family rather than as independent findings."""
 
-ORDERED_MODE = "V x A x P"
-UNORDERED_MODE = "V x A"
+POSITIONED_MODE = "V x A x P"
+AGGREGATE_MODE = "V x A"
 
 
 @dataclass
@@ -40,7 +43,7 @@ class WeakPoint:
     score: float
     scoring_mode: str
     propagation: float | None = None
-    order: float = float("inf")
+    positioned: bool = False
     coverage: float = 1.0
     n_pairs: int = 0
     tasks: list[str] = field(default_factory=list)
@@ -48,18 +51,39 @@ class WeakPoint:
     family_members: list[str] = field(default_factory=list)
 
     @property
-    def label(self) -> str:  # kept for report/back-compat readability
-        return self.name
+    def propagation_text(self) -> str:
+        if self.propagation is None:
+            return "N/A (trajectory aggregate)"
+        return f"{self.propagation:.2f}"
 
 
 @dataclass
 class Ranking:
-    """Ranked weak points plus what was excluded and how they were scored."""
+    """Ranked weak points, grouped by scoring mode.
 
-    weak_points: list[WeakPoint] = field(default_factory=list)
+    ``weak_points`` lists positioned features first, then aggregates. Scores
+    from the two groups are not comparable -- only a positioned feature is
+    multiplied by a propagation factor -- so compare within a group.
+    """
+
+    positioned: list[WeakPoint] = field(default_factory=list)
+    aggregates: list[WeakPoint] = field(default_factory=list)
     excluded: list[str] = field(default_factory=list)
-    scoring_mode: str = UNORDERED_MODE
     families: dict[str, list[str]] = field(default_factory=dict)
+
+    @property
+    def weak_points(self) -> list[WeakPoint]:
+        return self.positioned + self.aggregates
+
+    @property
+    def scoring_mode(self) -> str:
+        if self.positioned and self.aggregates:
+            return f"{POSITIONED_MODE} / {AGGREGATE_MODE}"
+        return POSITIONED_MODE if self.positioned else AGGREGATE_MODE
+
+    @property
+    def mixed(self) -> bool:
+        return bool(self.positioned) and bool(self.aggregates)
 
     def __iter__(self) -> Iterator[WeakPoint]:
         return iter(self.weak_points)
@@ -89,19 +113,25 @@ def _pearson(xs: Sequence[float], ys: Sequence[float]) -> float:
 
 def _propagation(
     name: str,
-    downstream: Sequence[str],
+    successors: Sequence[str],
     pairs: Sequence[PairDivergence],
     threshold: float,
 ) -> float:
+    """When this feature diverges, does what comes after it diverge too?
+
+    The outcome is the sink of the precedence DAG, so it always counts as one
+    downstream item; a positioned feature with no declared successors is still
+    measured against the outcome rather than against itself.
+    """
     local = [p.features.get(name, 0.0) for p in pairs]
     diverged = [i for i, d in enumerate(local) if d >= threshold]
     if not diverged:
         return 0.0
-    if not downstream:
-        # Last declared feature: its own divergence is what reaches the outcome.
-        return mean(local[i] for i in diverged)
     return mean(
-        mean(1.0 if pairs[i].features.get(k, 0.0) >= threshold else 0.0 for k in downstream)
+        mean(
+            [1.0 if pairs[i].features.get(k, 0.0) >= threshold else 0.0 for k in successors]
+            + [1.0 if pairs[i].outcome >= threshold else 0.0]
+        )
         for i in diverged
     )
 
@@ -124,7 +154,6 @@ def _families(
             if _pearson(vectors[a], vectors[b]) >= threshold:
                 parent[find(a)] = find(b)
 
-    # Name each family after its highest-scoring member.
     best: dict[str, WeakPoint] = {}
     for wp in ranked:
         root = find(wp.name)
@@ -133,8 +162,7 @@ def _families(
 
     families: dict[str, list[str]] = {}
     for wp in ranked:
-        representative = best[find(wp.name)].name
-        families.setdefault(representative, []).append(wp.name)
+        families.setdefault(best[find(wp.name)].name, []).append(wp.name)
     return families
 
 
@@ -152,14 +180,6 @@ def rank_weak_points(
     excluded: an observation that is the outcome has an association of 1.0 by
     definition (§9, §10).
     """
-    ordered = bool(schema and schema.ordered)
-    mode = ORDERED_MODE if ordered else UNORDERED_MODE
-    downstream_of: dict[str, list[str]] = {}
-    if ordered and schema:
-        names_in_order = schema.ordered_names()
-        for i, name in enumerate(names_in_order):
-            downstream_of[name] = names_in_order[i + 1 :]
-
     excluded: list[str] = []
     accumulated: dict[str, dict] = {}
     vectors: dict[str, list[float]] = {}
@@ -168,27 +188,32 @@ def rank_weak_points(
         if not pairs:
             continue
         for column in columns:
-            role = schema.spec(column.name).role if schema and schema.spec(column.name) else column.role
+            spec = schema.spec(column.name) if schema else None
+            role = spec.role if spec else column.role
             if role is ObservationRole.OUTCOME:
                 if column.name not in excluded:
                     excluded.append(column.name)
                 continue
 
+            positioned = bool(schema and schema.positioned(column.name))
             local = [p.features.get(column.name, 0.0) for p in pairs]
             outcomes = [p.outcome for p in pairs]
             entry = accumulated.setdefault(
                 column.name,
                 {"local": [], "association": [], "propagation": [], "coverage": [],
-                 "order": [], "n_pairs": 0, "tasks": []},
+                 "positioned": positioned, "n_pairs": 0, "tasks": []},
             )
             entry["local"].append(mean(local) if local else 0.0)
             entry["association"].append(max(0.0, _pearson(local, outcomes)))
-            if ordered:
+            if positioned and schema:
+                successors = [
+                    n for n in schema.successors(column.name)
+                    if schema.spec(n) and schema.spec(n).role is ObservationRole.FEATURE
+                ]
                 entry["propagation"].append(
-                    _propagation(column.name, downstream_of.get(column.name, []), pairs, threshold)
+                    _propagation(column.name, successors, pairs, threshold)
                 )
             entry["coverage"].append(column.coverage)
-            entry["order"].append(column.order)
             entry["n_pairs"] += len(pairs)
             entry["tasks"].append(task_id)
             vectors.setdefault(column.name, []).extend(local)
@@ -201,6 +226,7 @@ def rank_weak_points(
         local = mean(entry["local"])
         association = mean(entry["association"])
         propagation = mean(entry["propagation"]) if entry["propagation"] else None
+        positioned = entry["positioned"]
         score = local * association * (propagation if propagation is not None else 1.0)
         weak_points.append(
             WeakPoint(
@@ -208,30 +234,29 @@ def rank_weak_points(
                 local_variation=local,
                 outcome_association=association,
                 propagation=propagation,
+                positioned=positioned,
                 score=score,
-                scoring_mode=mode,
-                order=mean(entry["order"]),
+                scoring_mode=POSITIONED_MODE if positioned else AGGREGATE_MODE,
                 coverage=coverage,
                 n_pairs=entry["n_pairs"],
                 tasks=sorted(set(entry["tasks"])),
             )
         )
 
-    weak_points.sort(key=lambda w: (-w.score, w.order, w.name))
     families = _families(vectors, weak_points, family_correlation) if weak_points else {}
-    members_by_name = {
-        name: members for name, members in families.items()
-    }
     for wp in weak_points:
-        for representative, members in members_by_name.items():
+        for representative, members in families.items():
             if wp.name in members:
                 wp.family = representative
                 if wp.name == representative:
                     wp.family_members = list(members)
 
+    def order(group: list[WeakPoint]) -> list[WeakPoint]:
+        return sorted(group, key=lambda w: (-w.score, w.name))
+
     return Ranking(
-        weak_points=weak_points,
+        positioned=order([w for w in weak_points if w.positioned]),
+        aggregates=order([w for w in weak_points if not w.positioned]),
         excluded=excluded,
-        scoring_mode=mode,
         families={k: v for k, v in families.items() if len(v) > 1},
     )

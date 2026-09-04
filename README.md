@@ -102,17 +102,21 @@ call means something different in every run. So AgentSeism ranks **declared
 execution features**, not raw events (DESIGN-FEATURE-PROJECTION.md):
 
 ```text
-unordered schema   W = LocalVariation × OutcomeAssociation
-ordered schema     W = LocalVariation × OutcomeAssociation × Propagation
+positioned feature     W = LocalVariation × OutcomeAssociation × Propagation
+trajectory aggregate   W = LocalVariation × OutcomeAssociation
 ```
 
-Propagation is scored only when the adapter declares feature order. An unordered
-schema gets no propagation term rather than an invented one, and the report
-states which mode produced the score.
+Adapters declare execution precedence as a partial order — a DAG, not a total
+ordering. A ReAct agent's plan really does precede the evidence it gathers,
+which precedes the reasoning before submission; its tool set, tool sequence and
+call count are whole-trajectory aggregates with no position at all. Aggregates
+get `propagation = None`, printed as `N/A`, never a silent 0 or 1, and the two
+groups are ranked separately because their scores are not comparable.
 
 This is **weak-point localization, not causal attribution**. A high score says a
 feature's variation co-varies with outcome variation — not that intervening
-there would change the outcome.
+there would change the outcome. Separating an introduced variation from an
+inherited one is what [`DESIGN-INTERVENTION.md`](DESIGN-INTERVENTION.md) is for.
 
 ## Validating the attribution
 
@@ -189,11 +193,12 @@ reference answer is recorded separately, as context.
   groups them into a feature family instead of claiming three findings.
 - **No semantic comparator by default.** Text similarity is token overlap; pass
   your own comparator for anything that needs meaning.
-- **The correlation baseline may already be enough.** On an unordered schema the
-  score is correlation re-weighted by local variation, so it can rank exactly
-  like correlation-only. The pilot checks for this and says so out loud; if it
-  holds on real agents, the next method needs intervention, not a better
-  weighting (DESIGN-FEATURE-PROJECTION.md §22).
+- **The correlation baseline may already be enough.** For aggregates the score
+  is correlation re-weighted by local variation, and even with a propagation
+  term the ranking can match correlation-only. The pilot checks this within each
+  scoring group and says so out loud. If it holds on real agents, the answer is
+  intervention, not another factor in the product
+  (DESIGN-FEATURE-PROJECTION.md §22).
 
 ## Layout
 
@@ -212,7 +217,10 @@ paper/           claims, experiment log, figures
 
 ## Status
 
-Research prototype, pre-v0.1. The six-week go/no-go plan and explicit success
+Research prototype, pre-v0.1. V0 is a **localization heuristic** that produces
+candidate weak points; the intervention contract that turns candidates into
+causal claims is specified in
+[`DESIGN-INTERVENTION.md`](DESIGN-INTERVENTION.md) and not yet implemented. The six-week go/no-go plan and explicit success
 criteria are in [DESIGN.md](DESIGN.md) §24-25 — including the conditions under
 which this project should be stopped.
 

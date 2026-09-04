@@ -23,7 +23,8 @@ def test_experiment_roundtrip(tmp_path):
         schema=FeatureSchema(
             version="t/1",
             specs=[
-                FeatureSpec("plan", comparator="text", order=0),
+                FeatureSpec("plan", comparator="text"),
+                FeatureSpec("check", predecessors=("plan",)),
                 FeatureSpec("answer", role=ObservationRole.OUTCOME),
             ],
         ),
@@ -43,7 +44,8 @@ def test_schema_survives_persistence(tmp_path):
     schema = FeatureSchema(
         version="t/1",
         specs=[
-            FeatureSpec("a", comparator=lambda x, y: 1.0, order=0),
+            FeatureSpec("a", comparator=lambda x, y: 1.0),
+            FeatureSpec("b", predecessors=("a",)),
             FeatureSpec("out", role=ObservationRole.OUTCOME),
         ],
     )
@@ -51,7 +53,8 @@ def test_schema_survives_persistence(tmp_path):
     loaded = Experiment.load(path)
 
     assert loaded.schema.version == "t/1"
-    assert loaded.schema.ordered
+    assert loaded.schema.positioned_names == ["a", "b"]
+    assert loaded.schema.successors("a") == ["b"]
     assert loaded.schema.outcome_names == ["out"]
     # A callable comparator cannot be persisted; it is dropped, not faked.
     assert loaded.schema.spec("a").comparator is None

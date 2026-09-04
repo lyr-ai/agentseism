@@ -62,24 +62,30 @@ def record_raw_trace(trace, *, question: Any, steps: list[Step], answer: Any) ->
 SCHEMA = FeatureSchema(
     version=SCHEMA_VERSION,
     specs=[
+        # Positioned: a ReAct loop really does plan before it gathers evidence,
+        # and gathers evidence before the reasoning that precedes submission.
+        FeatureSpec("initial_plan", comparator="text",
+                    description="first model output, before tool interaction"),
+        FeatureSpec("evidence_set", comparator="set", predecessors=("initial_plan",),
+                    description="normalized set of tool results acquired"),
+        FeatureSpec("pre_final_reasoning", comparator="text", predecessors=("evidence_set",),
+                    description="reasoning immediately before submission; negative control"),
+        # Aggregates: whole-trajectory summaries with no position in the DAG.
+        # They get no propagation term rather than an invented one.
         FeatureSpec("tool_set", comparator="set",
                     description="distinct tools used; did the agent choose different capabilities?"),
         FeatureSpec("tool_sequence", comparator="sequence",
                     description="ordered tool calls; did the execution path differ?"),
         FeatureSpec("tool_call_count", comparator="numeric",
                     description="loop length, without pretending occurrence alignment is meaningful"),
-        FeatureSpec("evidence_set", comparator="set",
-                    description="normalized set of tool results acquired"),
-        FeatureSpec("initial_plan", comparator="text",
-                    description="first model output, before tool interaction"),
-        FeatureSpec("pre_final_reasoning", comparator="text",
-                    description="reasoning immediately before submission; negative control"),
         FeatureSpec("final_answer", role=ObservationRole.OUTCOME,
-                    description="the outcome itself; never an attribution candidate"),
+                    description="the outcome itself; never a localization candidate"),
     ],
 )
-"""Unordered on purpose: a ReAct loop gives no reliable topology over these
-features, so no propagation term is claimed (§16, §17)."""
+"""Partial order, not a total one: the plan/evidence/reasoning chain is real
+execution precedence, while the tool aggregates have no position at all. The
+precedence declared here must describe the agent, never be tuned to make a score
+look better (§16, §17)."""
 
 
 class ReActProjector:

@@ -15,7 +15,6 @@ class FeatureColumn:
 
     name: str
     values: dict[str, Any] = field(default_factory=dict)
-    order: float = float("inf")
     role: ObservationRole = ObservationRole.FEATURE
 
     @property
@@ -51,7 +50,7 @@ def align_features(
                     names.append(name)
 
     columns = []
-    for index, name in enumerate(names):
+    for name in names:
         spec = schema.spec(name) if schema else None
         columns.append(
             FeatureColumn(
@@ -60,7 +59,6 @@ def align_features(
                     run.id: run.features[name].value if name in run.features else MISSING
                     for run in runs
                 },
-                order=float(spec.order) if spec and spec.order is not None else float(index),
                 role=spec.role if spec else ObservationRole.FEATURE,
             )
         )

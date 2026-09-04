@@ -18,7 +18,7 @@ DESIGN-FEATURE-PROJECTION.md §23 -- high local variation must not by itself
 produce a high weak-point score.
 
 Unlike a ReAct agent, this pipeline has a known topology, so its schema declares
-feature order and the ranker may use a propagation term.
+real execution precedence and every feature is positioned.
 """
 
 from __future__ import annotations
@@ -38,13 +38,15 @@ SCHEMA_VERSION = "synthetic/1"
 SCHEMA = FeatureSchema(
     version=SCHEMA_VERSION,
     specs=[
-        FeatureSpec("intake", order=0),
-        FeatureSpec("retrieval", order=1),
-        FeatureSpec("phrasing", order=2, description="decoy: varies always, reaches nothing"),
-        FeatureSpec("evidence_selection", order=3),
-        FeatureSpec("hypothesis", order=4),
-        FeatureSpec("decision", order=5),
-        FeatureSpec("render", order=6, description="decoy: terminal prose"),
+        # A fixed pipeline: every step really does precede the next one.
+        FeatureSpec("intake"),
+        FeatureSpec("retrieval", predecessors=("intake",)),
+        FeatureSpec("phrasing", predecessors=("retrieval",),
+                    description="decoy: varies always, reaches nothing"),
+        FeatureSpec("evidence_selection", predecessors=("phrasing",)),
+        FeatureSpec("hypothesis", predecessors=("evidence_selection",)),
+        FeatureSpec("decision", predecessors=("hypothesis",)),
+        FeatureSpec("render", predecessors=("decision",), description="decoy: terminal prose"),
         FeatureSpec("submitted_answer", role=ObservationRole.OUTCOME),
     ],
 )

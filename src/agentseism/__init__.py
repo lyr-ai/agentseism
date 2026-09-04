@@ -18,6 +18,7 @@ from agentseism.features import (
     ObservationRole,
 )
 from agentseism.projection import EventProjector, Projector, project_run
+from agentseism.intervention import Intervenable, InterventionResult
 from agentseism.types import Event, Experiment, Run, Task
 
 __version__ = "0.2.0"
@@ -37,6 +38,8 @@ __all__ = [
     "Projector",
     "EventProjector",
     "project_run",
+    "Intervenable",
+    "InterventionResult",
     "Task",
     "Run",
     "Event",

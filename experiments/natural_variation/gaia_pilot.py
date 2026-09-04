@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT / "src"), str(ROOT)]
 
 from agentseism import divergence_tables, scan  # noqa: E402
-from agentseism.attribution import correlation_only  # noqa: E402
+from agentseism.localization import correlation_only  # noqa: E402
 from agentseism.features import MISSING, ObservationRole  # noqa: E402
 from agents.gaia import answer_equivalent, build_state, extract_answer, is_correct, outcome  # noqa: E402
 from agents.langgraph_adapter import LangGraphAgent  # noqa: E402
@@ -103,8 +103,23 @@ def checks(report, tasks) -> dict:
     tables = divergence_tables(
         report.experiment, comparator=answer_equivalent, schema=schema
     )
-    correlation_top3 = correlation_only(tables, schema)[:3] if tables else []
-    ours_top3 = [w.name for w in weak[:3]]
+    # §22: compare within a scoring group. Positioned features and aggregates
+    # are scored by different formulas, so a merged top-3 would compare nothing.
+    correlation = correlation_only(tables, schema) if tables else []
+    groups = {
+        "positioned": [w.name for w in report.ranking.positioned] if report.ranking else [],
+        "aggregate": [w.name for w in report.ranking.aggregates] if report.ranking else [],
+    }
+    comparison = {}
+    for group, ours in groups.items():
+        if not ours:
+            continue
+        theirs = [n for n in correlation if n in set(ours)]
+        comparison[group] = {
+            "agentseism": ours[:3],
+            "correlation": theirs[:3],
+            "matches": ours[:3] == theirs[:3],
+        }
 
     references = {t["id"]: t.get("metadata", {}).get("reference_answer") for t in tasks}
     graded = [
@@ -125,9 +140,8 @@ def checks(report, tasks) -> dict:
         "max_association": max((w.outcome_association for w in weak), default=0.0),
         "noisy_but_inconsequential": [w.name for w in noisy_but_inconsequential],
         "comparator_complaints": comparator_sanity(tables),
-        "agentseism_top3": ours_top3,
-        "correlation_top3": correlation_top3,
-        "correlation_matches_us": ours_top3 == correlation_top3,
+        "baseline_comparison": comparison,
+        "correlation_matches_us": [g for g, c in comparison.items() if c["matches"]],
         "accuracy": sum(graded) / len(graded) if graded else None,
     }
 
@@ -203,10 +217,13 @@ def main() -> None:
     if c["accuracy"] is not None:
         print(f"{'accuracy vs reference (context)':<34}{c['accuracy']:>12.0%}")
     print()
-    print(f"AgentSeism top-3   {c['agentseism_top3']}")
-    print(f"correlation top-3  {c['correlation_top3']}")
-    if c["correlation_matches_us"]:
-        print("Correlation-only already reproduces our ranking (§22 risk).")
+    for group, comp in c["baseline_comparison"].items():
+        print(f"[{group}] AgentSeism  {comp['agentseism']}")
+        print(f"[{group}] correlation {comp['correlation']}")
+    for group in c["correlation_matches_us"]:
+        print(
+            f"Correlation-only already reproduces our {group} ranking (§22 risk)."
+        )
     print()
     print("VERDICT: proceed to 50 x 10" if passed else "VERDICT: do not scale up yet")
     for reason in reasons:

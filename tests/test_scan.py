@@ -38,7 +38,7 @@ def test_scan_end_to_end_ranks_weak_point_and_renders():
     assert "AgentSeism" in text
     assert "synthetic" in text
     assert "evidence_selection" in text
-    assert "Association, not causation" in text
+    assert "Localization, not causal attribution" in text
 
 
 def test_scan_persists_experiment_and_analyze_reproduces_it(tmp_path):
@@ -57,6 +57,9 @@ def test_scan_persists_experiment_and_analyze_reproduces_it(tmp_path):
     assert reloaded.schema.version == SCHEMA.version
     # The schema round-trips, so the scoring mode survives persistence.
     assert reloaded.ranking.scoring_mode == report.ranking.scoring_mode
+    assert [w.name for w in reloaded.ranking.positioned] == [
+        w.name for w in report.ranking.positioned
+    ]
 
 
 def test_single_trial_scan_is_well_defined():

@@ -520,9 +520,14 @@ We should not invent a complicated method before establishing the phenomenon.
 
 ---
 
-# 15. V0 Attribution
+# 15. V0 Weak-Point Localization
 
-The first attribution algorithm should be deliberately simple.
+The first localization algorithm should be deliberately simple.
+
+**Terminology rule.** Nothing without an intervention is called attribution in
+this project. V0 *localizes*: it produces candidate weak points. Causal
+attribution is reserved for the intervention-based work in
+[`DESIGN-INTERVENTION.md`](DESIGN-INTERVENTION.md).
 
 For every aligned event:
 
@@ -557,9 +562,10 @@ E2                     0.17
 E9                     0.03
 ```
 
-This is **association-based attribution**, not causal attribution.
+This is **association-based localization**, not causal attribution.
 
-The distinction must be explicit in the paper.
+The distinction must be explicit in the paper, and in every user-facing string
+the tool prints.
 
 ---
 
@@ -623,7 +629,7 @@ This gives AgentSeism a much cleaner experimental setting.
 
 ---
 
-# 17. Ground-Truth Attribution
+# 17. Ground-Truth Localization
 
 This is probably the most important experiment for the eventual paper.
 

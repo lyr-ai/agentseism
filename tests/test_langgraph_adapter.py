@@ -66,20 +66,33 @@ def test_scan_over_stub_agent_localizes_weak_points():
     assert report.consistency < 1.0
 
     ranked = {w.name: w for w in report.weak_points}
-    # The stub's only consequential choice is which tool it calls first, which
-    # shows up as the tool set and the evidence it produced.
-    assert report.weak_points[0].name in ("tool_set", "evidence_set")
+    # The stub's only consequential choice is which tool it calls first: among
+    # the aggregates that is the tool set, among positioned features the
+    # evidence it produced.
+    assert report.ranking.aggregates[0].name in ("tool_set", "tool_sequence")
+    assert report.ranking.positioned[0].name == "evidence_set"
     # Loop length varies without changing the answer, so it must not lead.
     assert ranked["tool_call_count"].score < ranked["tool_set"].score
     # Prose before submission is the negative control.
-    assert ranked["pre_final_reasoning"].score < ranked["tool_set"].score
+    assert ranked["pre_final_reasoning"].score < ranked["evidence_set"].score
 
 
-def test_unordered_schema_reports_no_propagation_term():
+def test_partial_order_splits_positioned_features_from_aggregates():
     report = _scan()
-    assert report.ranking.scoring_mode == "V x A"
-    assert all(w.propagation is None for w in report.weak_points)
-    assert "score = V x A" in report.render()
+    ranking = report.ranking
+    assert ranking.mixed
+    assert [w.name for w in ranking.positioned] != []
+    assert {w.name for w in ranking.aggregates} == {
+        "tool_set", "tool_sequence", "tool_call_count"
+    }
+    assert all(w.propagation is not None for w in ranking.positioned)
+    assert all(w.propagation is None for w in ranking.aggregates)
+
+    text = report.render()
+    assert "Positioned execution features   (score = V x A x P)" in text
+    assert "Trajectory aggregates   (score = V x A)" in text
+    assert "N/A (trajectory aggregate)" in text
+    assert "not across them" in text
 
 
 def test_outcome_observation_is_excluded_and_reported():

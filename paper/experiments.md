@@ -65,3 +65,29 @@ Reading:        Rerun of the earlier harness check under the v0.2 model, with tw
                 artifact of the outcome observation being rankable. Still a
                 synthetic agent with one injected source by construction;
                 supports no hypothesis in `claims.md`.
+
+---
+
+## 2026-09-03 — partial-order rerun (synthetic) + stub §22 check
+
+Agent:          `agents/synthetic.py` (4 injection sites × 10 seeds); stub ReAct
+Tasks:          4 / 10
+Trials:         8 / 5
+Comparator:     exact (outcome); per-feature comparators from the schema
+Schema:         synthetic/1 (all features positioned); react/1 (3 positioned + 3 aggregates)
+Command:        `python experiments/attribution/ground_truth.py`;
+                `python experiments/natural_variation/gaia_pilot.py --stub`
+Artifact:       `results/attribution_ground_truth.json`, `results/gaia_pilot_stub_react.json`
+
+Result:         Ground truth unchanged by the switch from total order to declared
+                precedence: AgentSeism 1.00 @1, correlation 0.46 @1.
+                On the stub ReAct agent, correlation-only reproduces the AgentSeism
+                ranking in **both** scoring groups.
+
+Reading:        Partial order did not dissolve the §22 risk, and was not expected
+                to. Where the score beats correlation (synthetic), the margin comes
+                from the propagation term over a real precedence chain plus local
+                variation; where the schema is thin (stub ReAct), correlation is
+                already sufficient. The stub is not evidence about real agents
+                either way. The structural point stands: a propagation factor
+                cannot answer "introduced or inherited?" — intervention can.

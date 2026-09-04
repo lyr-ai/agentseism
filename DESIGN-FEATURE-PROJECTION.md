@@ -1,6 +1,6 @@
 # AgentSeism — Execution Feature Projection & Alignment
 
-**Status:** Design Draft v0.2
+**Status:** Design Draft v0.2 (amended: §16-§17 partial order)
 **Scope:** V0 alignment and attribution model
 **Related:** [`DESIGN.md`](DESIGN.md)
 
@@ -257,24 +257,46 @@ This prevents purely cosmetic variation from dominating the ranking.
 
 # 16. Propagation
 
-In a fixed pipeline, downstream order is explicit. In a dynamic ReAct execution,
-feature projection may not define a chain.
+Precedence is declared as a **partial order** — a DAG, not a total ordering:
 
-- **Ordered features** — adapter declares order; propagation uses downstream
-  feature divergence.
-- **Unordered/global features** — propagation is unavailable, reported as
-  `None`. The score must not invent an ordering.
+```python
+FeatureSpec(name="evidence_set", predecessors=["initial_plan"])
+```
+
+A ReAct agent is not orderless. Its plan precedes the evidence it gathers, which
+precedes the reasoning before submission. Its whole-trajectory aggregates have
+no position at all:
+
+```text
+initial_plan → evidence_set → pre_final_reasoning → outcome
+
+tool_set          ─── aggregate
+tool_sequence     ─── aggregate
+tool_call_count   ─── aggregate
+```
+
+- **Positioned features** — propagation is measured against the feature's
+  transitive successors plus the outcome, which is the sink of the DAG. A
+  positioned feature with no successors is still measured, against the outcome.
+- **Trajectory aggregates** — propagation is `None`, reported as
+  `N/A (trajectory aggregate)`. Never silently 0 or 1.
+
+Declare precedence only where the execution semantics really have it. Ordering
+features to make a score look better is measuring the metric, not the agent.
 
 ---
 
 # 17. Weak-Point Score
 
 ```text
-unordered   W_f = V_f × A_f
-ordered     W_f = V_f × A_f × P_f
+positioned feature     W_f = V_f × A_f × P_f
+trajectory aggregate   W_f = V_f × A_f
 ```
 
-The report must indicate which scoring mode was used.
+The two are **not comparable**: only a positioned feature carries a propagation
+factor ≤ 1. The report therefore ranks them as two separate groups and says so,
+rather than merging them into one misleading ordering. The report also states
+which mode produced each score.
 
 ---
 
@@ -331,7 +353,14 @@ the proposed score is not a sufficient research contribution, and the next
 method should introduce controlled intervention or counterfactual replay.
 
 **This is a planned falsification test, not an implementation detail.** The
-pilot reports it directly.
+pilot reports it directly, comparing within each scoring group.
+
+Note what partial order does *not* fix. Adding a propagation term makes the
+score differ from correlation, but a reviewer can still ask why upstream
+divergence that correlates with downstream divergence is attribution rather than
+a heuristic. That question is answered by intervention, not by another factor in
+the product — see [`DESIGN-INTERVENTION.md`](DESIGN-INTERVENTION.md). V0 is a
+localization heuristic that produces candidates; V1 is the method.
 
 ---
 

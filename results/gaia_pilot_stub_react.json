@@ -16,17 +16,38 @@
       "pre_final_reasoning"
     ],
     "comparator_complaints": [],
-    "agentseism_top3": [
-      "evidence_set",
-      "tool_set",
-      "tool_sequence"
+    "baseline_comparison": {
+      "positioned": {
+        "agentseism": [
+          "evidence_set",
+          "initial_plan",
+          "pre_final_reasoning"
+        ],
+        "correlation": [
+          "evidence_set",
+          "initial_plan",
+          "pre_final_reasoning"
+        ],
+        "matches": true
+      },
+      "aggregate": {
+        "agentseism": [
+          "tool_set",
+          "tool_sequence",
+          "tool_call_count"
+        ],
+        "correlation": [
+          "tool_set",
+          "tool_sequence",
+          "tool_call_count"
+        ],
+        "matches": true
+      }
+    },
+    "correlation_matches_us": [
+      "positioned",
+      "aggregate"
     ],
-    "correlation_top3": [
-      "evidence_set",
-      "tool_set",
-      "tool_sequence"
-    ],
-    "correlation_matches_us": true,
     "accuracy": 0.52
   },
   "passed": true,

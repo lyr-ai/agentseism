@@ -35,6 +35,14 @@ corresponding experiment has been run and recorded in `experiments.md`.
    random tie-break, for AgentSeism and every baseline alike. A three-way tie
    for first place is worth 1/3, not 1.
 
+## V0 / V1 split
+
+V0 is a localization heuristic producing candidate weak points. The paper method
+is intervention-based attribution (`DESIGN-INTERVENTION.md`). Hypothesis C is
+about localization; a causal claim needs the V1 experiment. Framing the paper
+around localization alone invites the fair objection that upstream divergence
+correlating with downstream divergence is a heuristic, not attribution.
+
 ## Planned falsification test
 
 Hypothesis C dies if correlation-only matches AgentSeism on real agents with

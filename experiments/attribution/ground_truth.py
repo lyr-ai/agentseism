@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT / "src"), str(ROOT)]
 
 from agentseism import divergence_tables, run_experiment  # noqa: E402
-from agentseism.attribution import (  # noqa: E402
+from agentseism.localization import (  # noqa: E402
     available_baselines,
     credit_at_k,
     rank_weak_points,

@@ -3,8 +3,8 @@
 Each baseline consumes the same per-task divergence tables as
 :func:`rank_weak_points` and returns feature names, best first.
 
-``first_divergence`` requires a declared feature order. On an unordered schema
-it is unavailable rather than approximated -- inventing an order to make a
+``first_divergence`` requires declared execution precedence. Without it the
+baseline is unavailable rather than approximated -- inventing an order to make a
 baseline runnable would make the comparison meaningless.
 
 The correlation baseline is the one that matters. If it matches AgentSeism on
@@ -19,7 +19,7 @@ from statistics import mean
 from typing import Sequence
 
 from agentseism.alignment import FeatureColumn
-from agentseism.attribution.weakpoints import _pearson
+from agentseism.localization.weakpoints import _pearson
 from agentseism.features import FeatureSchema, ObservationRole
 from agentseism.variation.features import PairDivergence
 
@@ -82,11 +82,12 @@ def correlation_scores(per_task: PerTask, schema=None, **_: object) -> dict[str,
 def first_divergence_scores(
     per_task: PerTask, schema: FeatureSchema | None = None, *, threshold: float = 0.15, **_: object
 ) -> dict[str, float]:
-    if schema is None or not schema.ordered:
+    if schema is None or not schema.has_precedence:
         raise BaselineUnavailable(
-            "first_divergence needs a declared feature order; this schema has none"
+            "first_divergence needs declared execution precedence; this schema has none"
         )
-    ordered = [n for n in schema.ordered_names() if n in set(_attributable(per_task, schema))]
+    attributable = set(_attributable(per_task, schema))
+    ordered = [n for n in schema.topological_names() if n in attributable]
     counts = {name: 0.0 for name in ordered}
     for _, pairs in per_task.values():
         for pair in pairs:
@@ -131,7 +132,7 @@ BASELINE_SCORERS = {
 def available_baselines(schema: FeatureSchema | None, *, scorers: bool = False) -> dict:
     """Baselines that can run on this schema, honestly reported."""
     source = BASELINE_SCORERS if scorers else BASELINES
-    if schema is not None and schema.ordered:
+    if schema is not None and schema.has_precedence:
         return dict(source)
     return {k: v for k, v in source.items() if k != "first_divergence"}
 
