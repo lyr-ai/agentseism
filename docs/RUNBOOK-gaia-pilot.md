@@ -53,9 +53,33 @@ never dataset content.
 
 ```bash
 git clone https://github.com/MarkAZhang/gaia-agent
-cd gaia-agent && uv sync           # or pip install -r requirements.txt
+cd gaia-agent && uv sync           # NOT `pip install -r requirements.txt`
 cp .env.example .env               # then fill in the keys
 ```
+
+**Install from `pyproject.toml` / `uv.lock`, not `requirements.txt`.** As of
+`b53f536` that file is stale: it pins 48 packages and omits `docling`,
+`faster-whisper`, `e2b-code-interpreter`, `google-genai` and `nltk`. Since
+`_get_tools()` constructs every tool at import time, a requirements.txt install
+fails on import rather than degrading quietly — but it would also mean running a
+different agent than the one whose reported numbers we are citing.
+
+The full install is heavy (docling and faster-whisper pull ML runtimes). Budget
+several GB and some minutes.
+
+**Use macOS 14+ or Linux.** As of `b53f536` the lock pins `onnxruntime==1.24.4`
+and `av==17.0.0`; neither ships a macOS 13 arm64 wheel, so `uv sync` fails there
+and `av` falls back to a source build that needs ffmpeg headers. Working around
+it means installing different versions of those two packages than the authors
+locked — avoidable by running the pilot on a supported platform.
+
+**Two tools build their model at import time**, not on first use:
+`tools/audio_transcriber.py` runs `WhisperModel("turbo", ...)` and
+`tools/document_parser.py` runs `DocumentConverter()` at module scope. So the
+first import downloads Whisper weights (~1.5 GB), and every API key must be
+present even for tasks that never touch those tools — `_get_tools()` constructs
+all of them, including the Gemini image analyzer, which reads
+`os.environ["GEMINI_API_KEY"]` eagerly.
 
 Keys it needs: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` (output formatter),
 `GEMINI_API_KEY` (image analyzer), `TAVILY_API_KEY` (search), `E2B_API_KEY`
@@ -72,11 +96,22 @@ module inside their checkout is enough:
 
 ```python
 # gaia-agent/agentseism_entry.py
+from dotenv import load_dotenv
+
+load_dotenv()  # their library does not load .env; only their own scripts do
+
 from agent_graph.build_agent_graph_and_config import build_agent_graph_and_config
-from agent_graph.build_system_prompt import build_system_prompt  # noqa: F401
+from agent_graph.build_system_prompt import build_system_prompt  # noqa: F401,E402
 
 app = build_agent_graph_and_config().graph
 ```
+
+`load_dotenv()` must come first and must run before the import: `.env` is read by
+their `scripts/*.py` entry points, not by the package, and the graph builder
+reads keys at import time.
+
+Set `LANGSMITH_TRACING=false` for the pilot unless you want their tracing too —
+AgentSeism captures its own trace and does not need it.
 
 Pass their `build_system_prompt` explicitly. Running their agent under a generic
 prompt measures a different agent than the one whose numbers you are citing.
