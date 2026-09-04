@@ -79,7 +79,37 @@ Offline plumbing check, no keys, no cost:
 python experiments/natural_variation/gaia_pilot.py --stub
 ```
 
-## 5. Read the checks
+## 5. Verify by hand before trusting any number
+
+The pilot prints, for the first two runs, the raw trace next to the projected
+values (`--inspect N`, default 2). Read them once:
+
+```text
+raw `tools` events:
+  [tool] web_search -> Zurich has a population of ...
+projected evidence_set (2):
+  Zurich has a population of ...
+
+raw `check_and_get_final_answer` events:
+  [system] Format your answer as 'Ans: ...'
+  [model]  {'content': 'Zurich', ...}
+projected answer_format_retries     1
+```
+
+Two things to confirm with your own eyes:
+
+1. **`evidence_set` holds tool output, not a wrapper.** If entries look like
+   `{'type': 'text', ...}` or a `ToolMessage(...)` repr, the set comparator is
+   comparing serialization noise and the evidence numbers mean nothing.
+2. **`answer_format_retries` counts format rejections**, not every visit to the
+   check node. It is derived from the role recorded on each streamed message; if
+   that role does not come through on the real graph, the count is
+   systematically wrong.
+
+Both are covered by tests against the stub, but the stub is a model of the
+graph, not the graph. Verify once against real runs.
+
+## 6. Read the checks
 
 | check | what a bad value means |
 |---|---|
@@ -93,7 +123,35 @@ python experiments/natural_variation/gaia_pilot.py --stub
 
 The script prints `VERDICT: proceed to 50 x 10` only if every check passes.
 
-## 6. Then stop and decide
+Six headline numbers:
+
+```text
+1. runs completed
+2. traces complete
+3. median outcome consistency
+4. tasks with variation
+5. runs past projection window
+6. formatter changed answer
+```
+
+Plus answer-level diagnostics, which are context and not localization:
+
+```text
+raw answer consistency        0.82
+formatted answer consistency  0.96
+  → the output formatter is REMOVING agent variation
+```
+
+The reverse reading (formatted lower than raw) means the formatter is
+introducing variation of its own. Either direction is an empirical observation
+worth recording.
+
+**Do not read the AgentSeism-vs-correlation comparison as a result.** 10 × 5 is
+far too small for a method comparison; the script prints the comparison so the
+§22 risk stays visible, not so it can be cited. What this pilot decides is
+whether real behavioral variation exists and propagates with structure.
+
+## 7. Then stop and decide
 
 Scale to 50 × 10 only on a passing verdict. If the verdict fails, the finding is
 about *this agent* — record it in `paper/experiments.md` and pick the next agent,

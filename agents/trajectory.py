@@ -231,16 +231,23 @@ def _call_field(call: Any, name: str) -> Any:
 
 
 def _text(content: Any) -> str:
+    """Flatten message content to text.
+
+    Tool results arrive as a string, as a list of content blocks, or -- for some
+    tools -- as a dict. Falling back to ``str(dict)`` would make the set
+    comparator compare serialization noise instead of evidence, so the common
+    wrappers are unwrapped explicitly.
+    """
     if content is None:
         return ""
     if isinstance(content, str):
         return content
+    if isinstance(content, dict):
+        for key in ("text", "content", "output", "result"):
+            if key in content:
+                return _text(content[key])
+        return str(content)
     if isinstance(content, list):
-        parts = []
-        for block in content:
-            if isinstance(block, dict):
-                parts.append(str(block.get("text", block.get("content", ""))))
-            else:
-                parts.append(str(block))
+        parts = [_text(block) for block in content]
         return " ".join(p for p in parts if p)
     return str(content)

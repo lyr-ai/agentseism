@@ -24,8 +24,10 @@ class StubGaiaGraphApp:
 
     ``branch_prob`` picks a different first tool (the consequential choice),
     ``detour_prob`` adds an inconsequential extra loop, ``retry_prob`` makes the
-    agent emit a badly formatted answer once so the check node loops back, and
-    ``refusal_prob`` ends the run at the refusal node.
+    agent emit a badly formatted answer once so the check node loops back,
+    ``refusal_prob`` ends the run at the refusal node, and
+    ``formatter_error_prob`` makes the output formatter return a *different*
+    answer -- variation introduced downstream of the agent.
     """
 
     def __init__(
@@ -36,12 +38,14 @@ class StubGaiaGraphApp:
         detour_prob: float = 0.5,
         retry_prob: float = 0.2,
         refusal_prob: float = 0.0,
+        formatter_error_prob: float = 0.0,
     ) -> None:
         self.seed = seed
         self.branch_prob = branch_prob
         self.detour_prob = detour_prob
         self.retry_prob = retry_prob
         self.refusal_prob = refusal_prob
+        self.formatter_error_prob = formatter_error_prob
         self._counter = count()
 
     def stream(self, state: dict, config: dict | None = None, stream_mode: str = "updates"):
@@ -76,7 +80,10 @@ class StubGaiaGraphApp:
 
         yield {"core_agent": {"messages": [_ai(f"Reasoning {rng.random():.3f}\nAns: {answer}")]}}
         yield {"check_and_get_final_answer": {"messages": [_ai(answer)]}}
-        yield {"output_formatter": {"messages": [_ai(answer.replace("-", " "))]}}
+        formatted = answer.replace("-", " ")
+        if rng.random() < self.formatter_error_prob:
+            formatted = "unknown"
+        yield {"output_formatter": {"messages": [_ai(formatted)]}}
 
     def invoke(self, state: dict, config: dict | None = None) -> dict:
         """Final state only -- with the trimming applied, as the real graph does."""

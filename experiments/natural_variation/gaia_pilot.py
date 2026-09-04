@@ -23,6 +23,7 @@ sys.path[:0] = [str(ROOT / "src"), str(ROOT)]
 from agentseism import divergence_tables, scan  # noqa: E402
 from agentseism.localization import correlation_only  # noqa: E402
 from agentseism.features import MISSING, ObservationRole  # noqa: E402
+from agentseism.variation import consistency  # noqa: E402
 from agents import gaia, gaia_markazhang  # noqa: E402
 from agents.gaia import answer_equivalent, is_correct  # noqa: E402
 from agents.langgraph_adapter import LangGraphAgent  # noqa: E402
@@ -108,6 +109,72 @@ def comparator_sanity(tables) -> list[str]:
     return complaints
 
 
+def diagnostics(report) -> dict:
+    """Answer-level context: is the output formatter removing or adding variation?
+
+    Kept out of localization -- both answers are declared outcomes -- but worth
+    watching: a formatter that erases agent variation, or manufactures it, is an
+    empirical finding either way.
+    """
+    raw, formatted, changed = [], [], []
+    for task in report.tasks:
+        runs = report.experiment.runs_for(task.task_id)
+        raw_values = [
+            r.features["raw_final_answer"].value for r in runs if "raw_final_answer" in r.features
+        ]
+        if len(raw_values) > 1:
+            raw.append(consistency(raw_values, answer_equivalent))
+            formatted.append(task.consistency)
+    for run in report.experiment.runs:
+        if run.ok and "formatter_changed_answer" in run.features:
+            changed.append(bool(run.features["formatter_changed_answer"].value))
+
+    if not raw:
+        return {}
+    return {
+        "raw_answer_consistency": sum(raw) / len(raw),
+        "formatted_answer_consistency": sum(formatted) / len(formatted),
+        "formatter_changed_rate": (sum(changed) / len(changed)) if changed else None,
+    }
+
+
+def inspect_runs(report, limit: int = 2) -> None:
+    """Print raw trace next to projected values, for manual verification.
+
+    Two things need a human eye once, before any number is trusted: that
+    `evidence_set` holds tool output rather than a serialized wrapper, and that
+    `answer_format_retries` really counts format rejections.
+    """
+    ok_runs = [r for r in report.experiment.runs if r.ok][:limit]
+    for run in ok_runs:
+        print("\n" + "=" * 60)
+        print(f"RAW TRACE vs PROJECTION — run {run.id}")
+        print("=" * 60)
+
+        print("\nraw `tools` events:")
+        for event in run.events:
+            if event.name == "tools":
+                print(f"  [{event.metadata.get('role')}] {event.input} -> {_clip(event.output)}")
+        evidence = run.features.get("evidence_set")
+        print(f"projected evidence_set ({len(evidence.value) if evidence else 0}):")
+        for item in (evidence.value if evidence else []):
+            print(f"  {_clip(item)}")
+
+        print("\nraw `check_and_get_final_answer` events:")
+        for event in run.events:
+            if event.name == "check_and_get_final_answer":
+                print(f"  [{event.metadata.get('role')}] {_clip(event.output)}")
+        for name in ("answer_format_retries", "raw_final_answer", "final_answer",
+                     "formatter_changed_answer", "termination"):
+            if name in run.features:
+                print(f"projected {name:<26}{_clip(run.features[name].value)}")
+
+
+def _clip(value, width: int = 90) -> str:
+    text = str(value).replace("\n", " ")
+    return text if len(text) <= width else text[: width - 1] + "…"
+
+
 def checks(report, tasks) -> dict:
     runs = report.experiment.runs
     ok_runs = [r for r in runs if r.ok]
@@ -125,6 +192,17 @@ def checks(report, tasks) -> dict:
     noisy_but_inconsequential = [
         w for w in weak
         if w.local_variation >= NOISY_VARIATION and w.outcome_association < USEFUL_ASSOCIATION
+    ]
+
+    # Projection windows: only some projectors summarise a bounded number of
+    # iterations. Report the rate where it applies, and None where the concept
+    # does not exist, rather than a zero that reads like "nothing was dropped".
+    windowed = [
+        r for r in ok_runs
+        if "iterations_beyond_projection" in (r.output or {}).get("trajectory", {})
+    ]
+    truncated = [
+        r for r in windowed if r.output["trajectory"]["iterations_beyond_projection"] > 0
     ]
 
     tables = divergence_tables(
@@ -157,6 +235,7 @@ def checks(report, tasks) -> dict:
 
     return {
         "run_ok_rate": len(ok_runs) / len(runs) if runs else 0.0,
+        "past_projection_window": (len(truncated) / len(windowed)) if windowed else None,
         "feature_completeness": complete / len(ok_runs) if ok_runs else 0.0,
         "distinct_loop_lengths": len(loop_lengths),
         "median_consistency": report.median_consistency,
@@ -212,6 +291,10 @@ def main() -> None:
     )
     parser.add_argument("--tasks", type=int, default=10)
     parser.add_argument("--trials", type=int, default=PILOT_TRIALS)
+    parser.add_argument(
+        "--inspect", type=int, default=2, metavar="N",
+        help="print raw trace next to projected values for N runs (0 to skip)",
+    )
     args = parser.parse_args()
 
     adapter = ADAPTERS[args.adapter]
@@ -252,20 +335,45 @@ def main() -> None:
     print(report.render())
 
     c = checks(report, tasks)
+    d = diagnostics(report)
     passed, reasons = verdict(c)
+
+    if args.inspect:
+        inspect_runs(report, args.inspect)
 
     print("\nWeek 1 pilot checks")
     print("-" * 46)
-    print(f"{'runs completed':<34}{c['run_ok_rate']:>12.0%}")
-    print(f"{'runs with every feature':<34}{c['feature_completeness']:>12.0%}")
+    window = c["past_projection_window"]
+    changed = d.get("formatter_changed_rate")
+    print(f"{'1. runs completed':<34}{c['run_ok_rate']:>12.0%}")
+    print(f"{'2. traces complete':<34}{c['feature_completeness']:>12.0%}")
+    print(f"{'3. median outcome consistency':<34}{c['median_consistency']:>12.2f}")
+    print(f"{'4. tasks with variation':<34}{c['tasks_with_variation']:>9}/{c['n_tasks']}")
+    print(
+        f"{'5. runs past projection window':<34}"
+        + (f"{window:>12.0%}" if window is not None else f"{'n/a':>12}")
+    )
+    print(
+        f"{'6. formatter changed answer':<34}"
+        + (f"{changed:>12.0%}" if changed is not None else f"{'n/a':>12}")
+    )
+    print()
     print(f"{'distinct loop lengths':<34}{c['distinct_loop_lengths']:>12}")
-    print(f"{'median consistency':<34}{c['median_consistency']:>12.2f}")
-    print(f"{'tasks with variation':<34}{c['tasks_with_variation']:>9}/{c['n_tasks']}")
     print(f"{'features that vary':<34}{c['features_that_vary']:>12}")
     print(f"{'features tied to the outcome':<34}{c['features_associated_with_outcome']:>12}")
     print(f"{'noisy but inconsequential':<34}{', '.join(c['noisy_but_inconsequential']) or '-':>12}")
     if c["accuracy"] is not None:
         print(f"{'accuracy vs reference (context)':<34}{c['accuracy']:>12.0%}")
+
+    if d:
+        print("\nAnswer-level diagnostics (context, not localization)")
+        print(f"{'raw answer consistency':<34}{d['raw_answer_consistency']:>12.2f}")
+        print(f"{'formatted answer consistency':<34}{d['formatted_answer_consistency']:>12.2f}")
+        gap = d["formatted_answer_consistency"] - d["raw_answer_consistency"]
+        if gap > 0.05:
+            print("  → the output formatter is REMOVING agent variation")
+        elif gap < -0.05:
+            print("  → the output formatter is INTRODUCING variation of its own")
     print()
     for group, comp in c["baseline_comparison"].items():
         print(f"[{group}] AgentSeism  {comp['agentseism']}")
@@ -274,6 +382,10 @@ def main() -> None:
         print(
             f"Correlation-only already reproduces our {group} ranking (§22 risk)."
         )
+    print(
+        "\n10 x 5 is too small for a method comparison. What decides go/no-go is\n"
+        "whether real behavioral variation exists and propagates with structure."
+    )
     print()
     print("VERDICT: proceed to 50 x 10" if passed else "VERDICT: do not scale up yet")
     for reason in reasons:
@@ -289,6 +401,7 @@ def main() -> None:
                 "trials": args.trials,
                 "feature_schema_version": report.schema.version if report.schema else None,
                 "checks": c,
+                "diagnostics": d,
                 "passed": passed,
                 "reasons": reasons,
             },

@@ -19,9 +19,10 @@ Three properties of that graph drive this adapter:
    from a final state.
 2. **There are two answers.** `check_and_get_final_answer` extracts the agent's
    own ``Ans:`` line; `output_formatter` then rewrites it with a second model.
-   The formatted answer is the outcome; the raw one is a positioned feature, so
-   "the agent decided differently" and "the formatter formatted differently" do
-   not get conflated.
+   Both are declared outcome observations: the raw answer is the outcome before
+   formatting, so ranking it would only restate the outcome. The rankable part
+   is `formatter_changed_answer`, which keeps "the agent decided differently"
+   apart from "the formatter formatted differently".
 3. **A run can end without an answer.** Refusal and tool-not-available are
    terminal nodes, so how a run ended is itself behavior.
 """
