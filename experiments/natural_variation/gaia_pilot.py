@@ -79,7 +79,12 @@ def stub_tasks(n: int) -> list[dict]:
 
 
 def gaia_tasks(n: int) -> list[dict]:
-    from benchmarks.gaia import load_gaia, save_spec, select
+    from benchmarks.gaia import check_access, load_gaia, save_spec, select
+
+    ok, message = check_access()
+    if not ok:
+        raise SystemExit(f"GAIA access: {message}")
+    print(f"GAIA access: {message}")
 
     tasks = select(load_gaia(), n)
     print(f"slice spec written to {save_spec(tasks, 'pilot').relative_to(ROOT)}")

@@ -7,9 +7,9 @@ from the same spec.
 
 Selection rule for Week 1:
 
-- validation split, Level 1 -- the level whose tasks are executable end to end
-  without a long tool chain, so the first experiment measures agent variation
-  rather than environment failure;
+- validation split, Level 1 (53 tasks) -- the level whose tasks are executable
+  end to end without a long tool chain, so the first experiment measures agent
+  variation rather than environment failure;
 - no file attachment by default -- file extraction is its own source of
   variation and would confound the first measurement;
 - sorted by ``task_id`` and truncated, so the slice is deterministic and does
@@ -26,24 +26,73 @@ import json
 from pathlib import Path
 from typing import Any
 
+REPO_ID = "gaia-benchmark/GAIA"
+METADATA = "2023/{split}/metadata.level{level}.parquet"
+"""Current layout of the GAIA repo: parquet metadata per split and level. The
+older loading-script API (``load_dataset(..., "2023_level1", trust_remote_code=True)``)
+does not match what the repo ships today."""
+
 PILOT_SIZE = 10
 WEEK1_SIZE = 50
 SPEC_DIR = Path(__file__).resolve().parent
 
 
-def load_gaia(level: str = "2023_level1", split: str = "validation") -> list[dict]:
-    """Load GAIA rows via ``datasets``. Requires Hugging Face access to the gated repo."""
+def check_access() -> tuple[bool, str]:
+    """Preflight: is this machine authorized to read GAIA?
+
+    Two failures look alike from a distance and are fixed differently:
+    being logged out, and being logged in but not on the authorized list.
+    Gated access needs the conditions accepted on the dataset page; a
+    ``huggingface-cli login`` alone is not enough.
+    """
     try:
-        from datasets import load_dataset
+        from huggingface_hub import HfApi, whoami
+    except ImportError:  # pragma: no cover - environment dependent
+        return False, "huggingface_hub is not installed: pip install huggingface_hub pandas pyarrow"
+
+    try:
+        user = whoami()["name"]
+    except Exception:
+        return False, "not logged in: run `huggingface-cli login`"
+
+    try:
+        HfApi().hf_hub_download(
+            repo_id=REPO_ID,
+            filename=METADATA.format(split="validation", level=1),
+            repo_type="dataset",
+        )
+    except Exception as err:
+        if "gated" in str(err).lower() or "restricted" in str(err).lower():
+            return False, (
+                f"logged in as {user}, but not authorized for {REPO_ID}. "
+                f"Accept the conditions at https://huggingface.co/datasets/{REPO_ID} "
+                "while signed in as that user; logging in is a separate step from "
+                "being granted access."
+            )
+        return False, f"{type(err).__name__}: {err}"
+    return True, f"authorized as {user}"
+
+
+def load_gaia(level: int = 1, split: str = "validation") -> list[dict]:
+    """Load GAIA metadata rows straight from the repo's parquet files."""
+    try:
+        from huggingface_hub import hf_hub_download
+        import pandas as pd
     except ImportError as err:  # pragma: no cover - environment dependent
         raise ImportError(
-            "GAIA needs the 'datasets' package: pip install datasets. "
-            "The dataset is gated; accept the terms at "
-            "https://huggingface.co/datasets/gaia-benchmark/GAIA first."
+            "GAIA needs huggingface_hub and pandas: pip install huggingface_hub pandas pyarrow"
         ) from err
 
-    rows = load_dataset("gaia-benchmark/GAIA", level, split=split, trust_remote_code=True)
-    return [dict(row) for row in rows]
+    ok, message = check_access()
+    if not ok:
+        raise PermissionError(message)
+
+    path = hf_hub_download(
+        repo_id=REPO_ID,
+        filename=METADATA.format(split=split, level=level),
+        repo_type="dataset",
+    )
+    return pd.read_parquet(path).to_dict("records")
 
 
 def format_task(row: dict) -> dict:
@@ -114,3 +163,25 @@ def tasks_from_spec(rows: list[dict], name: str) -> list[dict]:
 
 def reference_answers(tasks: list[dict]) -> dict[str, Any]:
     return {t["id"]: t["metadata"].get("reference_answer") for t in tasks}
+
+
+def main() -> None:
+    """Preflight and slice selection: `python benchmarks/gaia.py`."""
+    ok, message = check_access()
+    print(("OK   " if ok else "FAIL ") + message)
+    if not ok:
+        raise SystemExit(1)
+
+    rows = load_gaia()
+    with_files = sum(1 for r in rows if r.get("file_name"))
+    print(f"level 1 validation: {len(rows)} tasks, {with_files} with attachments")
+
+    tasks = select(rows, PILOT_SIZE)
+    path = save_spec(tasks, "pilot")
+    print(f"pilot slice: {len(tasks)} tasks -> {path}")
+    for task in tasks:
+        print(f"  {task['id']}  {task['input']['question'][:70]}")
+
+
+if __name__ == "__main__":
+    main()

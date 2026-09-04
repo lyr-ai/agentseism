@@ -20,14 +20,34 @@ rather than $305. Do not skip it.
 
 ## 1. GAIA access
 
-The dataset is gated on Hugging Face — accept the terms once, per account:
+Gated, and it is **two separate steps** — being logged in is not being
+authorized:
 
-1. Log in at <https://huggingface.co/datasets/gaia-benchmark/GAIA> and agree to
-   the conditions (gating exists to limit scraping and contamination).
-2. `huggingface-cli login` locally, so `datasets` can read it.
-3. Use the **validation** split. Test-split answers are private.
+1. `huggingface-cli login` locally (identity).
+2. Visit <https://huggingface.co/datasets/gaia-benchmark/GAIA> signed in as that
+   same user and accept the conditions (authorization). Until this is done, the
+   API lists the repo's files but returns `403 GatedRepoError` on every read.
 
-`benchmarks/gaia.py` stores only task ids, never dataset content.
+Check both at once:
+
+```bash
+python benchmarks/gaia.py
+```
+
+```text
+OK   authorized as <user>
+level 1 validation: 53 tasks, N with attachments
+pilot slice: 10 tasks -> benchmarks/gaia_pilot.json
+```
+
+A failure prints which of the two steps is missing. Use the **validation**
+split; test-split answers are private.
+
+Metadata comes from the repo's parquet files
+(`2023/validation/metadata.level1.parquet`) via `huggingface_hub` + `pandas` —
+the older loading-script API does not match what the repo ships today, and no
+`datasets` dependency is needed. `benchmarks/gaia.py` stores only task ids,
+never dataset content.
 
 ## 2. The agent
 
