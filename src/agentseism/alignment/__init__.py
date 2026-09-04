@@ -1,5 +1,10 @@
-"""Correspondence between events of different runs of the same task."""
+"""Cross-run alignment.
 
-from agentseism.alignment.aligner import Slot, align_runs
+Alignment is by feature name, not by raw node correspondence: once each run has
+been projected into a declared feature schema, runs line up by construction
+(DESIGN-FEATURE-PROJECTION.md §11).
+"""
 
-__all__ = ["Slot", "align_runs"]
+from agentseism.alignment.features import FeatureColumn, align_features
+
+__all__ = ["FeatureColumn", "align_features"]

@@ -2,6 +2,8 @@
   "agent": "synthetic",
   "tasks": 20,
   "trials": 10,
+  "feature_schema_version": "synthetic/1",
+  "scoring_mode": "V x A x P",
   "mean_consistency": 0.5277777777777778,
   "median_consistency": 0.5333333333333333,
   "distribution": [

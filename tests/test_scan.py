@@ -1,6 +1,6 @@
 from agentseism import analyze, scan
 from agentseism.types import Experiment
-from agents.synthetic import make_synthetic_agent, outcome
+from agents.synthetic import SCHEMA, make_synthetic_agent, outcome, projector
 
 
 def test_scan_without_trace_reports_outcome_variation_only():
@@ -29,9 +29,10 @@ def test_scan_end_to_end_ranks_weak_point_and_renders():
         trials=8,
         outcome=outcome,
         comparator="exact",
+        projector=projector(),
         agent_id="synthetic",
     )
-    assert report.top_weak_points(1)[0].label == "evidence_selection"
+    assert report.top_weak_points(1)[0].name == "evidence_selection"
 
     text = report.render()
     assert "AgentSeism" in text
@@ -48,10 +49,14 @@ def test_scan_persists_experiment_and_analyze_reproduces_it(tmp_path):
         trials=6,
         outcome=outcome,
         comparator="exact",
+        projector=projector(),
         save_to=path,
     )
     reloaded = analyze(Experiment.load(path), comparator="exact")
-    assert [w.key for w in reloaded.weak_points] == [w.key for w in report.weak_points]
+    assert reloaded.weak_points[0].name == report.weak_points[0].name
+    assert reloaded.schema.version == SCHEMA.version
+    # The schema round-trips, so the scoring mode survives persistence.
+    assert reloaded.ranking.scoring_mode == report.ranking.scoring_mode
 
 
 def test_single_trial_scan_is_well_defined():

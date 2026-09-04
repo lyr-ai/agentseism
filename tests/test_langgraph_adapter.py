@@ -2,7 +2,7 @@ from agentseism import scan
 from agents.gaia import answer_equivalent, build_state, extract_answer, outcome
 from agents.langgraph_adapter import LangGraphAgent
 from agents.stub_react import StubReActApp
-from agents.trajectory import OUTCOME_SLOT
+from agents.trajectory import ReActProjector
 
 CASES = [
     {"id": f"stub-{i}", "input": {"task_id": f"stub-{i}", "question": f"q{i}", "file_name": ""}}
@@ -18,6 +18,18 @@ def _agent(app=None):
     )
 
 
+def _scan(app=None, trials=6, **kwargs):
+    return scan(
+        _agent(app),
+        CASES,
+        trials=trials,
+        outcome=outcome,
+        comparator=answer_equivalent,
+        projector=ReActProjector(),
+        **kwargs,
+    )
+
+
 def test_adapter_returns_answer_and_trajectory_summary():
     class Trace:
         def __init__(self):
@@ -30,8 +42,9 @@ def test_adapter_returns_answer_and_trajectory_summary():
     trace = Trace()
     result = _agent()(CASES[0]["input"], trace)
     assert result["answer"].startswith("answer-")
-    assert result["trajectory"]["n_model_steps"] >= 2
-    assert "final_answer" in trace.names
+    assert result["trajectory"]["n_steps"] >= 4
+    assert trace.names[0] == "intake"
+    assert trace.names[-1] == "final_submission"
 
 
 def test_adapter_supports_async_apps():
@@ -42,46 +55,41 @@ def test_adapter_supports_async_apps():
         async def ainvoke(self, state, config=None):
             return self.inner.invoke(state, config)
 
-    report = scan(_agent(AsyncApp()), CASES, trials=2, outcome=outcome, comparator=answer_equivalent)
+    report = _scan(AsyncApp(), trials=2)
     assert all(r.ok for r in report.experiment.runs)
+    assert all(r.features for r in report.experiment.runs)
 
 
-def test_scan_over_stub_agent_produces_weak_points():
-    report = scan(
-        _agent(),
-        CASES,
-        trials=6,
-        outcome=outcome,
-        comparator=answer_equivalent,
-        agent_id="stub-react",
-        exclude_slots=(OUTCOME_SLOT,),
-    )
+def test_scan_over_stub_agent_localizes_weak_points():
+    report = _scan(agent_id="stub-react")
     assert all(r.ok for r in report.experiment.runs)
     assert report.consistency < 1.0
 
-    ranked = {w.label: w for w in report.weak_points}
-    # The stub's only consequential choice is which tool it calls first.
-    assert report.weak_points[0].label in ("tool_set", "tool_selection")
-    # Trajectory length varies without changing the answer, so it must not
-    # outrank the tool choice.
-    assert ranked["n_steps"].score < ranked["tool_set"].score
+    ranked = {w.name: w for w in report.weak_points}
+    # The stub's only consequential choice is which tool it calls first, which
+    # shows up as the tool set and the evidence it produced.
+    assert report.weak_points[0].name in ("tool_set", "evidence_set")
+    # Loop length varies without changing the answer, so it must not lead.
+    assert ranked["tool_call_count"].score < ranked["tool_set"].score
+    # Prose before submission is the negative control.
+    assert ranked["pre_final_reasoning"].score < ranked["tool_set"].score
 
 
-def test_outcome_slot_is_excluded_from_ranking_but_reported():
-    report = scan(
-        _agent(), CASES, trials=6, outcome=outcome, comparator=answer_equivalent,
-        exclude_slots=(OUTCOME_SLOT,),
-    )
-    assert OUTCOME_SLOT not in {w.label for w in report.weak_points}
-    assert "Excluded from ranking: final_answer" in report.render()
+def test_unordered_schema_reports_no_propagation_term():
+    report = _scan()
+    assert report.ranking.scoring_mode == "V x A"
+    assert all(w.propagation is None for w in report.weak_points)
+    assert "score = V x A" in report.render()
 
-    # Without the exclusion it would trivially rank first: it is the outcome.
-    unfiltered = scan(_agent(), CASES, trials=6, outcome=outcome, comparator=answer_equivalent)
-    assert unfiltered.weak_points[0].label == OUTCOME_SLOT
+
+def test_outcome_observation_is_excluded_and_reported():
+    report = _scan()
+    assert "final_answer" not in {w.name for w in report.weak_points}
+    assert "Excluded from attribution: final_answer" in report.render()
+    assert "Feature schema: react/1" in report.render()
 
 
 def test_deterministic_app_shows_no_variation():
-    app = StubReActApp(branch_prob=0.0, detour_prob=0.0)
-    report = scan(_agent(app), CASES, trials=4, outcome=outcome, comparator=answer_equivalent)
+    report = _scan(StubReActApp(branch_prob=0.0, detour_prob=0.0), trials=4)
     assert report.consistency == 1.0
     assert all(w.score == 0.0 for w in report.weak_points)

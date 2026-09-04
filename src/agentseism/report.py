@@ -6,7 +6,8 @@ from dataclasses import dataclass, field
 from statistics import median
 from typing import Sequence
 
-from agentseism.attribution import WeakPoint
+from agentseism.attribution import Ranking, WeakPoint
+from agentseism.features import FeatureSchema
 from agentseism.types import Experiment
 from agentseism.variation import TaskVariation
 
@@ -22,9 +23,13 @@ class ScanReport:
     agent_id: str
     experiment: Experiment
     tasks: list[TaskVariation] = field(default_factory=list)
-    weak_points: list[WeakPoint] = field(default_factory=list)
-    excluded_slots: list[str] = field(default_factory=list)
+    ranking: Ranking | None = None
+    schema: FeatureSchema | None = None
     high_variation_threshold: float = HIGH_VARIATION
+
+    @property
+    def weak_points(self) -> list[WeakPoint]:
+        return self.ranking.weak_points if self.ranking else []
 
     @property
     def n_runs(self) -> int:
@@ -93,17 +98,33 @@ class ScanReport:
             lines.append("")
 
         if self.weak_points:
-            lines += ["", "Top Behavioral Weak Points", THIN, ""]
+            mode = self.ranking.scoring_mode if self.ranking else ""
+            lines += [
+                "",
+                f"Top Behavioral Weak Points   (score = {mode})",
+                THIN,
+                "",
+            ]
             for i, wp in enumerate(self.top_weak_points(top), start=1):
                 lines += [
-                    f"{i}. Event group: {wp.label}",
+                    f"{i}. Execution feature: {wp.name}",
                     "",
                     f"   {'Local variation':<26}{wp.local_variation:.2f}",
-                    f"   {'Downstream propagation':<26}{wp.propagation:.2f}",
+                ]
+                if wp.propagation is not None:
+                    lines.append(f"   {'Downstream propagation':<26}{wp.propagation:.2f}")
+                lines += [
                     f"   {'Outcome association':<26}{wp.outcome_association:.2f}",
                     "",
                     f"   {'Weak-point score':<26}{wp.score:.2f}",
                 ]
+                if len(wp.family_members) > 1:
+                    others = [m for m in wp.family_members if m != wp.name]
+                    lines += [
+                        "",
+                        f"   Feature family with: {', '.join(others)}",
+                        "   These co-vary; count them as one finding, not several.",
+                    ]
                 if wp.score < 0.05:
                     lines += ["", "   Low behavioral impact."]
                 lines.append("")
@@ -112,19 +133,21 @@ class ScanReport:
                 "variation across runs. Confirm with a controlled intervention.",
                 "",
             ]
-            if self.excluded_slots:
+            if self.ranking and self.ranking.excluded:
                 lines += [
-                    f"Excluded from ranking: {', '.join(self.excluded_slots)} "
-                    "(recorded as the outcome, not a step toward it).",
+                    f"Excluded from attribution: {', '.join(self.ranking.excluded)} "
+                    "(declared outcome, not a step toward it).",
                     "",
                 ]
-        elif any(r.events for r in self.experiment.runs):
-            lines += ["", "No aligned execution points scored above zero.", ""]
+            if self.schema:
+                lines += [f"Feature schema: {self.schema.version}", ""]
+        elif any(r.features for r in self.experiment.runs):
+            lines += ["", "No execution feature scored above zero.", ""]
         else:
             lines += [
                 "",
                 "No trace recorded: outcome-level analysis only.",
-                "Instrument the agent with a TraceCollector for weak-point attribution.",
+                "Instrument the agent and give scan() a projector to localize weak points.",
                 "",
             ]
 

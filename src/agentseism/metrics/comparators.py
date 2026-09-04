@@ -10,9 +10,10 @@ own comparator.
 
 from __future__ import annotations
 
+import difflib
 import math
 import re
-from typing import Any, Callable
+from typing import Any, Callable, Sequence
 
 Comparator = Callable[[Any, Any], float]
 
@@ -51,6 +52,54 @@ def numeric(a: Any, b: Any, scale: float | None = None) -> float:
     return max(0.0, 1.0 - abs(fa - fb) / denom)
 
 
+def set_similarity(a: Any, b: Any) -> float:
+    """Jaccard similarity over two collections, ignoring order and repetition."""
+    sa, sb = _as_set(a), _as_set(b)
+    if not sa and not sb:
+        return 1.0
+    if not sa or not sb:
+        return 0.0
+    return len(sa & sb) / len(sa | sb)
+
+
+def sequence_similarity(a: Any, b: Any) -> float:
+    """Order-sensitive similarity between two sequences.
+
+    Uses a longest-matching-block ratio, so a sequence with one extra step is
+    close to its shorter form while a reordered sequence is not.
+    """
+    sa, sb = _as_sequence(a), _as_sequence(b)
+    if not sa and not sb:
+        return 1.0
+    if not sa or not sb:
+        return 0.0
+    return difflib.SequenceMatcher(a=sa, b=sb).ratio()
+
+
+def _as_set(value: Any) -> set:
+    if isinstance(value, (set, frozenset)):
+        return set(value)
+    if isinstance(value, (list, tuple)):
+        return {_hashable(v) for v in value}
+    return {_hashable(value)}
+
+
+def _as_sequence(value: Any) -> Sequence:
+    if isinstance(value, (list, tuple)):
+        return [_hashable(v) for v in value]
+    if isinstance(value, str):
+        return value.split()
+    return [_hashable(value)]
+
+
+def _hashable(value: Any) -> Any:
+    try:
+        hash(value)
+    except TypeError:
+        return repr(value)
+    return value
+
+
 def structured(a: Any, b: Any) -> float:
     """Recursive comparison of dicts / lists / scalars.
 
@@ -85,8 +134,33 @@ _NAMED: dict[str, Comparator] = {
     "text": jaccard,
     "numeric": numeric,
     "structured": structured,
+    "set": set_similarity,
+    "sequence": sequence_similarity,
     "auto": structured,
 }
+
+
+def default_comparator_for(value: Any) -> Comparator:
+    """Pick a comparator from a value's shape.
+
+    Adapters should declare comparators for features whose semantics matter
+    (§13); this is the fallback when they do not.
+    """
+    from agentseism.features import MissingFeature
+
+    if isinstance(value, MissingFeature):
+        return exact
+    if isinstance(value, (set, frozenset)):
+        return set_similarity
+    if isinstance(value, (list, tuple)):
+        return sequence_similarity
+    if isinstance(value, bool):
+        return exact
+    if isinstance(value, (int, float)):
+        return numeric
+    if isinstance(value, str):
+        return jaccard
+    return structured
 
 
 def resolve_comparator(spec: str | Comparator | None) -> Comparator:

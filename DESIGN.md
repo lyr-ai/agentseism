@@ -395,45 +395,25 @@ V0 should **not attempt arbitrary graph alignment**.
 
 Start with agents where event correspondence can be established reliably.
 
-## 11.1 V0 alignment strategy: trajectory projection
+## 11.1 V0 alignment strategy: feature projection
 
-Real ReAct agents are not fixed workflows. The reference GAIA agent loops
-`model -> tools -> model` until it submits an answer, so one run takes three
-iterations and another takes seven. Aligning by occurrence index would pair a
-run's third model call with another run's detour and score the difference as
-variation.
+Superseded in detail by [`DESIGN-FEATURE-PROJECTION.md`](DESIGN-FEATURE-PROJECTION.md)
+(Design Draft v0.2), which replaces stage alignment with feature projection:
 
-V0 therefore aligns a **projection** of the trajectory, not the trajectory
-itself. Each run is mapped onto a small set of points that mean the same thing
-in every run:
+> V0 does not align semantic stages directly. It projects each raw execution
+> into a set of comparable execution features, then attributes outcome variation
+> to those features.
 
-```text
-intake            the task as the agent received it
-plan              first model output, before any tool result exists
-tool_selection#i  tool chosen at iteration i, first K iterations
-tool_result#i     what that tool returned
-tool_sequence     ordered tools used, whole trajectory
-tool_set          same tools, order- and repetition-insensitive
-evidence          set of tool results, order-insensitive
-n_steps           trajectory length
-final_answer      the submitted answer
-```
+The consequences that matter for the rest of this document:
 
-Three consequences worth stating:
-
-* **Length is behavior, not noise.** `n_steps`, `tool_sequence` and `tool_set`
-  keep a longer or reordered trajectory visible as variation instead of as
-  missing data.
-* **Separate order from identity.** `tool_set` and `tool_sequence` are distinct
-  points on purpose: using a different tool and using the same tools with one
-  extra loop are different phenomena, and one ordered slot scores them alike.
-* **The outcome is not an execution point.** `final_answer` is recorded so a
-  trajectory can be read end to end, but excluded from ranking: its outcome
-  association is 1.0 by construction, so ranking it only restates the outcome.
-
-Iterations past the projection window are counted and reported, never silently
-dropped. A high truncation rate is a signal that the projection is discarding
-the interesting part of the execution, and is one of the Week 1 pilot checks.
+* raw event occurrence is not a cross-run identity, so attribution ranks
+  declared **execution features**, not raw events;
+* the raw trace is still recorded in full, for debugging and for the
+  intervention work in V1;
+* propagation is only scored when the adapter declares feature order; an
+  unordered schema is scored `V × A` and says so;
+* an observation that *is* the outcome is rejected from attribution by
+  construction, and the exclusion is reported.
 
 ---
 

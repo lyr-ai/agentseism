@@ -1,39 +1,77 @@
-"""Weak-point ranking (DESIGN.md §14, §15).
+"""Weak-point localization (DESIGN-FEATURE-PROJECTION.md §14-§21).
 
-    W(e) = LocalVariation(e) * OutcomeAssociation(e) * Propagation(e)
+    ordered schema     W_f = V_f x A_f x P_f
+    unordered schema   W_f = V_f x A_f
 
-This is association-based attribution, not causal attribution. A high score says
-that variation at an execution point co-varies with downstream and outcome
-variation across repeated runs -- not that intervening there would change the
-outcome. The distinction is load-bearing for the paper and must survive into any
-user-facing wording.
+Propagation is only used when the adapter declared feature order. When it did
+not, the score has no propagation term rather than an invented one (§16, §17).
+
+This is weak-point *localization*, not causal attribution. A feature that merely
+inherits variation from the real source correlates with the outcome just as
+strongly (§21); separating the two needs intervention, which V0 does not do.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from statistics import mean
-from typing import Sequence
+from typing import Iterator, Sequence
 
-from agentseism.alignment import Slot
-from agentseism.variation.events import PairDivergence
+from agentseism.alignment import FeatureColumn
+from agentseism.features import FeatureSchema, ObservationRole
+from agentseism.variation.features import PairDivergence
 
 DIVERGENCE_THRESHOLD = 0.15
-"""Above this, a pair is treated as having diverged at an execution point."""
+"""Above this, a pair is treated as having diverged at a feature."""
+
+FAMILY_CORRELATION = 0.9
+"""Features whose divergence patterns correlate at least this strongly are
+reported as one execution-feature family rather than as independent findings."""
+
+ORDERED_MODE = "V x A x P"
+UNORDERED_MODE = "V x A"
 
 
 @dataclass
 class WeakPoint:
-    key: str
-    label: str
-    order: float
+    name: str
     local_variation: float
-    propagation: float
     outcome_association: float
     score: float
-    n_pairs: int = 0
+    scoring_mode: str
+    propagation: float | None = None
+    order: float = float("inf")
     coverage: float = 1.0
+    n_pairs: int = 0
     tasks: list[str] = field(default_factory=list)
+    family: str | None = None
+    family_members: list[str] = field(default_factory=list)
+
+    @property
+    def label(self) -> str:  # kept for report/back-compat readability
+        return self.name
+
+
+@dataclass
+class Ranking:
+    """Ranked weak points plus what was excluded and how they were scored."""
+
+    weak_points: list[WeakPoint] = field(default_factory=list)
+    excluded: list[str] = field(default_factory=list)
+    scoring_mode: str = UNORDERED_MODE
+    families: dict[str, list[str]] = field(default_factory=dict)
+
+    def __iter__(self) -> Iterator[WeakPoint]:
+        return iter(self.weak_points)
+
+    def __len__(self) -> int:
+        return len(self.weak_points)
+
+    def __getitem__(self, index):
+        return self.weak_points[index]
+
+    def names(self) -> list[str]:
+        return [w.name for w in self.weak_points]
 
 
 def _pearson(xs: Sequence[float], ys: Sequence[float]) -> float:
@@ -49,115 +87,151 @@ def _pearson(xs: Sequence[float], ys: Sequence[float]) -> float:
     return num / (dx * dy) ** 0.5
 
 
-def _metrics_for_slot(
-    key: str,
-    slots: Sequence[Slot],
+def _propagation(
+    name: str,
+    downstream: Sequence[str],
     pairs: Sequence[PairDivergence],
     threshold: float,
-) -> tuple[float, float, float]:
-    """Return (local_variation, propagation, outcome_association) for one slot."""
-    local = [p.slots.get(key, 0.0) for p in pairs]
-    outcomes = [p.outcome for p in pairs]
-
-    order = {slot.key: slot.order for slot in slots}
-    downstream_keys = [s.key for s in slots if order[s.key] > order[key]]
-
-    # Propagation: when this point diverges, do the points after it also diverge?
+) -> float:
+    local = [p.features.get(name, 0.0) for p in pairs]
     diverged = [i for i, d in enumerate(local) if d >= threshold]
-    if downstream_keys and diverged:
-        propagation = mean(
-            mean(
-                1.0 if pairs[i].slots.get(k, 0.0) >= threshold else 0.0
-                for k in downstream_keys
-            )
-            for i in diverged
-        )
-    elif not downstream_keys and diverged:
-        # Terminal execution point: its own divergence is what reaches the outcome.
-        propagation = mean(local[i] for i in diverged)
-    else:
-        propagation = 0.0
+    if not diverged:
+        return 0.0
+    if not downstream:
+        # Last declared feature: its own divergence is what reaches the outcome.
+        return mean(local[i] for i in diverged)
+    return mean(
+        mean(1.0 if pairs[i].features.get(k, 0.0) >= threshold else 0.0 for k in downstream)
+        for i in diverged
+    )
 
-    # Outcome association: does divergence here predict outcome divergence?
-    association = max(0.0, _pearson(local, outcomes))
 
-    return (mean(local) if local else 0.0, propagation, association)
+def _families(
+    vectors: dict[str, list[float]], ranked: list[WeakPoint], threshold: float
+) -> dict[str, list[str]]:
+    """Group features whose divergence patterns are near-duplicates (§20)."""
+    parent = {name: name for name in vectors}
+
+    def find(x: str) -> str:
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    names = list(vectors)
+    for i, a in enumerate(names):
+        for b in names[i + 1 :]:
+            if _pearson(vectors[a], vectors[b]) >= threshold:
+                parent[find(a)] = find(b)
+
+    # Name each family after its highest-scoring member.
+    best: dict[str, WeakPoint] = {}
+    for wp in ranked:
+        root = find(wp.name)
+        if root not in best or wp.score > best[root].score:
+            best[root] = wp
+
+    families: dict[str, list[str]] = {}
+    for wp in ranked:
+        representative = best[find(wp.name)].name
+        families.setdefault(representative, []).append(wp.name)
+    return families
 
 
 def rank_weak_points(
-    per_task: dict[str, tuple[Sequence[Slot], Sequence[PairDivergence]]],
+    per_task: dict[str, tuple[Sequence[FeatureColumn], Sequence[PairDivergence]]],
+    schema: FeatureSchema | None = None,
     *,
     threshold: float = DIVERGENCE_THRESHOLD,
     min_coverage: float = 0.0,
-    exclude: Sequence[str] = (),
-) -> list[WeakPoint]:
-    """Rank execution points across one or more tasks.
+    family_correlation: float = FAMILY_CORRELATION,
+) -> Ranking:
+    """Rank execution features across one or more tasks.
 
-    ``per_task`` maps task id -> (slots, pair divergences), as produced by
-    :func:`agentseism.variation.pair_divergences`. Slot metrics are averaged
-    across tasks so that a weak point is a property of the agent, not of a
-    single input.
-
-    ``exclude`` drops execution points by label. Use it for any point that *is*
-    the outcome rather than a step toward it: such a point has an outcome
-    association of 1.0 by construction and would always rank first, which says
-    nothing. What was excluded is reported, never dropped silently.
+    ``OUTCOME`` observations are rejected by construction and reported as
+    excluded: an observation that is the outcome has an association of 1.0 by
+    definition (§9, §10).
     """
-    excluded = set(exclude)
-    accumulated: dict[str, dict] = {}
+    ordered = bool(schema and schema.ordered)
+    mode = ORDERED_MODE if ordered else UNORDERED_MODE
+    downstream_of: dict[str, list[str]] = {}
+    if ordered and schema:
+        names_in_order = schema.ordered_names()
+        for i, name in enumerate(names_in_order):
+            downstream_of[name] = names_in_order[i + 1 :]
 
-    for task_id, (slots, pairs) in per_task.items():
+    excluded: list[str] = []
+    accumulated: dict[str, dict] = {}
+    vectors: dict[str, list[float]] = {}
+
+    for task_id, (columns, pairs) in per_task.items():
         if not pairs:
             continue
-        for slot in slots:
-            if slot.label in excluded or slot.key in excluded:
+        for column in columns:
+            role = schema.spec(column.name).role if schema and schema.spec(column.name) else column.role
+            if role is ObservationRole.OUTCOME:
+                if column.name not in excluded:
+                    excluded.append(column.name)
                 continue
-            local, propagation, association = _metrics_for_slot(
-                slot.key, slots, pairs, threshold
-            )
+
+            local = [p.features.get(column.name, 0.0) for p in pairs]
+            outcomes = [p.outcome for p in pairs]
             entry = accumulated.setdefault(
-                slot.key,
-                {
-                    "label": slot.label,
-                    "order": [],
-                    "local": [],
-                    "propagation": [],
-                    "association": [],
-                    "coverage": [],
-                    "n_pairs": 0,
-                    "tasks": [],
-                },
+                column.name,
+                {"local": [], "association": [], "propagation": [], "coverage": [],
+                 "order": [], "n_pairs": 0, "tasks": []},
             )
-            entry["order"].append(slot.order)
-            entry["local"].append(local)
-            entry["propagation"].append(propagation)
-            entry["association"].append(association)
-            entry["coverage"].append(slot.coverage)
+            entry["local"].append(mean(local) if local else 0.0)
+            entry["association"].append(max(0.0, _pearson(local, outcomes)))
+            if ordered:
+                entry["propagation"].append(
+                    _propagation(column.name, downstream_of.get(column.name, []), pairs, threshold)
+                )
+            entry["coverage"].append(column.coverage)
+            entry["order"].append(column.order)
             entry["n_pairs"] += len(pairs)
             entry["tasks"].append(task_id)
+            vectors.setdefault(column.name, []).extend(local)
 
     weak_points: list[WeakPoint] = []
-    for key, entry in accumulated.items():
+    for name, entry in accumulated.items():
         coverage = mean(entry["coverage"])
         if coverage < min_coverage:
             continue
         local = mean(entry["local"])
-        propagation = mean(entry["propagation"])
         association = mean(entry["association"])
+        propagation = mean(entry["propagation"]) if entry["propagation"] else None
+        score = local * association * (propagation if propagation is not None else 1.0)
         weak_points.append(
             WeakPoint(
-                key=key,
-                label=entry["label"],
-                order=mean(entry["order"]),
+                name=name,
                 local_variation=local,
-                propagation=propagation,
                 outcome_association=association,
-                score=local * propagation * association,
-                n_pairs=entry["n_pairs"],
+                propagation=propagation,
+                score=score,
+                scoring_mode=mode,
+                order=mean(entry["order"]),
                 coverage=coverage,
+                n_pairs=entry["n_pairs"],
                 tasks=sorted(set(entry["tasks"])),
             )
         )
 
-    weak_points.sort(key=lambda w: (-w.score, w.order))
-    return weak_points
+    weak_points.sort(key=lambda w: (-w.score, w.order, w.name))
+    families = _families(vectors, weak_points, family_correlation) if weak_points else {}
+    members_by_name = {
+        name: members for name, members in families.items()
+    }
+    for wp in weak_points:
+        for representative, members in members_by_name.items():
+            if wp.name in members:
+                wp.family = representative
+                if wp.name == representative:
+                    wp.family_members = list(members)
+
+    return Ranking(
+        weak_points=weak_points,
+        excluded=excluded,
+        scoring_mode=mode,
+        families={k: v for k, v in families.items() if len(v) > 1},
+    )

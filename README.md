@@ -17,9 +17,9 @@
 > [AgentLab](https://github.com/canis-minor/agentlab) ·
 > **AgentSeism**
 
-AgentSeism discovers **where small variations are amplified inside LLM-agent
-executions**, and ranks the execution points most associated with downstream
-behavioral variation.
+AgentSeism projects heterogeneous agent executions into comparable **execution
+features**, then measures which feature variations are most strongly associated
+with downstream behavioral variation.
 
 The question is not *did my agent fail?* and not *are two outputs different?*
 It is:
@@ -48,71 +48,71 @@ matter.
 
 ```python
 from agentseism import scan
+from agents.trajectory import ReActProjector
 
 def my_agent(task, trace):
-    docs = trace.record("retrieval", "retrieval", input=task, output=search(task))
-    evidence = trace.record("decision", "evidence_selection", input=docs, output=pick(docs))
-    answer = trace.record("model_call", "answer", input=evidence, output=generate(evidence))
-    return {"answer": answer}
+    # record the raw execution; the projector turns it into features
+    ...
 
 report = scan(
     my_agent,
     cases=["why is checkout slow?", "why did auth fail?"],
     trials=10,
     outcome=lambda r: r["answer"],
+    projector=ReActProjector(),
 )
 print(report)
 ```
 
 The `trace` parameter is optional. Without it you still get outcome-level
-variation; with it you get event-level weak-point attribution.
+variation; with it, the raw trace is projected into the adapter's declared
+feature schema and those features are ranked.
 
 ```text
-AgentSeism
-══════════════════════════════════════
+Top Behavioral Weak Points   (score = V x A)
+──────────────────────────────────────────────
 
-Agent: synthetic
+1. Execution feature: tool_set
 
-Tasks                       20
-Executions                 200
+   Local variation           0.47
+   Outcome association       0.87
 
-Behavioral consistency
-                           72%
+   Weak-point score          0.41
 
-High-variation tasks
-                            11
+   Feature family with: tool_sequence
+   These co-vary; count them as one finding, not several.
 
-Top Behavioral Weak Points
-──────────────────────────────────────
-
-1. Event group: evidence_selection
-
-   Local variation           0.19
-   Downstream propagation    1.00
-   Outcome association       1.00
-
-   Weak-point score          0.19
+Excluded from attribution: final_answer (declared outcome, not a step toward it).
+Feature schema: react/1
 ```
 
-**High variation ≠ high weakness.** An execution point whose output changes on
-every run but never reaches the outcome scores near zero.
+**High variation ≠ high weakness.** A feature that changes on every run but never
+reaches the outcome scores near zero — that is what the negative-control feature
+(`pre_final_reasoning`) is there to verify.
 
 ## How it works
 
 ```text
-agent → repeated runs → trace → run alignment → event-level variation
-      → propagation + outcome association → ranked weak points
+agent → repeated runs → raw trace → adapter projection → execution features
+      → feature variation → outcome association → ranked weak points
 ```
 
-The V0 weak-point score is deliberately simple (DESIGN.md §14):
+Raw event occurrence is not a cross-run identity: a ReAct agent's third model
+call means something different in every run. So AgentSeism ranks **declared
+execution features**, not raw events (DESIGN-FEATURE-PROJECTION.md):
 
 ```text
-W(e) = LocalVariation(e) × Propagation(e) × OutcomeAssociation(e)
+unordered schema   W = LocalVariation × OutcomeAssociation
+ordered schema     W = LocalVariation × OutcomeAssociation × Propagation
 ```
 
-This is **association-based attribution, not causal attribution**. A high score
-says variation at that point co-varies with downstream and outcome variation —
-not that intervening there would change the outcome.
+Propagation is scored only when the adapter declares feature order. An unordered
+schema gets no propagation term rather than an invented one, and the report
+states which mode produced the score.
+
+This is **weak-point localization, not causal attribution**. A high score says a
+feature's variation co-varies with outcome variation — not that intervening
+there would change the outcome.
 
 ## Validating the attribution
 
@@ -159,16 +159,17 @@ Pieces involved:
 | file | what it does |
 |---|---|
 | `agents/langgraph_adapter.py` | wraps any compiled LangGraph app; duck-typed, no langchain import |
-| `agents/trajectory.py` | projects a variable-length ReAct loop onto alignable execution points |
+| `agents/trajectory.py` | records the raw ReAct trace, and projects it into the §8 feature schema |
 | `agents/gaia.py` | GAIA state, answer extraction, formatting-insensitive answer equivalence |
 | `benchmarks/gaia.py` | Level-1 slice spec (task ids only — GAIA is gated, so no data is vendored) |
 
 **ReAct loops are not fixed workflows.** One run takes three iterations, another
 takes seven, so occurrence-index alignment would pair a run's third model call
-with another run's detour. V0 aligns a projection instead — `tool_sequence`,
-`tool_set`, `evidence`, `n_steps` and the first K iterations — which keeps
-trajectory length visible as behavior rather than as missing data
-(DESIGN.md §11.1). Iterations past the window are counted and reported.
+with another run's detour. AgentSeism projects instead: `tool_set`,
+`tool_sequence`, `tool_call_count`, `evidence_set`, `initial_plan`,
+`pre_final_reasoning`. Loop length becomes behavior rather than missing data,
+and `tool_set` separates *which capabilities* from *which path*. The full raw
+trace is still stored, untruncated, for the intervention work in V1.
 
 **The comparator is not a grader.** Two runs that are identically wrong are
 behaviorally consistent, and AgentSeism says so. Correctness against the GAIA
@@ -179,16 +180,20 @@ reference answer is recorded separately, as context.
 - **Propagated variation looks like source variation.** A point downstream of the
   real weak point inherits high propagation and outcome association. Separating
   source from consequence needs intervention, not association.
-- **Alignment is name-and-position based.** Agents whose execution points are not
-  stably labelled are out of scope for V0 (DESIGN.md §11).
+- **Features are hand-defined and frozen per adapter version.** Automatic
+  feature discovery is out of scope for V0; schemas must be fixed before
+  outcomes are examined, and results from different schema versions are never
+  mixed.
+- **Correlated features are one finding.** `tool_set`, `tool_sequence` and
+  `tool_call_count` often reflect the same underlying change, so the report
+  groups them into a feature family instead of claiming three findings.
 - **No semantic comparator by default.** Text similarity is token overlap; pass
   your own comparator for anything that needs meaning.
-- **One comparator for every execution point.** A tool name, a retrieved
-  document and a step count are compared by the same rule today; per-slot
-  comparators are a known gap.
-- **The outcome must be excluded by hand.** A recorded point that *is* the
-  outcome has an association of 1.0 by construction, so pass
-  `exclude_slots=("final_answer",)` — the report states what was excluded.
+- **The correlation baseline may already be enough.** On an unordered schema the
+  score is correlation re-weighted by local variation, so it can rank exactly
+  like correlation-only. The pilot checks for this and says so out loud; if it
+  holds on real agents, the next method needs intervention, not a better
+  weighting (DESIGN-FEATURE-PROJECTION.md §22).
 
 ## Layout
 

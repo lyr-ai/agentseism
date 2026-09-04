@@ -7,7 +7,7 @@ corresponding experiment has been run and recorded in `experiments.md`.
 |---|------------|----|----------|--------|
 | A | LLM-agent behavioral variation is substantial even when conventional task quality remains acceptable | RQ1 | Figure 1 | not started |
 | B | Consequential variation is concentrated rather than uniformly distributed across execution | RQ2 | Figure 2 | not started |
-| C | Execution-level variation analysis identifies consequential weak points better than trace-diff baselines | RQ3 | Table 1 | harness only (synthetic) |
+| C | Execution-feature variation analysis localizes consequential weak points better than trace-diff baselines | RQ3 | Table 1 | harness only (synthetic) |
 | D | Weak-point-guided intervention improves robustness on held-out tasks without degrading quality | RQ4 | Figure 4 | not started |
 
 ## Status vocabulary
@@ -19,11 +19,27 @@ corresponding experiment has been run and recorded in `experiments.md`.
 
 ## Standing caveats
 
-1. **Association, not causation.** The V0 score ranks execution points whose
-   variation co-varies with outcome variation. A point downstream of the true
-   source inherits that signal. Any causal language requires an intervention
-   experiment.
+1. **Localization, not causal attribution.** The V0 score ranks execution
+   *features* whose variation co-varies with outcome variation. A feature
+   downstream of the true source inherits that signal, and association cannot
+   separate the two. The paper says "weak-point localization"; "causal
+   attribution" is reserved for intervention-based versions.
 2. **Synthetic ≠ evidence.** `agents/synthetic.py` validates the harness. It is
    not a data point for any hypothesis above.
 3. **Comparator dependence.** Every variation number is relative to the outcome
    comparator. Report the comparator alongside the number, always.
+4. **Schema dependence.** Every weak-point number is relative to a frozen
+   feature schema. Report `adapter_version` and `feature_schema_version`, and
+   never mix results across schemas (§7, §24).
+5. **Ties are not wins.** Attribution@k is scored as expected credit under a
+   random tie-break, for AgentSeism and every baseline alike. A three-way tie
+   for first place is worth 1/3, not 1.
+
+## Planned falsification test
+
+Hypothesis C dies if correlation-only matches AgentSeism on real agents with
+injected interventions. On an unordered schema the V0 score is correlation
+re-weighted by local variation, so this is a live structural risk, not a remote
+one — the pilot reports the comparison directly. If it fires, the answer is
+intervention or counterfactual replay, not a better weighting
+(DESIGN-FEATURE-PROJECTION.md §22).

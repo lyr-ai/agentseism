@@ -12,6 +12,7 @@ import time
 import traceback
 from typing import Any, Callable, Iterable, Sequence
 
+from agentseism.projection import EventProjector, Projector, project_run
 from agentseism.trace import TraceCollector
 from agentseism.types import Experiment, Run, Task
 
@@ -51,6 +52,7 @@ def run_experiment(
     trials: int = 10,
     *,
     outcome: Callable[[Any], Any] | None = None,
+    projector: Projector | None = None,
     agent_id: str = "agent",
     experiment_id: str = "experiment",
     config: dict | None = None,
@@ -62,7 +64,11 @@ def run_experiment(
     ``trace`` keyword it is handed a :class:`TraceCollector` and its events are
     stored with the run; if it returns ``(output, events)`` those events are used
     instead. Uninstrumented agents still support outcome-level analysis
-    (DESIGN.md §10) -- only event-level attribution needs a trace.
+    (DESIGN.md §10) -- only feature-level localization needs a trace.
+
+    ``projector`` turns each raw trace into the declared execution features that
+    attribution actually ranks. When a trace exists and no projector is given,
+    recorded event names are projected onto same-named features.
     """
     if trials < 1:
         raise ValueError("trials must be >= 1")
@@ -73,11 +79,17 @@ def run_experiment(
     select_outcome = outcome or (lambda result: result)
     wants_trace = _accepts_trace(agent)
 
+    projector = projector or EventProjector()
     experiment = Experiment(
         id=experiment_id,
         agent_id=agent_id,
         tasks=tasks,
-        config={"trials": trials, **(config or {})},
+        config={
+            "trials": trials,
+            "adapter": getattr(projector, "name", "unknown"),
+            "adapter_version": getattr(projector, "version", "unknown"),
+            **(config or {}),
+        },
     )
 
     for task in tasks:
@@ -104,18 +116,21 @@ def run_experiment(
                 events = collector.events
             duration_ms = (time.perf_counter() - started) * 1000
 
-            experiment.runs.append(
-                Run(
-                    id=run_id,
-                    task_id=task.id,
-                    input=task.input,
-                    output=output,
-                    outcome=None if error else select_outcome(output),
-                    events=events,
-                    duration_ms=duration_ms,
-                    error=error,
-                    metadata={"trial": trial},
-                )
+            run = Run(
+                id=run_id,
+                task_id=task.id,
+                input=task.input,
+                output=output,
+                outcome=None if error else select_outcome(output),
+                events=events,
+                duration_ms=duration_ms,
+                error=error,
+                metadata={"trial": trial},
             )
+            if run.ok and run.events:
+                run.features = project_run(run, projector)
+            experiment.runs.append(run)
 
+    experiment.schema = projector.schema
+    experiment.config["feature_schema_version"] = experiment.schema.version
     return experiment

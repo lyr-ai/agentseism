@@ -1,13 +1,9 @@
 """GAIA pilot: 10 tasks x 5 runs (DESIGN.md §25 Week 1).
 
-Deliberately small. Before paying for 500 executions, find out three things:
-
-  1. does the trace come back complete on every run?
-  2. does the final answer vary at all?
-  3. is there alignable structure -- or does the projection lose most of the
-     trajectory?
-
-Only if all three hold does the full 50 x 10 slice make sense.
+Deliberately small. Before paying for 500 executions, check the five things in
+DESIGN-FEATURE-PROJECTION.md §25 -- outcome variation, feature variation,
+feature usefulness, comparator sanity, and baseline strength -- and report the
+§26 success criteria for the adapter itself.
 
     python experiments/natural_variation/gaia_pilot.py --app my_module:app
     python experiments/natural_variation/gaia_pilot.py --stub   # offline plumbing check
@@ -24,15 +20,16 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT / "src"), str(ROOT)]
 
-from agentseism import scan  # noqa: E402
+from agentseism import divergence_tables, scan  # noqa: E402
+from agentseism.attribution import correlation_only  # noqa: E402
+from agentseism.features import MISSING, ObservationRole  # noqa: E402
 from agents.gaia import answer_equivalent, build_state, extract_answer, is_correct, outcome  # noqa: E402
 from agents.langgraph_adapter import LangGraphAgent  # noqa: E402
-from agents.trajectory import OUTCOME_SLOT  # noqa: E402
+from agents.trajectory import ReActProjector  # noqa: E402
 
 PILOT_TRIALS = 5
-CORE_SLOTS = (
-    "intake", "plan", "tool_sequence", "tool_set", "evidence", "n_steps", "final_answer",
-)
+USEFUL_ASSOCIATION = 0.3
+NOISY_VARIATION = 0.3
 
 
 def load_app(spec: str):
@@ -61,60 +58,102 @@ def gaia_tasks(n: int) -> list[dict]:
     return tasks
 
 
+def comparator_sanity(tables) -> list[str]:
+    """Features whose comparator cannot be telling runs apart (§25)."""
+    complaints = []
+    seen: dict[str, list[float]] = {}
+    distinct: dict[str, set] = {}
+    for columns, pairs in tables.values():
+        for column in columns:
+            values = [v for v in column.values.values() if v is not MISSING]
+            distinct.setdefault(column.name, set()).update(
+                repr(v) for v in values
+            )
+        for pair in pairs:
+            for name, d in pair.features.items():
+                seen.setdefault(name, []).append(d)
+    for name, divergences in seen.items():
+        n_distinct = len(distinct.get(name, ()))
+        if n_distinct > 1 and max(divergences) == 0.0:
+            complaints.append(f"{name}: values differ but divergence is always 0 (comparator too loose)")
+        if n_distinct == 1 and min(divergences) > 0.0:
+            complaints.append(f"{name}: identical values scored as different (comparator too strict)")
+    return complaints
+
+
 def checks(report, tasks) -> dict:
     runs = report.experiment.runs
     ok_runs = [r for r in runs if r.ok]
-    run_ok_rate = len(ok_runs) / len(runs) if runs else 0.0
+    schema = report.schema
+    declared = [s.name for s in schema.specs if s.role is ObservationRole.FEATURE] if schema else []
 
-    slot_names = {e.name for r in ok_runs for e in r.events}
-    missing_core = [s for s in CORE_SLOTS if s not in slot_names]
-    complete_traces = sum(
-        1 for r in ok_runs if {e.name for e in r.events} >= set(CORE_SLOTS)
-    )
-    trace_completeness = complete_traces / len(ok_runs) if ok_runs else 0.0
+    complete = sum(1 for r in ok_runs if all(n in r.features for n in declared))
+    loop_lengths = {
+        r.features["tool_call_count"].value for r in ok_runs if "tool_call_count" in r.features
+    }
 
-    varying_tasks = [t for t in report.tasks if t.variation > 0]
-    truncated = [
-        r for r in ok_runs
-        if (r.output or {}).get("trajectory", {}).get("iterations_beyond_projection", 0) > 0
+    weak = report.weak_points
+    varying = [w for w in weak if w.local_variation > 0]
+    useful = [w for w in weak if w.outcome_association >= USEFUL_ASSOCIATION]
+    noisy_but_inconsequential = [
+        w for w in weak
+        if w.local_variation >= NOISY_VARIATION and w.outcome_association < USEFUL_ASSOCIATION
     ]
-    truncation_rate = len(truncated) / len(ok_runs) if ok_runs else 0.0
-    varying_slots = [w for w in report.weak_points if w.local_variation > 0]
+
+    tables = divergence_tables(
+        report.experiment, comparator=answer_equivalent, schema=schema
+    )
+    correlation_top3 = correlation_only(tables, schema)[:3] if tables else []
+    ours_top3 = [w.name for w in weak[:3]]
 
     references = {t["id"]: t.get("metadata", {}).get("reference_answer") for t in tasks}
     graded = [
-        (r.task_id, is_correct(r.outcome, references[r.task_id]))
+        is_correct(r.outcome, references[r.task_id])
         for r in ok_runs
         if references.get(r.task_id) is not None
     ]
-    accuracy = sum(1 for _, c in graded if c) / len(graded) if graded else None
 
     return {
-        "run_ok_rate": run_ok_rate,
-        "trace_completeness": trace_completeness,
-        "missing_core_slots": missing_core,
+        "run_ok_rate": len(ok_runs) / len(runs) if runs else 0.0,
+        "feature_completeness": complete / len(ok_runs) if ok_runs else 0.0,
+        "distinct_loop_lengths": len(loop_lengths),
         "median_consistency": report.median_consistency,
-        "tasks_with_variation": len(varying_tasks),
+        "tasks_with_variation": sum(1 for t in report.tasks if t.variation > 0),
         "n_tasks": len(report.tasks),
-        "truncation_rate": truncation_rate,
-        "varying_slots": len(varying_slots),
-        "accuracy": accuracy,
+        "features_that_vary": len(varying),
+        "features_associated_with_outcome": len(useful),
+        "max_association": max((w.outcome_association for w in weak), default=0.0),
+        "noisy_but_inconsequential": [w.name for w in noisy_but_inconsequential],
+        "comparator_complaints": comparator_sanity(tables),
+        "agentseism_top3": ours_top3,
+        "correlation_top3": correlation_top3,
+        "correlation_matches_us": ours_top3 == correlation_top3,
+        "accuracy": sum(graded) / len(graded) if graded else None,
     }
 
 
 def verdict(c: dict) -> tuple[bool, list[str]]:
+    """§26: what makes the adapter useful. Not causal attribution."""
     reasons = []
     if c["run_ok_rate"] < 0.9:
         reasons.append(f"only {c['run_ok_rate']:.0%} of runs completed -- fix the harness first")
-    if c["trace_completeness"] < 1.0 or c["missing_core_slots"]:
-        reasons.append(f"traces incomplete (missing {c['missing_core_slots'] or 'slots on some runs'})")
+    if c["feature_completeness"] < 1.0:
+        reasons.append(
+            f"only {c['feature_completeness']:.0%} of runs produced every declared feature"
+        )
+    if c["distinct_loop_lengths"] < 2:
+        reasons.append("loop length never varies -- this agent may be too deterministic to study")
     if c["tasks_with_variation"] == 0:
         reasons.append("no outcome variation at all -- this agent cannot answer RQ1")
-    if c["truncation_rate"] > 0.2:
+    if c["features_associated_with_outcome"] == 0:
+        reasons.append("no execution feature relates to outcome variation -- the schema may be wrong")
+    if not c["noisy_but_inconsequential"]:
         reasons.append(
-            f"{c['truncation_rate']:.0%} of runs exceed the projection window -- "
-            "raise max_iterations or the projection is discarding the interesting part"
+            "every high-variation feature also has high outcome association -- "
+            "no discrimination yet, so the ranking may just be tracking whatever changes most"
         )
+    if c["comparator_complaints"]:
+        reasons.append(f"comparator problems: {'; '.join(c['comparator_complaints'])}")
     return (not reasons, reasons)
 
 
@@ -142,8 +181,8 @@ def main() -> None:
         trials=args.trials,
         outcome=outcome,
         comparator=answer_equivalent,
+        projector=ReActProjector(),
         agent_id=agent_id,
-        exclude_slots=(OUTCOME_SLOT,),
         save_to=str(ROOT / "results" / f"gaia_pilot_{_slug(agent_id)}_experiment.json"),
     )
     print(report.render())
@@ -153,24 +192,42 @@ def main() -> None:
 
     print("\nWeek 1 pilot checks")
     print("-" * 46)
-    print(f"{'runs completed':<32}{c['run_ok_rate']:>12.0%}")
-    print(f"{'traces complete':<32}{c['trace_completeness']:>12.0%}")
-    print(f"{'median consistency':<32}{c['median_consistency']:>12.2f}")
-    print(f"{'tasks with variation':<32}{c['tasks_with_variation']:>9}/{c['n_tasks']}")
-    print(f"{'runs past projection window':<32}{c['truncation_rate']:>12.0%}")
-    print(f"{'execution points that vary':<32}{c['varying_slots']:>12}")
+    print(f"{'runs completed':<34}{c['run_ok_rate']:>12.0%}")
+    print(f"{'runs with every feature':<34}{c['feature_completeness']:>12.0%}")
+    print(f"{'distinct loop lengths':<34}{c['distinct_loop_lengths']:>12}")
+    print(f"{'median consistency':<34}{c['median_consistency']:>12.2f}")
+    print(f"{'tasks with variation':<34}{c['tasks_with_variation']:>9}/{c['n_tasks']}")
+    print(f"{'features that vary':<34}{c['features_that_vary']:>12}")
+    print(f"{'features tied to the outcome':<34}{c['features_associated_with_outcome']:>12}")
+    print(f"{'noisy but inconsequential':<34}{', '.join(c['noisy_but_inconsequential']) or '-':>12}")
     if c["accuracy"] is not None:
-        print(f"{'accuracy vs reference (context)':<32}{c['accuracy']:>12.0%}")
+        print(f"{'accuracy vs reference (context)':<34}{c['accuracy']:>12.0%}")
+    print()
+    print(f"AgentSeism top-3   {c['agentseism_top3']}")
+    print(f"correlation top-3  {c['correlation_top3']}")
+    if c["correlation_matches_us"]:
+        print("Correlation-only already reproduces our ranking (§22 risk).")
     print()
     print("VERDICT: proceed to 50 x 10" if passed else "VERDICT: do not scale up yet")
     for reason in reasons:
         print(f"  - {reason}")
     if args.stub:
-        print("\nStub agent: this checks the plumbing only. It is not evidence for any hypothesis.")
+        print("\nStub agent: plumbing check only. Not evidence for any hypothesis.")
 
     out = ROOT / "results" / f"gaia_pilot_{_slug(agent_id)}.json"
-    out.write_text(json.dumps({"agent": agent_id, "trials": args.trials, "checks": c,
-                               "passed": passed, "reasons": reasons}, indent=2))
+    out.write_text(
+        json.dumps(
+            {
+                "agent": agent_id,
+                "trials": args.trials,
+                "feature_schema_version": report.schema.version if report.schema else None,
+                "checks": c,
+                "passed": passed,
+                "reasons": reasons,
+            },
+            indent=2,
+        )
+    )
     print(f"wrote {out.relative_to(ROOT)}")
 
 

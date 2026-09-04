@@ -1,31 +1,17 @@
-"""Projecting a variable-length agent trajectory onto alignable execution points.
+"""ReAct raw-trace recording and feature projection.
 
-ReAct-style agents (``model -> tools -> model -> ...`` until done) do not have a
-fixed execution graph: one run takes three iterations, another takes seven.
-Aligning those by occurrence index would pair a run's third model call with a
-detour in another run and call the difference "variation" (DESIGN.md §11).
+Two separate jobs, deliberately kept apart (DESIGN-FEATURE-PROJECTION.md §5, §6):
 
-V0 therefore does not align raw iterations. It projects each trajectory onto a
-small set of execution points that mean the same thing in every run:
+1. ``record_raw_trace`` writes the raw execution -- one event per model call and
+   tool call -- and keeps it, so it stays available for debugging, later causal
+   intervention, and future automatic feature extraction.
+2. ``ReActProjector`` converts that raw trace into the declared feature schema
+   that attribution actually ranks.
 
-    intake            the question as the agent received it
-    plan              the first model output, before any tool result exists
-    tool_selection#i  the tool chosen at iteration i (first K iterations)
-    tool_result#i     what that tool returned
-    tool_sequence     the ordered list of tools used, whole trajectory
-    tool_set          the same tools, order- and repetition-insensitive
-    evidence          the set of tool results, order-insensitive
-    n_steps           trajectory length
-    final_answer      the submitted answer
-
-The per-iteration points cover only the first ``max_iterations`` iterations;
-anything past that is summarised by the whole-trajectory points rather than
-silently dropped. ``tool_sequence`` and ``evidence`` are what make a longer or
-reordered trajectory visible as variation instead of as missing data.
-
-``tool_set`` is separated from ``tool_sequence`` on purpose: an agent that used
-a different tool and an agent that used the same tools with one extra loop are
-different phenomena, and a single ordered-sequence slot scores them alike.
+The projection is what makes a variable-length loop comparable. Run A's
+``search -> calculator`` and run B's ``search -> search -> calculator -> search``
+have no valid node correspondence, but they do have comparable behavior:
+the same tool set, a different tool sequence, a different tool-call count.
 """
 
 from __future__ import annotations
@@ -33,12 +19,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 
-DEFAULT_MAX_ITERATIONS = 3
+from agentseism.features import FeatureSchema, FeatureSpec, ObservationRole
+from agentseism.types import Run
 
-OUTCOME_SLOT = "final_answer"
-"""The projected point that *is* the outcome. Recorded so a trajectory can be
-read end to end, but excluded from weak-point ranking: its outcome association
-is 1.0 by construction, so ranking it would only restate the outcome."""
+SCHEMA_VERSION = "react/1"
+
+SUBMIT_TOOL = "submit_final_answer"
 
 
 @dataclass
@@ -51,16 +37,106 @@ class Step:
     tool_args: dict = field(default_factory=dict)
 
 
+# -- raw trace ---------------------------------------------------------------
+
+
+def record_raw_trace(trace, *, question: Any, steps: list[Step], answer: Any) -> dict:
+    """Record the raw execution. No projection, no truncation."""
+    trace.record("transform", "intake", output=question)
+    for i, step in enumerate(steps):
+        if step.kind == "model":
+            trace.record(
+                "model_call",
+                "model_call",
+                input=i,
+                output={"content": step.content, "tool": step.tool_name, "args": step.tool_args},
+            )
+        else:
+            trace.record("tool_call", "tool_call", input=step.tool_name, output=step.content)
+    trace.record("final_submission", "final_submission", output=answer)
+    return {"n_steps": len(steps)}
+
+
+# -- projection --------------------------------------------------------------
+
+SCHEMA = FeatureSchema(
+    version=SCHEMA_VERSION,
+    specs=[
+        FeatureSpec("tool_set", comparator="set",
+                    description="distinct tools used; did the agent choose different capabilities?"),
+        FeatureSpec("tool_sequence", comparator="sequence",
+                    description="ordered tool calls; did the execution path differ?"),
+        FeatureSpec("tool_call_count", comparator="numeric",
+                    description="loop length, without pretending occurrence alignment is meaningful"),
+        FeatureSpec("evidence_set", comparator="set",
+                    description="normalized set of tool results acquired"),
+        FeatureSpec("initial_plan", comparator="text",
+                    description="first model output, before tool interaction"),
+        FeatureSpec("pre_final_reasoning", comparator="text",
+                    description="reasoning immediately before submission; negative control"),
+        FeatureSpec("final_answer", role=ObservationRole.OUTCOME,
+                    description="the outcome itself; never an attribution candidate"),
+    ],
+)
+"""Unordered on purpose: a ReAct loop gives no reliable topology over these
+features, so no propagation term is claimed (§16, §17)."""
+
+
+class ReActProjector:
+    """Projects a recorded ReAct trace into the §8 feature schema."""
+
+    name = "react"
+    version = SCHEMA_VERSION
+    schema = SCHEMA
+
+    def project(self, run: Run) -> dict[str, Any]:
+        model_events = [e for e in run.events if e.name == "model_call"]
+        tool_events = [e for e in run.events if e.name == "tool_call"]
+        submission = next((e for e in run.events if e.name == "final_submission"), None)
+
+        selections = [
+            (e.output or {}).get("tool")
+            for e in model_events
+            if isinstance(e.output, dict) and (e.output or {}).get("tool")
+        ]
+        working_tools = [t for t in selections if t != SUBMIT_TOOL]
+        evidence = [
+            str(e.output) for e in tool_events if (e.input or "") != SUBMIT_TOOL
+        ]
+
+        return {
+            "tool_set": sorted(set(working_tools)),
+            "tool_sequence": working_tools,
+            "tool_call_count": len(working_tools),
+            "evidence_set": sorted(set(evidence)),
+            "initial_plan": _content(model_events[0]) if model_events else "",
+            "pre_final_reasoning": _pre_final(model_events),
+            "final_answer": submission.output if submission else "",
+        }
+
+
+def _content(event) -> str:
+    if isinstance(event.output, dict):
+        return str(event.output.get("content", ""))
+    return str(event.output or "")
+
+
+def _pre_final(model_events: list) -> str:
+    """The last model output, which is normally the submission turn's reasoning."""
+    return _content(model_events[-1]) if model_events else ""
+
+
+# -- message parsing ---------------------------------------------------------
+
+
 def _attr(message: Any, name: str, default: Any = None) -> Any:
-    """Read a field from a LangChain message object or a plain dict."""
     if isinstance(message, dict):
         return message.get(name, default)
     return getattr(message, name, default)
 
 
 def _message_kind(message: Any) -> str:
-    kind = _attr(message, "type") or _attr(message, "role") or ""
-    kind = str(kind).lower()
+    kind = str(_attr(message, "type") or _attr(message, "role") or "").lower()
     if kind in ("ai", "assistant"):
         return "model"
     if kind == "tool":
@@ -71,8 +147,7 @@ def _message_kind(message: Any) -> str:
 def steps_from_messages(messages: Iterable[Any]) -> list[Step]:
     """Parse a LangChain-style message list into trajectory steps.
 
-    Duck-typed on purpose: AgentSeism must not depend on LangChain to read a
-    trajectory someone already captured.
+    Duck-typed on purpose: reading a trajectory must not require LangChain.
     """
     steps: list[Step] = []
     for message in messages or []:
@@ -90,11 +165,8 @@ def steps_from_messages(messages: Iterable[Any]) -> list[Step]:
             )
         elif kind == "tool":
             steps.append(
-                Step(
-                    kind="tool",
-                    content=_text(_attr(message, "content")),
-                    tool_name=_attr(message, "name"),
-                )
+                Step(kind="tool", content=_text(_attr(message, "content")),
+                     tool_name=_attr(message, "name"))
             )
     return steps
 
@@ -108,7 +180,6 @@ def _call_field(call: Any, name: str) -> Any:
 
 
 def _text(content: Any) -> str:
-    """Flatten LangChain's block-list content into text."""
     if content is None:
         return ""
     if isinstance(content, str):
@@ -122,61 +193,3 @@ def _text(content: Any) -> str:
                 parts.append(str(block))
         return " ".join(p for p in parts if p)
     return str(content)
-
-
-def record_trajectory(
-    trace,
-    *,
-    question: Any,
-    steps: list[Step],
-    answer: Any,
-    max_iterations: int = DEFAULT_MAX_ITERATIONS,
-) -> dict:
-    """Record the projected execution points on ``trace``.
-
-    Returns a summary dict, including how many iterations exceeded
-    ``max_iterations`` so that truncation is visible in the experiment record
-    rather than implied.
-    """
-    trace.record("transform", "intake", output=question)
-
-    model_steps = [s for s in steps if s.kind == "model"]
-    tool_steps = [s for s in steps if s.kind == "tool"]
-
-    trace.record(
-        "model_call",
-        "plan",
-        output=model_steps[0].content if model_steps else "",
-    )
-
-    for i in range(min(len(model_steps), max_iterations)):
-        trace.record(
-            "decision",
-            f"tool_selection#{i}" if i else "tool_selection",
-            input=i,
-            output={"tool": model_steps[i].tool_name, "args": model_steps[i].tool_args},
-        )
-    for i in range(min(len(tool_steps), max_iterations)):
-        trace.record(
-            "tool_call",
-            f"tool_result#{i}" if i else "tool_result",
-            input=tool_steps[i].tool_name,
-            output=tool_steps[i].content,
-        )
-
-    tool_sequence = [s.tool_name for s in model_steps if s.tool_name]
-    trace.record("transform", "tool_sequence", output=tool_sequence)
-    trace.record("transform", "tool_set", output=sorted(set(tool_sequence)))
-    trace.record(
-        "transform", "evidence", output=sorted(str(s.content) for s in tool_steps)
-    )
-    trace.record("transform", "n_steps", output=len(steps))
-    trace.record("model_call", "final_answer", output=answer)
-
-    return {
-        "n_steps": len(steps),
-        "n_model_steps": len(model_steps),
-        "n_tool_steps": len(tool_steps),
-        "tool_sequence": tool_sequence,
-        "iterations_beyond_projection": max(0, len(model_steps) - max_iterations),
-    }

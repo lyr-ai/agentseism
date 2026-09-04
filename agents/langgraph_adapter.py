@@ -10,7 +10,8 @@ history, including ones already captured to disk.
     from agents.gaia import build_state, extract_answer
 
     agent = LangGraphAgent(app, build_state=build_state, extract_answer=extract_answer)
-    report = scan(agent, cases=tasks, trials=5, outcome=lambda r: r["answer"])
+    report = scan(agent, cases=tasks, trials=5, outcome=lambda r: r["answer"],
+                  projector=ReActProjector())
 """
 
 from __future__ import annotations
@@ -19,11 +20,9 @@ import asyncio
 import inspect
 from typing import Any, Callable
 
-from agents.trajectory import (
-    DEFAULT_MAX_ITERATIONS,
-    record_trajectory,
-    steps_from_messages,
-)
+__all__ = ["LangGraphAgent", "ReActProjector"]
+
+from agents.trajectory import ReActProjector, record_raw_trace, steps_from_messages
 
 
 class LangGraphAgent:
@@ -37,14 +36,12 @@ class LangGraphAgent:
         extract_answer: Callable[[Any], Any],
         extract_messages: Callable[[Any], list] | None = None,
         config: dict | None = None,
-        max_iterations: int = DEFAULT_MAX_ITERATIONS,
     ) -> None:
         self.app = app
         self.build_state = build_state
         self.extract_answer = extract_answer
         self.extract_messages = extract_messages or _default_messages
         self.config = config or {"recursion_limit": 30}
-        self.max_iterations = max_iterations
 
     def __call__(self, task_input: Any, trace) -> dict:
         state = self.build_state(task_input)
@@ -52,12 +49,8 @@ class LangGraphAgent:
 
         steps = steps_from_messages(self.extract_messages(final_state))
         answer = self.extract_answer(final_state)
-        summary = record_trajectory(
-            trace,
-            question=_question_text(task_input),
-            steps=steps,
-            answer=answer,
-            max_iterations=self.max_iterations,
+        summary = record_raw_trace(
+            trace, question=_question_text(task_input), steps=steps, answer=answer
         )
         return {"answer": answer, "trajectory": summary}
 

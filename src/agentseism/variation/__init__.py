@@ -6,7 +6,12 @@ from agentseism.variation.outcome import (
     outcome_modes,
     task_variation,
 )
-from agentseism.variation.events import PairDivergence, pair_divergences
+from agentseism.variation.features import (
+    PairDivergence,
+    comparator_for,
+    divergence,
+    feature_divergences,
+)
 
 __all__ = [
     "TaskVariation",
@@ -14,5 +19,7 @@ __all__ = [
     "outcome_modes",
     "task_variation",
     "PairDivergence",
-    "pair_divergences",
+    "feature_divergences",
+    "comparator_for",
+    "divergence",
 ]

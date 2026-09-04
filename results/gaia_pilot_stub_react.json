@@ -1,15 +1,32 @@
 {
   "agent": "stub-react",
   "trials": 5,
+  "feature_schema_version": "react/1",
   "checks": {
     "run_ok_rate": 1.0,
-    "trace_completeness": 1.0,
-    "missing_core_slots": [],
+    "feature_completeness": 1.0,
+    "distinct_loop_lengths": 2,
     "median_consistency": 0.4,
     "tasks_with_variation": 9,
     "n_tasks": 10,
-    "truncation_rate": 0.0,
-    "varying_slots": 11,
+    "features_that_vary": 6,
+    "features_associated_with_outcome": 3,
+    "max_association": 0.9,
+    "noisy_but_inconsequential": [
+      "pre_final_reasoning"
+    ],
+    "comparator_complaints": [],
+    "agentseism_top3": [
+      "evidence_set",
+      "tool_set",
+      "tool_sequence"
+    ],
+    "correlation_top3": [
+      "evidence_set",
+      "tool_set",
+      "tool_sequence"
+    ],
+    "correlation_matches_us": true,
     "accuracy": 0.52
   },
   "passed": true,
