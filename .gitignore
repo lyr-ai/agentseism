@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+
+# raw experiment dumps (large, regenerable); summary artifacts are committed
+results/*_experiment.json

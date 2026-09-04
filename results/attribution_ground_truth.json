@@ -1,0 +1,45 @@
+{
+  "agent": "synthetic",
+  "weak_points": [
+    "retrieval",
+    "evidence_selection",
+    "hypothesis",
+    "decision"
+  ],
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "cases": 4,
+  "trials": 8,
+  "results": {
+    "agentseism": {
+      "at1": 1.0,
+      "at3": 1.0
+    },
+    "random": {
+      "at1": 0.0,
+      "at3": 0.5
+    },
+    "first_divergence": {
+      "at1": 0.175,
+      "at3": 0.25
+    },
+    "largest_diff": {
+      "at1": 0.0,
+      "at3": 1.0
+    },
+    "correlation": {
+      "at1": 0.8,
+      "at3": 1.0
+    }
+  }
+}
