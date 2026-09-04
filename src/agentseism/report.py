@@ -23,6 +23,7 @@ class ScanReport:
     experiment: Experiment
     tasks: list[TaskVariation] = field(default_factory=list)
     weak_points: list[WeakPoint] = field(default_factory=list)
+    excluded_slots: list[str] = field(default_factory=list)
     high_variation_threshold: float = HIGH_VARIATION
 
     @property
@@ -111,6 +112,12 @@ class ScanReport:
                 "variation across runs. Confirm with a controlled intervention.",
                 "",
             ]
+            if self.excluded_slots:
+                lines += [
+                    f"Excluded from ranking: {', '.join(self.excluded_slots)} "
+                    "(recorded as the outcome, not a step toward it).",
+                    "",
+                ]
         elif any(r.events for r in self.experiment.runs):
             lines += ["", "No aligned execution points scored above zero.", ""]
         else:

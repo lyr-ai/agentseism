@@ -89,6 +89,7 @@ def rank_weak_points(
     *,
     threshold: float = DIVERGENCE_THRESHOLD,
     min_coverage: float = 0.0,
+    exclude: Sequence[str] = (),
 ) -> list[WeakPoint]:
     """Rank execution points across one or more tasks.
 
@@ -96,13 +97,21 @@ def rank_weak_points(
     :func:`agentseism.variation.pair_divergences`. Slot metrics are averaged
     across tasks so that a weak point is a property of the agent, not of a
     single input.
+
+    ``exclude`` drops execution points by label. Use it for any point that *is*
+    the outcome rather than a step toward it: such a point has an outcome
+    association of 1.0 by construction and would always rank first, which says
+    nothing. What was excluded is reported, never dropped silently.
     """
+    excluded = set(exclude)
     accumulated: dict[str, dict] = {}
 
     for task_id, (slots, pairs) in per_task.items():
         if not pairs:
             continue
         for slot in slots:
+            if slot.label in excluded or slot.key in excluded:
+                continue
             local, propagation, association = _metrics_for_slot(
                 slot.key, slots, pairs, threshold
             )

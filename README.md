@@ -140,6 +140,40 @@ Read this as a harness check, not a research result: the synthetic agent is easy
 by construction, and correlation alone already reaches 0.80@1 on it. The number
 that matters comes from real agents with injected interventions (Week 5).
 
+## First agent: GAIA-style LangGraph agent
+
+```bash
+# offline plumbing check -- no API keys, not evidence for anything
+python experiments/natural_variation/gaia_pilot.py --stub
+
+# the real pilot: 10 tasks x 5 runs against your compiled LangGraph app
+python experiments/natural_variation/gaia_pilot.py --app my_module:app
+```
+
+The pilot answers three questions before the full 50 x 10 slice is worth paying
+for: do traces come back complete, does the answer vary at all, and does the
+projection keep the trajectory? It prints an explicit go/no-go verdict.
+
+Pieces involved:
+
+| file | what it does |
+|---|---|
+| `agents/langgraph_adapter.py` | wraps any compiled LangGraph app; duck-typed, no langchain import |
+| `agents/trajectory.py` | projects a variable-length ReAct loop onto alignable execution points |
+| `agents/gaia.py` | GAIA state, answer extraction, formatting-insensitive answer equivalence |
+| `benchmarks/gaia.py` | Level-1 slice spec (task ids only — GAIA is gated, so no data is vendored) |
+
+**ReAct loops are not fixed workflows.** One run takes three iterations, another
+takes seven, so occurrence-index alignment would pair a run's third model call
+with another run's detour. V0 aligns a projection instead — `tool_sequence`,
+`tool_set`, `evidence`, `n_steps` and the first K iterations — which keeps
+trajectory length visible as behavior rather than as missing data
+(DESIGN.md §11.1). Iterations past the window are counted and reported.
+
+**The comparator is not a grader.** Two runs that are identically wrong are
+behaviorally consistent, and AgentSeism says so. Correctness against the GAIA
+reference answer is recorded separately, as context.
+
 ## Known limitations (V0)
 
 - **Propagated variation looks like source variation.** A point downstream of the
@@ -149,6 +183,12 @@ that matters comes from real agents with injected interventions (Week 5).
   stably labelled are out of scope for V0 (DESIGN.md §11).
 - **No semantic comparator by default.** Text similarity is token overlap; pass
   your own comparator for anything that needs meaning.
+- **One comparator for every execution point.** A tool name, a retrieved
+  document and a step count are compared by the same rule today; per-slot
+  comparators are a known gap.
+- **The outcome must be excluded by hand.** A recorded point that *is* the
+  outcome has an association of 1.0 by construction, so pass
+  `exclude_slots=("final_answer",)` — the report states what was excluded.
 
 ## Layout
 

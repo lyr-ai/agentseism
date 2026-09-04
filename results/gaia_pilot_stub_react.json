@@ -1,0 +1,17 @@
+{
+  "agent": "stub-react",
+  "trials": 5,
+  "checks": {
+    "run_ok_rate": 1.0,
+    "trace_completeness": 1.0,
+    "missing_core_slots": [],
+    "median_consistency": 0.4,
+    "tasks_with_variation": 9,
+    "n_tasks": 10,
+    "truncation_rate": 0.0,
+    "varying_slots": 11,
+    "accuracy": 0.52
+  },
+  "passed": true,
+  "reasons": []
+}

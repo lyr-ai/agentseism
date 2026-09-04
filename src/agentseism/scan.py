@@ -53,6 +53,7 @@ def analyze(
     event_comparator: Comparator | str | None = None,
     threshold: float = DIVERGENCE_THRESHOLD,
     mode_threshold: float = 0.85,
+    exclude_slots: Sequence[str] = (),
 ) -> ScanReport:
     """Analyze an experiment that has already been run (or loaded from disk)."""
     tasks = [
@@ -63,13 +64,18 @@ def analyze(
     per_task = divergence_tables(
         experiment, comparator=comparator, event_comparator=event_comparator
     )
-    weak_points = rank_weak_points(per_task, threshold=threshold) if per_task else []
+    weak_points = (
+        rank_weak_points(per_task, threshold=threshold, exclude=exclude_slots)
+        if per_task
+        else []
+    )
 
     return ScanReport(
         agent_id=experiment.agent_id,
         experiment=experiment,
         tasks=tasks,
         weak_points=weak_points,
+        excluded_slots=list(exclude_slots),
     )
 
 
@@ -83,6 +89,7 @@ def scan(
     event_comparator: Comparator | str | None = None,
     agent_id: str = "agent",
     threshold: float = DIVERGENCE_THRESHOLD,
+    exclude_slots: Sequence[str] = (),
     save_to: str | None = None,
     **runner_kwargs: Any,
 ) -> ScanReport:
@@ -106,4 +113,5 @@ def scan(
         comparator=comparator,
         event_comparator=event_comparator,
         threshold=threshold,
+        exclude_slots=exclude_slots,
     )
