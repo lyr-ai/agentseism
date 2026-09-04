@@ -9,7 +9,7 @@ readme = "README.md"
 dependencies = []
 
 [project.urls]
-Homepage = "https://github.com/canis-minor/agentseism"
+Homepage = "https://github.com/lyr-ai/agentseism"
 Initiative = "https://github.com/canis-minor"
 
 [project.optional-dependencies]
