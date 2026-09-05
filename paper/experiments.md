@@ -205,6 +205,61 @@ Caveats:        Data collected with the guard at 30 graph steps, which censored
                 as failures, making the harness look 94% reliable when it had in
                 fact never failed.
 
-Next:           Do not scale this design. Look for an agent whose outcomes vary --
-                long-horizon, evidence-heavy, multi-decision -- and keep GAIA L1
-                as the stable comparison point.
+Identifiability:
+                Per-feature amplification, added after this run, is **not
+                estimable for any feature on this data: 0 of 6**. The obstacle is
+                not sample size.
+
+                `S_f = P(dY>0 | df>0)` and `A_f = S_f - P(dY>0)` are conditional
+                on the feature varying, so they need pairs where it *held still*
+                inside the same task to condition against. Within the three tasks
+                whose outcome varies, the features that vary, vary on nearly
+                every pair:
+
+                | feature              | 23dd907f | 3cef3a44 | 46719c30 | contrast |
+                |----------------------|----------|----------|----------|----------|
+                | initial_plan         | 3/3      | 10/10    | 10/10    | 0        |
+                | pre_final_reasoning  | 3/3      | 10/10    | 10/10    | 0        |
+                | evidence_set         | 2/3      | 9/10     | 10/10    | 2        |
+                | tool_call_count      | 2/3      | 8/10     | 9/10     | 4        |
+                | tool_sequence        | 2/3      | 8/10     | 9/10     | 4        |
+                | tool_set             | 0/3      | 6/10     | 0/10     | 17       |
+                | answer_format_retries| 0/3      | 0/10     | 0/10     | --       |
+                | formatter_changed    | 0/3      | 0/10     | 0/10     | --       |
+                | termination          | 0/3      | 0/10     | 0/10     | --       |
+
+                `initial_plan` and `pre_final_reasoning` have zero contrast: their
+                `A_f` of +0.017 is not "absorbed", it is not estimable, and no
+                number of runs creates a contrast pair. Precision is bounded by
+                the smaller side, so `tool_call_count` -- 32 varying pairs against
+                4 contrast pairs -- is a 4-pair estimate, not a 32-pair one.
+
+                A second trap: pooled across tasks, `tool_call_count` and
+                `tool_sequence` reach `A_f = +0.115` at `p = 0.025`, and
+                `tool_set` +0.365 at `p = 0.029`, which reads as signal.
+                Shuffling **within** task returns `p ~ 1.0` for every feature.
+                The design is hierarchical -- task, repeated runs, pairs -- so
+                pairs are not exchangeable across tasks, and outcome variation
+                concentrates in three of ten. A global null destroys the level it
+                needed to hold fixed, and what it then measures is task identity.
+
+                Stated as a constraint on the method, not on this agent:
+                **execution-feature amplification is estimable only where a
+                feature exhibits within-task contrast; pooling pairs across tasks
+                can manufacture significance by conflating task identity with
+                feature-outcome association.**
+
+Next:           Do not scale this design. GAIA L1 is retained as the
+                low-variation, low-identifiability control. Benchmark B is
+                selected on four criteria, the fourth added by this run:
+
+                1. long-horizon;
+                2. multiple intermediate decisions;
+                3. outcome genuinely varies across repeated runs;
+                4. key execution features exhibit within-task contrast --
+                   repeated runs of the *same* task where a feature sometimes
+                   holds and sometimes moves.
+
+                A feature that always varies and one that never varies are
+                equally unlocalizable. What carries information is recurring
+                alternative execution modes on a fixed input.

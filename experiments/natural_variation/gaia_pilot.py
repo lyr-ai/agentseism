@@ -14,20 +14,21 @@ from __future__ import annotations
 import argparse
 import importlib
 import json
+import random
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT / "src"), str(ROOT)]
 
-from agentseism import divergence_tables, scan  # noqa: E402
-from agentseism.localization import correlation_only  # noqa: E402
-from agentseism.features import MISSING, ObservationRole  # noqa: E402
-from agentseism.variation import consistency  # noqa: E402
 from agents import gaia, gaia_markazhang  # noqa: E402
 from agents.gaia import answer_equivalent, is_correct  # noqa: E402
 from agents.langgraph_adapter import LangGraphAgent  # noqa: E402
 from agents.trajectory import ReActProjector  # noqa: E402
+from agentseism import divergence_tables, scan  # noqa: E402
+from agentseism.features import MISSING, ObservationRole  # noqa: E402
+from agentseism.localization import correlation_only  # noqa: E402
+from agentseism.variation import consistency  # noqa: E402
 
 ADAPTERS = {
     # The multi-node GAIA agent (github.com/MarkAZhang/gaia-agent). Streams,
@@ -102,7 +103,12 @@ def gaia_tasks(n: int) -> list[dict]:
     look at the *same* slice, not a new one. Only the first run writes the spec.
     """
     from benchmarks.gaia import (
-        SPEC_DIR, check_access, load_gaia, save_spec, select, tasks_from_spec,
+        SPEC_DIR,
+        check_access,
+        load_gaia,
+        save_spec,
+        select,
+        tasks_from_spec,
     )
 
     ok, message = check_access()
@@ -262,6 +268,167 @@ def variation_survival(tables, schema=None) -> float | None:
                 if pair.outcome > 0:
                     survived += 1
     return (survived / diverged) if diverged else None
+
+
+def feature_survival(tables, schema=None, min_pairs: int = 20) -> dict:
+    """Per-feature survival and amplification.
+
+    ``variation_survival`` asks whether variation survives at all. This asks
+    *whose* variation survives::
+
+        S_f  = P(dY > 0 | df > 0)
+        A_f  = P(dY > 0 | df > 0) - P(dY > 0)
+
+    ``S_f`` alone rewards whatever varies most often, because a feature that
+    diverges on nearly every pair inherits the base rate. ``A_f`` subtracts that
+    base rate, so it asks the question the thesis actually cares about: when this
+    feature varies, is the outcome *more* likely to vary than it otherwise would
+    be? A feature whose variation is routinely absorbed scores near zero however
+    noisy it is.
+
+    Neither is causal. Both are conditional frequencies over run pairs, and a
+    feature can score high by moving with an upstream cause it does not produce
+    -- separating those needs intervention, not a bigger denominator.
+
+    Features seen varying on fewer than ``min_pairs`` pairs are reported with
+    ``enough=False`` rather than a number: with a handful of pairs these ratios
+    swing between 0 and 1 on one flipped outcome.
+
+    ``identifiable`` is the stricter condition, and the one that actually bites.
+    Both quantities are conditional on the feature varying, so they need pairs
+    where it *held still* inside the same task to condition against. A feature
+    that diverges on every pair of every task whose outcome varies has no such
+    pair, and no number of runs creates one: ``S_f`` then just reproduces the
+    base rate and ``A_f`` collapses to zero, which reads like "absorbed" when it
+    means "not estimable here". A permutation test that shuffles outcomes across
+    tasks will still report a small p-value for such a feature, because it is
+    then measuring task identity; shuffling within task returns p ~ 1.
+    """
+    feature_names = None
+    if schema is not None:
+        feature_names = {
+            s.name for s in schema.specs if s.role is ObservationRole.FEATURE
+        }
+
+    total = base = 0
+    varied: dict[str, int] = {}
+    co_varied: dict[str, int] = {}
+    # Contrast is counted only over tasks whose outcome varies: elsewhere there
+    # is nothing for the feature to be conditioned against in the first place.
+    held_still: dict[str, int] = {}
+    informative_pairs = 0
+    for _columns, pairs in tables.values():
+        task_varies = any(pair.outcome > 0 for pair in pairs)
+        for pair in pairs:
+            total += 1
+            outcome_moved = pair.outcome > 0
+            base += outcome_moved
+            if task_varies:
+                informative_pairs += 1
+            for name, d in pair.features.items():
+                if feature_names is not None and name not in feature_names:
+                    continue
+                if d > 0:
+                    varied[name] = varied.get(name, 0) + 1
+                    co_varied[name] = co_varied.get(name, 0) + outcome_moved
+                elif task_varies:
+                    held_still[name] = held_still.get(name, 0) + 1
+    if not total:
+        return {}
+
+    base_rate = base / total
+    out = {"_base_rate": base_rate, "_pairs": total}
+    for name, n in sorted(varied.items()):
+        s = co_varied[name] / n
+        contrast = held_still.get(name, 0)
+        out[name] = {
+            "survival": s,
+            "amplification": s - base_rate,
+            "pairs_with_variation": n,
+            "contrast_pairs": contrast,
+            # Precision is bounded by the *smaller* side of the comparison, so
+            # 32 varying pairs against 4 contrast pairs is a 4-pair estimate.
+            "enough": n >= min_pairs and contrast >= min_pairs,
+            "identifiable": contrast > 0,
+        }
+    out["_informative_pairs"] = informative_pairs
+    return out
+
+
+def within_task_permutation(
+    tables, schema=None, trials: int = 20000, seed: int = 0
+) -> dict[str, float]:
+    """Two-sided p-value for each feature's amplification, shuffling within task.
+
+    The design is hierarchical -- task, then repeated runs, then pairs between
+    them -- so run pairs are not exchangeable across tasks. Outcome variation
+    concentrates in a few tasks, and a feature that happens to vary more in those
+    tasks will look associated with the outcome under a null that shuffles
+    globally, because that null has already destroyed the level it needed to
+    hold fixed. What it measures then is task identity.
+
+    Shuffling outcome divergence *within* each task holds the task fixed and asks
+    the question that was intended: given this task, do pairs where the feature
+    moved end differently more often than pairs where it did not?
+
+    A feature with no within-task contrast returns 1.0 -- permuting cannot change
+    a conditional mean taken over every pair -- which is the correct answer, and
+    the reason :func:`feature_survival` reports ``identifiable`` alongside the
+    estimate rather than the estimate alone.
+    """
+    feature_names = None
+    if schema is not None:
+        feature_names = {
+            s.name for s in schema.specs if s.role is ObservationRole.FEATURE
+        }
+
+    groups = []
+    for _columns, pairs in tables.values():
+        labels = [1 if pair.outcome > 0 else 0 for pair in pairs]
+        varies = [
+            {
+                name
+                for name, d in pair.features.items()
+                if d > 0 and (feature_names is None or name in feature_names)
+            }
+            for pair in pairs
+        ]
+        if labels:
+            groups.append((labels, varies))
+    if not groups:
+        return {}
+
+    names = sorted({n for _l, vs in groups for v in vs for n in v})
+    index = {
+        name: [
+            (g, i)
+            for g, (_l, vs) in enumerate(groups)
+            for i, v in enumerate(vs)
+            if name in v
+        ]
+        for name in names
+    }
+    total = sum(len(labels) for labels, _v in groups)
+
+    def amplification(state, name):
+        cells = index[name]
+        hit = sum(state[g][i] for g, i in cells)
+        base = sum(sum(labels) for labels in state) / total
+        return hit / len(cells) - base
+
+    truth = [list(labels) for labels, _v in groups]
+    observed = {n: amplification(truth, n) for n in names}
+
+    rng = random.Random(seed)
+    shuffled = [list(labels) for labels in truth]
+    at_least_as_extreme = dict.fromkeys(names, 0)
+    for _ in range(trials):
+        for labels in shuffled:
+            rng.shuffle(labels)
+        for name in names:
+            if abs(amplification(shuffled, name)) >= abs(observed[name]) - 1e-12:
+                at_least_as_extreme[name] += 1
+    return {n: at_least_as_extreme[n] / trials for n in names}
 
 
 def censored(runs) -> list:
