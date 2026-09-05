@@ -44,10 +44,12 @@ A failure prints which of the two steps is missing. Use the **validation**
 split; test-split answers are private.
 
 Metadata comes from the repo's parquet files
-(`2023/validation/metadata.level1.parquet`) via `huggingface_hub` + `pandas` —
-the older loading-script API does not match what the repo ships today, and no
-`datasets` dependency is needed. `benchmarks/gaia.py` stores only task ids,
-never dataset content.
+(`2023/validation/metadata.level1.parquet`) via `huggingface_hub` + `pandas` +
+`pyarrow` — the older loading-script API does not match what the repo ships
+today, and no `datasets` dependency is needed. `pyarrow` is easy to miss:
+`pandas` imports fine without it and only fails inside `read_parquet`, after
+authorization has already succeeded, so the failure looks like an access problem
+and is not. `benchmarks/gaia.py` stores only task ids, never dataset content.
 
 ## 2. The agent
 
@@ -66,6 +68,22 @@ different agent than the one whose reported numbers we are citing.
 
 The full install is heavy (docling and faster-whisper pull ML runtimes). Budget
 several GB and some minutes.
+
+**`uv sync` is not the whole install.** `nltk` ships no corpora, and the first
+real run dies in a tool with `LookupError: Resource stopwords not found`. Fetch
+them once, before spending anything:
+
+```bash
+.venv/bin/python -c "import nltk; [nltk.download(r, quiet=True) for r in ('stopwords','punkt','punkt_tab')]"
+```
+
+The model weights are worth pre-fetching too, for the same reason — they are a
+~1.5 GB download that needs no API keys, so pulling them early keeps them off
+the critical path once runs cost money:
+
+```bash
+PYTHONPATH=src .venv/bin/python -c "import tools.document_parser, tools.audio_transcriber"
+```
 
 **Use macOS 14+ or Linux.** As of `b53f536` the lock pins `onnxruntime==1.24.4`
 and `av==17.0.0`; neither ships a macOS 13 arm64 wheel, so `uv sync` fails there
@@ -91,7 +109,8 @@ does not work, nothing downstream is worth debugging.
 
 ## 3. Expose the graph
 
-AgentSeism needs the compiled graph and the repo's own system prompt. A five-line
+AgentSeism needs three things from their checkout: the compiled graph, the
+repo's own system prompt, and **the config built alongside the graph**. A small
 module inside their checkout is enough:
 
 ```python
@@ -103,8 +122,19 @@ load_dotenv()  # their library does not load .env; only their own scripts do
 from agent_graph.build_agent_graph_and_config import build_agent_graph_and_config
 from agent_graph.build_system_prompt import build_system_prompt  # noqa: F401,E402
 
-app = build_agent_graph_and_config().graph
+_bundle = build_agent_graph_and_config()
+
+app = _bundle.graph
+config = _bundle.config
 ```
+
+**Export `config`, not just `graph`.** `build_agent_graph_and_config()` returns
+both, and the config carries `configurable.deps` -- the tool-bound
+`ChatAnthropic` that `core_agent` reads on *every* turn. Handing the pilot a
+bare graph is not a degraded run: it is `KeyError: 'deps'` on the first node, and
+the harness records it as a failed execution with no error text, so the pilot
+reports `runs completed 0%` and nothing says why. Their own
+`invoke_agent_with_user_message` passes this config; so must we.
 
 `load_dotenv()` must come first and must run before the import: `.env` is read by
 their `scripts/*.py` entry points, not by the package, and the graph builder
@@ -124,9 +154,14 @@ PYTHONPATH=/path/to/gaia-agent/src:/path/to/gaia-agent \
 python experiments/natural_variation/gaia_pilot.py \
     --app agentseism_entry:app \
     --system-prompt agentseism_entry:build_system_prompt \
+    --config agentseism_entry:config \
     --adapter gaia-graph \
     --tasks 10 --trials 5
 ```
+
+`--tasks` truncates the frozen slice; it never rewrites it. A `--tasks 1 --trials 2`
+run is a ~$1.20 look at the same first task the full pilot starts with, which is
+the cheapest way to satisfy §5 against the real graph before paying for 50 runs.
 
 Offline plumbing check, no keys, no cost:
 
@@ -153,9 +188,23 @@ projected answer_format_retries     1
 
 Two things to confirm with your own eyes:
 
-1. **`evidence_set` holds tool output, not a wrapper.** If entries look like
+1. **`evidence_set` holds evidence, not a response envelope.** Two failures
+   look identical in the report and have different causes. If entries look like
    `{'type': 'text', ...}` or a `ToolMessage(...)` repr, the set comparator is
-   comparing serialization noise and the evidence numbers mean nothing.
+   comparing serialization noise. If entries are the *provider's* full response,
+   check what the provider stamps into every call: `gaia-mz/1` compared raw
+   search responses carrying a per-call `request_id` UUID, a `response_time`
+   float, and a per-call `id` on each result, so evidence similarity of 1 was
+   impossible by construction and the feature reported maximum variation on
+   every task. The report cannot tell you this -- `evidence_set` simply appears
+   in `noisy but inconsequential`, which §6 counts as a *good* sign.
+
+   The cheap test does not need a second run. Take one captured response, change
+   only the transport fields, and project both: identical evidence must
+   canonicalize to the same entry. Then compare two real runs and confirm
+   genuine differences still show. Under `gaia-mz/1` those two cases both scored
+   0.0 -- the comparator could not tell "same documents, different UUIDs" from
+   "different documents" at all.
 2. **`answer_format_retries` counts format rejections**, not every visit to the
    check node. It is derived from the role recorded on each streamed message; if
    that role does not come through on the real graph, the count is

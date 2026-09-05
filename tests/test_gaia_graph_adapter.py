@@ -131,3 +131,75 @@ def test_scan_localizes_the_consequential_choice():
     assert report.consistency < 1.0
     assert report.ranking.positioned[0].name == "evidence_set"
     assert report.ranking.aggregates[0].name in ("tool_set", "tool_sequence")
+
+
+# --- gaia-mz/2: evidence semantics, not response serialization -------------
+
+def _search_response(results, **transport):
+    body = {"query": "q", "follow_up_questions": None, "results": results}
+    body.update({"request_id": "req-0", "response_time": 0.5, **transport})
+    return body
+
+
+def _result(url, content, **noise):
+    body = {"url": url, "title": "T", "content": content, "id": "res-0", "score": 0.5}
+    body.update(noise)
+    return body
+
+
+def _canon(response):
+    from agents.gaia_markazhang import canonical_evidence
+
+    return set(canonical_evidence(response))
+
+
+def test_transport_metadata_does_not_create_evidence_divergence():
+    """The gaia-mz/1 defect: a fresh request_id per call made equality impossible."""
+    docs = [_result("https://a.test/x", "hello")]
+    first = _search_response(docs, request_id="uuid-1", response_time=0.7)
+    second = _search_response(
+        [_result("https://a.test/x", "hello", id="res-9")],
+        request_id="uuid-2",
+        response_time=9.9,
+    )
+    assert first != second, "the raw responses genuinely differ"
+    assert _canon(first) == _canon(second)
+
+
+def test_provider_ranking_is_not_evidence():
+    same_docs_reranked = _search_response([_result("https://a.test/x", "hello", score=0.99)])
+    assert _canon(_search_response([_result("https://a.test/x", "hello")])) == _canon(
+        same_docs_reranked
+    )
+
+
+def test_different_documents_still_diverge():
+    a = _canon(_search_response([_result("https://a.test/x", "hello")]))
+    b = _canon(_search_response([_result("https://b.test/y", "different")]))
+    assert a != b
+    assert not (a & b)
+
+
+def test_partial_overlap_is_partial():
+    a = _canon(_search_response([_result("https://a.test/x", "1"), _result("https://a.test/y", "2")]))
+    b = _canon(_search_response([_result("https://a.test/x", "1"), _result("https://a.test/z", "3")]))
+    assert 0 < len(a & b) < len(a | b)
+
+
+def test_url_canonicalization_keeps_query_but_not_case_or_trailing_slash():
+    a = _canon(_search_response([_result("https://WWW.YouTube.com/watch?v=abc", "c")]))
+    b = _canon(_search_response([_result("https://www.youtube.com/watch?v=abc", "c")]))
+    assert a == b
+    other = _canon(_search_response([_result("https://www.youtube.com/watch?v=different", "c")]))
+    assert a != other, "the query string is document identity here, not noise"
+
+
+def test_non_search_tool_output_passes_through():
+    from agents.gaia_markazhang import canonical_evidence
+
+    assert canonical_evidence("stdout: 42") == ["stdout: 42"]
+    assert canonical_evidence("  spaced   out  ") == ["spaced out"]
+
+
+def test_schema_version_records_the_change():
+    assert SCHEMA.version == "gaia-mz/2"

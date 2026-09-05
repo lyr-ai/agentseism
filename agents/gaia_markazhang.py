@@ -29,13 +29,30 @@ Three properties of that graph drive this adapter:
 
 from __future__ import annotations
 
+import json
 from typing import Any, Callable
+from urllib.parse import urlsplit, urlunsplit
 
+from agents.gaia import SYSTEM_PROMPT, answer_equivalent
 from agentseism.features import FeatureSchema, FeatureSpec, ObservationRole
 from agentseism.types import Run
-from agents.gaia import SYSTEM_PROMPT, answer_equivalent
 
-SCHEMA_VERSION = "gaia-mz/1"
+SCHEMA_VERSION = "gaia-mz/2"
+"""Schema history.
+
+``gaia-mz/1`` compared ``evidence_set`` entries as the raw serialization of each
+tool response. For the search tool that response carries a fresh ``request_id``
+UUID and a ``response_time`` float per call, so two runs that retrieved
+byte-identical documents still compared unequal: evidence similarity of 1 was
+impossible by construction, and the resulting variation would have propagated
+through a positioned feature as if it were behavior. Rejected during the §5
+instrumentation check, before any pilot data was collected.
+
+``gaia-mz/2`` compares canonicalized evidence content instead: what was
+retrieved, not how the provider served it. Transport and runtime metadata are
+excluded from the comparison and remain in the raw trace, where they stay
+available as variables in their own right.
+"""
 
 NODE_CORE = "core_agent"
 NODE_TOOLS = "tools"
@@ -49,6 +66,24 @@ TERMINAL_NODES = (NODE_FORMAT, NODE_REFUSAL, NODE_NO_TOOL)
 TRIMMED = "removed"
 """What memory_management writes over earlier tool results."""
 
+TRANSPORT_KEYS = frozenset({"request_id", "response_time", "id"})
+"""Per-call transport metadata: identity of the HTTP call, not of the evidence.
+
+``request_id`` and ``response_time`` sit on the response; ``id`` is assigned per
+result *per call*, so the same document carries a different one each time it is
+returned. None of the three says anything about what the agent read.
+
+Excluded from ``evidence_set`` only. The raw trace keeps every response intact,
+so a later experiment can still ask whether provider latency relates to outcome.
+"""
+
+RANKING_KEYS = frozenset({"score"})
+"""Provider ranking, which is retrieval behavior rather than evidence content.
+
+Kept out of ``evidence_set`` so that "the agent saw the same documents" and "the
+provider ordered them the same way" stay separable questions.
+"""
+
 MODEL_ROLE = "model"
 """Role recorded for assistant messages by the raw-trace recorder."""
 
@@ -59,7 +94,8 @@ SCHEMA = FeatureSchema(
         FeatureSpec("initial_plan", comparator="text",
                     description="first core_agent output, before any tool result"),
         FeatureSpec("evidence_set", comparator="set", predecessors=("initial_plan",),
-                    description="tool results as produced, captured before memory_management trims them"),
+                    description="canonicalized evidence retrieved by tools, captured before "
+                                "memory_management trims it; transport and ranking metadata excluded"),
         FeatureSpec("pre_final_reasoning", comparator="text", predecessors=("evidence_set",),
                     description="last core_agent output, the turn that emits 'Ans:'; negative control"),
         FeatureSpec("formatter_changed_answer", comparator="exact",
@@ -109,7 +145,9 @@ class GaiaGraphProjector:
             )
 
         evidence = [
-            str(e.output) for e in tools if str(e.output) != TRIMMED
+            item
+            for e in tools if str(e.output) != TRIMMED
+            for item in canonical_evidence(e.output)
         ]
         sequence = [e.input for e in tools if e.input]
         raw_answer = _last_answer(checks)
@@ -130,6 +168,73 @@ class GaiaGraphProjector:
             "termination": _termination(run),
             "final_answer": formatted,
         }
+
+
+def _canonical_url(url: str) -> str:
+    """Same document fetched twice should canonicalize to the same string.
+
+    Deliberately conservative: scheme and host are case-normalized and a
+    trailing slash is dropped, but the query is kept, because for several
+    sources in this slice the query *is* the document identity
+    (``youtube.com/watch?v=...``).
+    """
+    parts = urlsplit(url.strip())
+    if not parts.netloc:
+        return url.strip()
+    path = parts.path.rstrip("/") or "/"
+    return urlunsplit(
+        (parts.scheme.lower(), parts.netloc.lower(), path, parts.query, "")
+    )
+
+
+def _normalize_text(value: Any) -> str:
+    return " ".join(str(value or "").split())
+
+
+def canonical_evidence(output: Any) -> list[str]:
+    """Evidence items a tool exposed to the agent, without transport metadata.
+
+    ``evidence_set`` answers "did the agent see the same information?". The raw
+    response answers a different question -- "did the provider return the same
+    bytes?" -- and the two diverge on every call, because the search tool stamps
+    a fresh ``request_id`` and ``response_time`` into each response (see
+    ``SCHEMA_VERSION``).
+
+    A search-shaped response is projected to one entry per retrieved result,
+    keyed by canonical URL and normalized content. Anything else -- code output,
+    parsed documents, transcripts -- is passed through as normalized text, since
+    for those tools the response *is* the evidence.
+    """
+    raw = output if isinstance(output, (dict, list)) else _parse_json(output)
+
+    if isinstance(raw, dict) and isinstance(raw.get("results"), list):
+        items = []
+        for result in raw["results"]:
+            if not isinstance(result, dict):
+                items.append(_normalize_text(result))
+                continue
+            body = {
+                k: _normalize_text(v)
+                for k, v in sorted(result.items())
+                if k not in TRANSPORT_KEYS and k not in RANKING_KEYS
+            }
+            if "url" in result:
+                body["url"] = _canonical_url(str(result["url"]))
+            items.append(json.dumps(body, sort_keys=True, ensure_ascii=False))
+        return items
+
+    if isinstance(raw, dict):
+        body = {k: v for k, v in raw.items() if k not in TRANSPORT_KEYS}
+        return [json.dumps(body, sort_keys=True, ensure_ascii=False, default=str)]
+
+    return [_normalize_text(output)]
+
+
+def _parse_json(value: Any) -> Any:
+    try:
+        return json.loads(value) if isinstance(value, str) else None
+    except (TypeError, ValueError):
+        return None
 
 
 def _content(event) -> str:

@@ -50,6 +50,7 @@ ADAPTERS = {
 }
 
 PILOT_TRIALS = 5
+RECURSION_LIMIT = 30
 USEFUL_ASSOCIATION = 0.3
 NOISY_VARIATION = 0.3
 
@@ -79,14 +80,31 @@ def stub_tasks(n: int) -> list[dict]:
 
 
 def gaia_tasks(n: int) -> list[dict]:
-    from benchmarks.gaia import check_access, load_gaia, save_spec, select
+    """The frozen pilot slice, truncated to ``n``.
+
+    An existing spec is read, never rewritten: the slice is frozen so that runs
+    from different days are comparable, and a smaller ``--tasks`` is a cheaper
+    look at the *same* slice, not a new one. Only the first run writes the spec.
+    """
+    from benchmarks.gaia import (
+        SPEC_DIR, check_access, load_gaia, save_spec, select, tasks_from_spec,
+    )
 
     ok, message = check_access()
     if not ok:
         raise SystemExit(f"GAIA access: {message}")
     print(f"GAIA access: {message}")
 
-    tasks = select(load_gaia(), n)
+    rows = load_gaia()
+    spec = SPEC_DIR / "gaia_pilot.json"
+    if spec.exists():
+        tasks = tasks_from_spec(rows, "pilot")
+        print(f"slice spec read from {spec.relative_to(ROOT)} ({len(tasks)} tasks)")
+        if n < len(tasks):
+            print(f"  using the first {n} of them; the spec is unchanged")
+        return tasks[:n]
+
+    tasks = select(rows, n)
     print(f"slice spec written to {save_spec(tasks, 'pilot').relative_to(ROOT)}")
     return tasks
 
@@ -294,6 +312,11 @@ def main() -> None:
         "--system-prompt",
         help="module:attr of the agent repo's own build_system_prompt(file_path)",
     )
+    parser.add_argument(
+        "--config",
+        help="module:attr of the agent repo's own RunnableConfig, if its nodes "
+             "read anything from config['configurable']",
+    )
     parser.add_argument("--tasks", type=int, default=10)
     parser.add_argument("--trials", type=int, default=PILOT_TRIALS)
     parser.add_argument(
@@ -324,8 +347,24 @@ def main() -> None:
     else:
         build_state = build_state()
 
+    # A graph whose nodes read config["configurable"] is not runnable without the
+    # config its authors build alongside it -- for the GAIA graph that is the
+    # tool-bound model in `deps`, read by core_agent on every turn. Keep the
+    # adapter's recursion limit unless the agent sets its own.
+    agent_config = None
+    if args.config:
+        agent_config = {"recursion_limit": RECURSION_LIMIT, **load_attr(args.config)}
+    elif args.app and not args.stub:
+        print(
+            "warning: no --config given. If this agent's nodes read "
+            "config['configurable'], every run will fail."
+        )
+
     agent = LangGraphAgent(
-        app, build_state=build_state, extract_answer=adapter["extract_answer"]
+        app,
+        build_state=build_state,
+        extract_answer=adapter["extract_answer"],
+        config=agent_config,
     )
     report = scan(
         agent,
