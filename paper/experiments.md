@@ -441,3 +441,54 @@ Reading:        The conclusion is unchanged -- still 0 of 6 features estimable,
                 is the more dangerous of the two. Every `A_f` cited in the entries
                 above this one was computed under the superseded form and should
                 be read as such; none of them supported a conclusion that changes.
+
+---
+
+## 2026-09-05 — Benchmark B step 0: open_deep_research feasibility (engineering only)
+
+Agent:          `langchain-ai/open_deep_research` @ `1b7d2e8`
+Runs:           1, reduced configuration (3 research units / 3 iterations / 5 tool
+                calls, against defaults of 5 / 6 / 10)
+Cost:           ~60s wall clock, roughly $0.3-0.8 by token estimate
+
+**Not Benchmark B data.** Pre-registered as engineering calibration only: it does
+not enter H1 or H2 and is not compared with GAIA.
+
+Result:         Connecting AgentSeism to this graph needs three changes, not the
+                none that was estimated from the graph structure alone.
+
+                1. Its nodes are async-only. `stream()` exists and raises from
+                   *inside* the first node rather than at the call, so the
+                   adapter cannot decide on `hasattr(app, "stream")`. Fixed:
+                   `astream` is used when sync capture fails that way, and
+                   deliberately not by falling back to `invoke`, which would
+                   silently drop stream capture on a history-rewriting graph.
+                2. `research_supervisor` is a compiled subgraph; its internals
+                   need `subgraphs=True` to appear at all. Not done.
+                3. The trajectory recorder reads `delta["messages"]` only. Not
+                   done, and the most serious of the three.
+
+                With (1) fixed, a full run produced a 9,238-character report from
+                exactly one captured node:
+
+                    events_by_node: intake 1, final_report_generation 1,
+                                    final_submission 1
+
+                `intake` and `final_submission` are AgentSeism's own. The research
+                phase ran and left no trace, because this graph carries behavior
+                in `research_brief`, `supervisor_messages`, `notes` and
+                `raw_notes`, and only the final node writes `messages`.
+
+Reading:        The limitation is ours, not the agent's. Trajectory capture
+                assumes LangChain-message-shaped state, which GAIA's agent
+                happened to satisfy because it is a `MessagesState` graph. On a
+                graph that keeps its decisions elsewhere, zero execution features
+                are extractable and H2 cannot be asked at all.
+
+                So the earlier estimate that this agent was "adapter-free" was
+                wrong: it read the graph topology and not the state shape. The
+                two candidates now cost about the same to reach. What separates
+                them is what the work buys -- open_deep_research would still lack
+                a discrete outcome afterwards, while Ambig-DS already has one and
+                lacks only a published build script. Availability is the kind of
+                problem an email can solve; experimental design is not.

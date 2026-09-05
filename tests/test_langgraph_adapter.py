@@ -1,8 +1,11 @@
+import pytest
+
 from agents.gaia import answer_equivalent, build_state, extract_answer, outcome
 from agents.langgraph_adapter import LangGraphAgent
 from agents.stub_react import StubReActApp
 from agents.trajectory import ReActProjector
 from agentseism import scan
+from agentseism.runner.experiment import TraceCollector
 
 CASES = [
     {"id": f"stub-{i}", "input": {"task_id": f"stub-{i}", "question": f"q{i}", "file_name": ""}}
@@ -106,3 +109,53 @@ def test_deterministic_app_shows_no_variation():
     report = _scan(StubReActApp(branch_prob=0.0, detour_prob=0.0), trials=4)
     assert report.consistency == 1.0
     assert all(w.score == 0.0 for w in report.weak_points)
+
+
+# --- async-only graphs (open_deep_research shape) ----------------------------
+
+class _AsyncOnlyApp:
+    """A graph whose nodes are async: stream() exists but raises from inside.
+
+    This is the shape langgraph produces for an async-only graph, and it is why
+    the adapter cannot decide on `hasattr(app, "stream")` alone.
+    """
+
+    def __init__(self, updates):
+        self._updates = updates
+
+    def stream(self, state, config=None, stream_mode="updates"):
+        raise TypeError('No synchronous function provided to "node_a".')
+
+    async def astream(self, state, config=None, stream_mode="updates"):
+        for update in self._updates:
+            yield update
+
+
+def test_async_only_graph_is_captured_by_streaming():
+    updates = [
+        {"node_a": {"messages": [{"role": "assistant", "content": "a"}]}},
+        {"node_b": {"messages": [{"role": "assistant", "content": "b"}]}},
+    ]
+    agent = LangGraphAgent(
+        _AsyncOnlyApp(updates),
+        build_state=lambda x: {"messages": []},
+        extract_answer=lambda s: "done",
+    )
+    collector = TraceCollector("async:0")
+    out = agent({"question": "q"}, trace=collector)
+    assert out["answer"] == "done"
+    assert {e.name for e in collector.events} >= {"node_a", "node_b"}
+
+
+def test_sync_type_errors_that_are_not_about_async_still_raise():
+    class Broken(_AsyncOnlyApp):
+        def stream(self, state, config=None, stream_mode="updates"):
+            raise TypeError("build_state returned the wrong shape")
+
+    agent = LangGraphAgent(
+        Broken([]),
+        build_state=lambda x: {"messages": []},
+        extract_answer=lambda s: "done",
+    )
+    with pytest.raises(TypeError, match="wrong shape"):
+        agent({"question": "q"}, trace=TraceCollector("async:1"))

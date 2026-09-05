@@ -67,7 +67,7 @@ class LangGraphAgent:
         question = _question_text(task_input)
 
         if self._streams():
-            updates = list(self.app.stream(state, self.config, stream_mode="updates"))
+            updates = self._stream_updates(state)
             summary = record_graph_stream(trace, question=question, updates=updates)
             answer = self.extract_answer(_state_from_updates(state, updates))
             trace.record("final_submission", "final_submission", output=answer)
@@ -84,10 +84,41 @@ class LangGraphAgent:
     def _streams(self) -> bool:
         if self.capture == "invoke":
             return False
-        has_stream = callable(getattr(self.app, "stream", None))
+        has_stream = callable(getattr(self.app, "stream", None)) or self._astreams()
         if self.capture == "stream" and not has_stream:
             raise TypeError("capture='stream' but the app has no stream()")
         return has_stream
+
+    def _astreams(self) -> bool:
+        return callable(getattr(self.app, "astream", None))
+
+    def _stream_updates(self, state: Any) -> list:
+        """Node-by-node updates, from whichever streaming API the graph offers.
+
+        A graph whose nodes are async-only still exposes ``stream``; it raises
+        from inside the first node rather than at the call, so sync capture has
+        to be attempted and can fail late. Stream capture is mandatory for
+        history-rewriting graphs, so falling back to ``invoke`` here would
+        silently change what is measured -- the async path is used instead.
+        """
+        if callable(getattr(self.app, "stream", None)):
+            try:
+                return list(self.app.stream(state, self.config, stream_mode="updates"))
+            except TypeError as exc:
+                if not self._astreams() or "synchronous" not in str(exc):
+                    raise
+        if not self._astreams():
+            raise TypeError("app has neither a usable stream() nor astream()")
+
+        async def _collect() -> list:
+            return [
+                update
+                async for update in self.app.astream(
+                    state, self.config, stream_mode="updates"
+                )
+            ]
+
+        return asyncio.run(_collect())
 
     def _invoke(self, state: Any) -> Any:
         invoke = getattr(self.app, "invoke", None)
