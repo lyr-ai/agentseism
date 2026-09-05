@@ -333,3 +333,73 @@ Caveat:         The abstraction ladder still matters for Benchmark B even though
                 nothing here, but on a benchmark with recurring retrieval modes
                 the same move would need a stopping rule. Repeatable enough to
                 estimate, specific enough to keep behaviors apart.
+
+---
+
+## 2026-09-05 — answer-space structure (offline); supersedes the Benchmark B criteria
+
+Agent:          same 50 executions; nothing re-run
+Artifact:       `results/gaia_pilot_agentseism_entry_app_experiment.json`
+Cost:           $0
+
+Question:       Why does GAIA L1 show large execution variation and almost no
+                outcome variation? Two readings: the agent is robust, or the
+                tasks have an attractor strong enough that any adequate path
+                lands on the same answer. These recommend opposite next steps.
+
+Result:         Every task whose outcome stayed fixed has a single determined
+                answer -- `6`, `Right`, `Wojciech`, `519`, `Rockhopper penguin`,
+                `Maktay mato apple`, a logical equivalence. None of the three
+                whose outcome moved does:
+
+                | task     | answer space          | observed variation                |
+                |----------|-----------------------|-----------------------------------|
+                | 3cef3a44 | composable (a set)    | differ by one element (`zucchini`) |
+                | 23dd907f | interpretive          | `2` vs `1` -- what counts as a stanza |
+                | 46719c30 | ambiguous reference   | two different papers entirely      |
+
+                The partition is complete on this slice: 7 of 7 stable tasks are
+                single-answer, 3 of 3 varying tasks are not.
+
+Reading:        Consistent with the attractor account, not the robustness one.
+                Execution variation was never absorbed by the agent being stable;
+                it was absorbed by the task having one place to land. That makes
+                `variation survival = 0.152` a statement about GAIA L1's answer
+                spaces at least as much as about this agent.
+
+                Post-hoc and small: the categories above are ours, applied after
+                seeing which tasks varied, over 10 tasks. It is a hypothesis the
+                data is consistent with, not a test of one. Stated as a
+                prediction it is falsifiable: a benchmark of single-answer tasks
+                should show low outcome variation however complex its execution.
+
+                This also explains the SWE-bench bimodality found while screening
+                Benchmark B -- resolution rates pile up at 0/k and k/k. `tests
+                pass` is itself a strong attractor. Long-horizon execution does
+                not imply an ambiguous decision, and screening on horizon alone
+                would have selected for the wrong property.
+
+Criteria:       Benchmark B is selected on decision ambiguity first. This
+                supersedes the ordering recorded in the Week 1 pilot entry:
+
+                1. **ambiguous or underdetermined decision** -- several plausible
+                   conclusions survive the available evidence, and no single
+                   correct answer pulls every path back;
+                2. recurring alternative modes -- the same input produces
+                   execution paths that repeat, not paths that are unique every
+                   time (this is what makes within-task contrast possible);
+                3. measurable outcome variation across repeated runs;
+                4. long-horizon execution with multiple intermediate decisions.
+
+                Horizon moved from first to last. It is a necessary condition for
+                interesting propagation, not a sufficient one, and it is the
+                easiest of the four to satisfy accidentally.
+
+Open:           Whether `outcome` should remain correctness. On a task with no
+                single right answer, the quantity of interest is the decision the
+                agent reached -- selected hypothesis, recommended action, risk
+                level -- and "which is correct" may be unavailable and beside the
+                point. The comparator contract already permits this: `outcome` is
+                any value with a comparator. Nothing in the code assumes a
+                reference answer exists; `accuracy` is reported as context and is
+                already `None` when no reference is present.
