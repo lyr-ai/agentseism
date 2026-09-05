@@ -263,3 +263,73 @@ Next:           Do not scale this design. GAIA L1 is retained as the
                 A feature that always varies and one that never varies are
                 equally unlocalizable. What carries information is recurring
                 alternative execution modes on a fixed input.
+
+---
+
+## 2026-09-05 — evidence representation sensitivity (offline, no new runs)
+
+Agent:          same 50 executions as the Week 1 pilot; nothing re-run
+Schema:         `gaia-mz/2` unchanged -- this is a sensitivity analysis, not a
+                new primary metric
+Command:        `python experiments/natural_variation/evidence_representation.py`
+Artifact:       `results/gaia_pilot_agentseism_entry_app_experiment.json`
+Cost:           $0
+
+Question:       `evidence_set` was not identifiable in the pilot (contrast 2 of
+                23 informative pairs). Two explanations that the pilot cannot
+                separate: the agent genuinely retrieves differently on every
+                repeat, or the representation is fine-grained enough that a
+                repeated behavior never yields a repeated observation. The first
+                says change benchmark; the second says change the feature, and
+                predicts that a more complex agent would hit the same wall.
+
+Result:         Three resolutions of the same tool output, same runs, same
+                comparator:
+
+                | representation   | mean sim | varies | contrast | A_f    | p_within |
+                |------------------|----------|--------|----------|--------|----------|
+                | evidence_content | 0.415    | 61     | 2        | +0.029 | 1.000    |
+                | evidence_source  | 0.611    | 51     | 2        | +0.061 | 1.000    |
+                | evidence_domain  | 0.669    | 50     | 2        | +0.065 | 1.000    |
+
+                Coarsening raises mean similarity by 25 points and produces no
+                additional contrast. Not a thresholding artifact either: inside
+                the outcome-varying tasks the similarity distribution is
+                bimodal at the wrong end -- 21 of 23 pairs below 0.5, nothing
+                between 0.5 and 0.9, the same 2 pairs at exactly 1.0 -- so
+                counting "close enough" as held still changes nothing.
+
+                Per task, the reason is structural:
+
+                | | mean retrieval similarity | pairs with sim == 1 |
+                |---|---|---|
+                | outcome-varying tasks (3) | 0.278 | 2 of 23 |
+                | outcome-stable tasks (7)  | 0.720 | 46 of 66 |
+
+                Three tasks retrieve identically on all 10 pairs; all three have
+                stable outcomes. The three tasks whose outcome moves retrieve
+                something different almost every run.
+
+Reading:        The representation hypothesis is not supported. The two
+                conditions feature-level attribution requires -- a feature that
+                sometimes repeats, and an outcome that sometimes moves -- are
+                close to disjoint on this slice, and no re-encoding of the same
+                observation creates a contrast pair out of that. It is a property
+                of the slice, not of the encoding. This is the fork resolving
+                toward benchmark/agent dynamics, so Benchmark B remains the next
+                step rather than a feature-abstraction redesign.
+
+                Stated carefully, because it is 10 tasks and the comparison is
+                confounded with task difficulty: on this slice, retrieval
+                instability and outcome instability coincide. That is consistent
+                with retrieval variation driving outcome variation, and equally
+                consistent with hard tasks being unstable everywhere at once.
+                Separating those needs intervention, not more observation.
+
+Caveat:         The abstraction ladder still matters for Benchmark B even though
+                it did not explain this result. Contrast can be manufactured by
+                coarsening until everything looks alike, and `evidence_domain`
+                shows the shape of that trade: +25 points of similarity bought
+                nothing here, but on a benchmark with recurring retrieval modes
+                the same move would need a stopping rule. Repeatable enough to
+                estimate, specific enough to keep behaviors apart.
