@@ -57,6 +57,8 @@ def run_experiment(
     experiment_id: str = "experiment",
     config: dict | None = None,
     on_error: str = "record",
+    save_to: str | None = None,
+    progress: bool = False,
 ) -> Experiment:
     """Execute ``agent`` on every case ``trials`` times.
 
@@ -72,6 +74,10 @@ def run_experiment(
     """
     if trials < 1:
         raise ValueError("trials must be >= 1")
+    # A long scan that only writes at the end loses everything it has paid for
+    # if the process dies partway. With ``save_to`` the experiment is rewritten
+    # after every run, so an interrupted scan leaves a readable artifact of the
+    # runs that did finish.
     if on_error not in ("record", "raise"):
         raise ValueError("on_error must be 'record' or 'raise'")
 
@@ -130,6 +136,19 @@ def run_experiment(
             if run.ok and run.events:
                 run.features = project_run(run, projector)
             experiment.runs.append(run)
+
+            if progress:
+                total = len(tasks) * trials
+                state = "ok" if run.ok else "FAILED"
+                print(
+                    f"[{len(experiment.runs)}/{total}] {run_id} {state} "
+                    f"{duration_ms / 1000:.0f}s",
+                    flush=True,
+                )
+            if save_to:
+                experiment.schema = projector.schema
+                experiment.config["feature_schema_version"] = experiment.schema.version
+                experiment.save(save_to)
 
     experiment.schema = projector.schema
     experiment.config["feature_schema_version"] = experiment.schema.version

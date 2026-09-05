@@ -1,35 +1,39 @@
 {
   "agent": "agentseism_entry:app",
-  "trials": 3,
+  "trials": 5,
   "feature_schema_version": "gaia-mz/2",
   "checks": {
-    "run_ok_rate": 1.0,
+    "run_ok_rate": 0.94,
     "past_projection_window": null,
     "feature_completeness": 1.0,
-    "distinct_loop_lengths": 1,
+    "distinct_loop_lengths": 9,
     "median_consistency": 1.0,
-    "tasks_with_variation": 0,
-    "n_tasks": 1,
-    "features_that_vary": 3,
+    "tasks_with_variation": 3,
+    "n_tasks": 10,
+    "features_that_vary": 6,
     "features_associated_with_outcome": 0,
-    "max_association": 0.0,
+    "max_association": 0.09494798582215774,
     "noisy_but_inconsequential": [
+      "pre_final_reasoning",
       "evidence_set"
     ],
-    "comparator_complaints": [],
+    "comparator_complaints": [
+      "formatter_changed_answer: values differ but divergence is always 0 (comparator too loose)",
+      "termination: values differ but divergence is always 0 (comparator too loose)"
+    ],
     "baseline_comparison": {
       "positioned": {
         "agentseism": [
-          "evidence_set",
           "initial_plan",
-          "pre_final_reasoning"
+          "pre_final_reasoning",
+          "evidence_set"
         ],
         "correlation": [
+          "pre_final_reasoning",
           "evidence_set",
-          "initial_plan",
-          "pre_final_reasoning"
+          "initial_plan"
         ],
-        "matches": true
+        "matches": false
       },
       "aggregate": {
         "agentseism": [
@@ -38,28 +42,24 @@
           "termination"
         ],
         "correlation": [
-          "answer_format_retries",
-          "formatter_changed_answer",
-          "termination"
+          "tool_sequence",
+          "tool_call_count",
+          "tool_set"
         ],
-        "matches": true
+        "matches": false
       }
     },
-    "correlation_matches_us": [
-      "positioned",
-      "aggregate"
-    ],
-    "accuracy": 1.0
+    "correlation_matches_us": [],
+    "accuracy": 0.6382978723404256
   },
   "diagnostics": {
-    "raw_answer_consistency": 1.0,
-    "formatted_answer_consistency": 1.0,
-    "formatter_changed_rate": 0.0
+    "raw_answer_consistency": 0.8933333333333333,
+    "formatted_answer_consistency": 0.8333333333333334,
+    "formatter_changed_rate": 0.3191489361702128
   },
   "passed": false,
   "reasons": [
-    "loop length never varies -- this agent may be too deterministic to study",
-    "no outcome variation at all -- this agent cannot answer RQ1",
-    "no execution feature relates to outcome variation -- the schema may be wrong"
+    "no execution feature relates to outcome variation -- the schema may be wrong",
+    "comparator problems: formatter_changed_answer: values differ but divergence is always 0 (comparator too loose); termination: values differ but divergence is always 0 (comparator too loose)"
   ]
 }

@@ -138,3 +138,73 @@ Open:           `evidence_set` is keyed on canonical URL *and* normalized conten
                 0.556). Whether provider snippet jitter is evidence variation or
                 environment noise is unresolved, and 3 runs is too few to decide.
                 Left as-is for the pilot rather than re-tuned against 3 numbers.
+
+---
+
+## 2026-09-04 — GAIA Level-1 pilot (benchmark selection, not a result)
+
+Agent:          `MarkAZhang/gaia-agent` @ `b53f536`, via `agentseism_entry:app`
+Tasks:          10 (frozen pilot slice, GAIA L1 validation, no attachments)
+Trials:         5 (50 executions)
+Comparator:     GAIA answer equivalence (outcome); per-feature from the schema
+Schema:         `gaia-mz/2`
+Command:        `python experiments/natural_variation/gaia_pilot.py --app agentseism_entry:app
+                --system-prompt agentseism_entry:build_system_prompt
+                --config agentseism_entry:config --tasks 10 --trials 5`
+Artifact:       `results/gaia_pilot_agentseism_entry_app.json`
+Cost:           ~$30
+
+Result:         47 of 50 executions completed; the other 3 were cut short by the
+                harness guard, not by failure. Accuracy against the GAIA
+                reference 64%. Outcome varied in 3 of 10 tasks, giving 12
+                outcome-differing pairs out of 89. Nine distinct loop lengths, so
+                the agent is not deterministic. Intermediate variation is large
+                where the outcome is stable: evidence_set local variation 0.603,
+                pre_final_reasoning 0.450, while the highest outcome association
+                of any feature is 0.095 against a 0.3 threshold. Variation
+                survival rate 0.152. The output formatter changed the answer in
+                32% of runs and *introduced* variation overall (raw answer
+                consistency 0.89, formatted 0.83). AgentSeism's ranking differed
+                from correlation-only in both scoring groups, so §22 did not fire
+                here -- on 89 pairs that is an observation, not a comparison.
+
+Reading:        This is a benchmark-selection experiment. It does not support or
+                refute any hypothesis in `claims.md`, and the ranking numbers
+                should not be cited: with 87% of pairs showing no outcome
+                variation at all, "which feature relates to outcome variation" is
+                a question this data is too weak to answer, and the zero
+                association reflects that weakness rather than a wrong schema.
+
+                What it does establish is about the *benchmark*: substantial
+                execution variation coexists with stable outcomes on GAIA L1.
+                That makes this agent a reasonable robustness case and a poor
+                weak-point attribution case. Scaling the same design to 50x10
+                would buy repeated observations of mostly non-varying tasks, not
+                more informative ones, so it was not run. What is scarce here is
+                informative tasks, not sample size.
+
+                `variation_survival` was added for exactly this: outcome
+                consistency alone cannot separate "the agent did the same thing"
+                from "the agent did something different and the difference was
+                absorbed". At 0.152, most execution variation on this slice dies
+                before reaching the answer.
+
+Caveats:        Data collected with the guard at 30 graph steps, which censored
+                the 3 longest runs -- 2 of them in `23dd907f`, one of only three
+                tasks whose outcome varied. Completed runs reached at most 27
+                events, so the guard sat on the tail of the distribution: this is
+                missing-not-at-random, and every length-sensitive number above
+                (distinct loop lengths, execution-path variation) is biased
+                downward. The guard is now 100 and censored runs are reported
+                rather than dropped; any rerun should use the new value.
+
+                Two harness defects were found by this run and fixed after it:
+                `comparator_sanity` pooled feature values across tasks while
+                comparing them against within-task divergences, which reported
+                two sound comparators as broken; and censored runs were counted
+                as failures, making the harness look 94% reliable when it had in
+                fact never failed.
+
+Next:           Do not scale this design. Look for an agent whose outcomes vary --
+                long-horizon, evidence-heavy, multi-decision -- and keep GAIA L1
+                as the stable comparison point.

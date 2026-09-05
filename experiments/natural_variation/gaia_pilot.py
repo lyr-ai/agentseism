@@ -50,7 +50,22 @@ ADAPTERS = {
 }
 
 PILOT_TRIALS = 5
-RECURSION_LIMIT = 30
+RECURSION_LIMIT = 100
+"""Emergency guard against a non-terminating graph -- not a run-length budget.
+
+At 30 this silently censored the longest runs. Completed runs in the Week 1
+pilot reached at most 27 graph events (median 8, p90 21), so the limit sat
+directly on the tail of the distribution and removed exactly the runs that
+looped most, concentrated in a task whose outcome varied. That is missing-not-
+at-random: it biases every length-sensitive number downward, `distinct loop
+lengths` and execution-path variation among them.
+
+A guard should fire only for a graph that is not going to stop. Anything it does
+cut is reported as `censored`, never dropped quietly.
+"""
+
+CENSORED_MARKERS = ("GRAPH_RECURSION_LIMIT", "recursion limit")
+"""How a run cut short by the guard identifies itself in the captured error."""
 USEFUL_ASSOCIATION = 0.3
 NOISY_VARIATION = 0.3
 
@@ -110,26 +125,41 @@ def gaia_tasks(n: int) -> list[dict]:
 
 
 def comparator_sanity(tables) -> list[str]:
-    """Features whose comparator cannot be telling runs apart (§25)."""
-    complaints = []
-    seen: dict[str, list[float]] = {}
-    distinct: dict[str, set] = {}
+    """Features whose comparator cannot be telling runs apart (§25).
+
+    Values and divergences are compared **within one task**, because that is the
+    scope divergence is defined over: pairs are formed between trials of the
+    same task, never across tasks. Pooling values across tasks while comparing
+    them against within-task divergences reports a feature that is constant
+    within every task but differs between tasks -- `termination`, say -- as a
+    comparator that cannot tell runs apart, which is the opposite of what those
+    numbers mean.
+    """
+    loose: set[str] = set()
+    strict: set[str] = set()
     for columns, pairs in tables.values():
-        for column in columns:
-            values = [v for v in column.values.values() if v is not MISSING]
-            distinct.setdefault(column.name, set()).update(
-                repr(v) for v in values
-            )
+        values = {
+            column.name: {
+                repr(v) for v in column.values.values() if v is not MISSING
+            }
+            for column in columns
+        }
+        divergences: dict[str, list[float]] = {}
         for pair in pairs:
             for name, d in pair.features.items():
-                seen.setdefault(name, []).append(d)
-    for name, divergences in seen.items():
-        n_distinct = len(distinct.get(name, ()))
-        if n_distinct > 1 and max(divergences) == 0.0:
-            complaints.append(f"{name}: values differ but divergence is always 0 (comparator too loose)")
-        if n_distinct == 1 and min(divergences) > 0.0:
-            complaints.append(f"{name}: identical values scored as different (comparator too strict)")
-    return complaints
+                divergences.setdefault(name, []).append(d)
+        for name, ds in divergences.items():
+            n_distinct = len(values.get(name, ()))
+            if n_distinct > 1 and max(ds) == 0.0:
+                loose.add(name)
+            if n_distinct == 1 and min(ds) > 0.0:
+                strict.add(name)
+    return (
+        [f"{n}: values differ but divergence is always 0 (comparator too loose)"
+         for n in sorted(loose)]
+        + [f"{n}: identical values scored as different (comparator too strict)"
+           for n in sorted(strict)]
+    )
 
 
 def diagnostics(report) -> dict:
@@ -198,9 +228,61 @@ def _clip(value, width: int = 90) -> str:
     return text if len(text) <= width else text[: width - 1] + "…"
 
 
+def variation_survival(tables, schema=None) -> float | None:
+    """Of the run pairs that executed differently, how many ended differently?
+
+    Outcome consistency alone cannot distinguish "the agent did the same thing"
+    from "the agent did something different and the difference was absorbed".
+    This separates them: the denominator is pairs whose execution diverged at
+    all, the numerator those whose outcome diverged too.
+
+    Low survival is not stability -- it is variation being absorbed somewhere
+    between the execution and the answer. Where absorption stops is the question
+    AgentSeism exists to ask, so the rate is reported as context, never ranked.
+
+    ``None`` when no pair executed differently: nothing varied, so nothing could
+    have survived, and 0.0 would read as total absorption.
+    """
+    feature_names = None
+    if schema is not None:
+        feature_names = {
+            s.name for s in schema.specs if s.role is ObservationRole.FEATURE
+        }
+
+    diverged = survived = 0
+    for _columns, pairs in tables.values():
+        for pair in pairs:
+            varied = any(
+                d > 0
+                for name, d in pair.features.items()
+                if feature_names is None or name in feature_names
+            )
+            if varied:
+                diverged += 1
+                if pair.outcome > 0:
+                    survived += 1
+    return (survived / diverged) if diverged else None
+
+
+def censored(runs) -> list:
+    """Runs the guard cut short, as opposed to runs that failed.
+
+    A censored run is not evidence about the agent -- it is the harness
+    declining to let the agent finish -- so it is counted and named rather than
+    folded into the failure rate, where it would read as a broken harness, or
+    dropped silently, where it would bias every length-sensitive number.
+    """
+    return [
+        r for r in runs
+        if r.error and any(m in r.error for m in CENSORED_MARKERS)
+    ]
+
+
 def checks(report, tasks) -> dict:
     runs = report.experiment.runs
     ok_runs = [r for r in runs if r.ok]
+    cut = censored(runs)
+    broken = [r for r in runs if r.error and r not in cut]
     schema = report.schema
     declared = [s.name for s in schema.specs if s.role is ObservationRole.FEATURE] if schema else []
 
@@ -257,7 +339,12 @@ def checks(report, tasks) -> dict:
     ]
 
     return {
-        "run_ok_rate": len(ok_runs) / len(runs) if runs else 0.0,
+        # Censored runs are excluded from the denominator: this rate answers
+        # "is the harness working?", and a run the guard stopped says nothing
+        # about that. It is reported separately as censored_executions.
+        "run_ok_rate": (
+            len(ok_runs) / (len(runs) - len(cut)) if (len(runs) - len(cut)) else 0.0
+        ),
         "past_projection_window": (len(truncated) / len(windowed)) if windowed else None,
         "feature_completeness": complete / len(ok_runs) if ok_runs else 0.0,
         "distinct_loop_lengths": len(loop_lengths),
@@ -268,6 +355,10 @@ def checks(report, tasks) -> dict:
         "features_associated_with_outcome": len(useful),
         "max_association": max((w.outcome_association for w in weak), default=0.0),
         "noisy_but_inconsequential": [w.name for w in noisy_but_inconsequential],
+        "censored_executions": len(cut),
+        "censored_tasks": sorted({r.task_id for r in cut}),
+        "failed_executions": len(broken),
+        "variation_survival": variation_survival(tables, schema),
         "comparator_complaints": comparator_sanity(tables),
         "baseline_comparison": comparison,
         "correlation_matches_us": [g for g, c in comparison.items() if c["matches"]],
@@ -280,6 +371,12 @@ def verdict(c: dict) -> tuple[bool, list[str]]:
     reasons = []
     if c["run_ok_rate"] < 0.9:
         reasons.append(f"only {c['run_ok_rate']:.0%} of runs completed -- fix the harness first")
+    if c.get("censored_executions"):
+        reasons.append(
+            f"{c['censored_executions']} run(s) cut short by the guard -- the runs that "
+            "loop longest are exactly the ones removed, so every length-sensitive "
+            "number here is biased downward. Raise the guard and rerun before reading them"
+        )
     if c["feature_completeness"] < 1.0:
         reasons.append(
             f"only {c['feature_completeness']:.0%} of runs produced every declared feature"
@@ -375,6 +472,7 @@ def main() -> None:
         projector=adapter["projector"](),
         agent_id=agent_id,
         save_to=str(ROOT / "results" / f"gaia_pilot_{_slug(agent_id)}_experiment.json"),
+        progress=not args.stub,
     )
     print(report.render())
 
@@ -402,6 +500,14 @@ def main() -> None:
         + (f"{changed:>12.0%}" if changed is not None else f"{'n/a':>12}")
     )
     print()
+    if c.get("censored_executions") or c.get("failed_executions"):
+        print(f"{'   of which censored by guard':<34}{c.get('censored_executions', 0):>12}")
+        print(f"{'   of which failed':<34}{c.get('failed_executions', 0):>12}")
+    survival = c.get("variation_survival")
+    print(
+        f"{'variation survival rate':<34}"
+        + (f"{survival:>12.2f}" if survival is not None else f"{'n/a':>12}")
+    )
     print(f"{'distinct loop lengths':<34}{c['distinct_loop_lengths']:>12}")
     print(f"{'features that vary':<34}{c['features_that_vary']:>12}")
     print(f"{'features tied to the outcome':<34}{c['features_associated_with_outcome']:>12}")

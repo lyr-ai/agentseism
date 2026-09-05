@@ -101,6 +101,7 @@ def scan(
         outcome=outcome,
         projector=projector,
         agent_id=agent_id,
+        save_to=save_to,
         **runner_kwargs,
     )
     if save_to:
