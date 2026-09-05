@@ -1,8 +1,8 @@
-from agentseism import scan
 from agents.gaia import answer_equivalent, build_state, extract_answer, outcome
 from agents.langgraph_adapter import LangGraphAgent
 from agents.stub_react import StubReActApp
 from agents.trajectory import ReActProjector
+from agentseism import scan
 
 CASES = [
     {"id": f"stub-{i}", "input": {"task_id": f"stub-{i}", "question": f"q{i}", "file_name": ""}}

@@ -1,6 +1,11 @@
 import json
 
-from agentseism.features import ExecutionFeature, FeatureSchema, FeatureSpec, ObservationRole
+from agentseism.features import (
+    ExecutionFeature,
+    FeatureSchema,
+    FeatureSpec,
+    ObservationRole,
+)
 from agentseism.types import Event, Experiment, Run, Task
 
 

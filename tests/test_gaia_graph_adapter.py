@@ -2,7 +2,6 @@
 
 import pytest
 
-from agentseism import scan
 from agents.gaia import answer_equivalent
 from agents.gaia_markazhang import (
     SCHEMA,
@@ -13,6 +12,7 @@ from agents.gaia_markazhang import (
 )
 from agents.langgraph_adapter import LangGraphAgent
 from agents.stub_gaia_graph import TRIMMED, StubGaiaGraphApp
+from agentseism import scan
 
 CASES = [
     {"id": f"g{i}", "input": {"task_id": f"g{i}", "question": f"question {i}", "file_name": ""}}

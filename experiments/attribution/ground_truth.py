@@ -20,18 +20,18 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT / "src"), str(ROOT)]
 
-from agentseism import divergence_tables, run_experiment  # noqa: E402
-from agentseism.localization import (  # noqa: E402
-    available_baselines,
-    credit_at_k,
-    rank_weak_points,
-)
 from agents.synthetic import (  # noqa: E402
     SCHEMA,
     WEAK_POINTS,
     make_synthetic_agent,
     outcome,
     projector,
+)
+from agentseism import divergence_tables, run_experiment  # noqa: E402
+from agentseism.localization import (  # noqa: E402
+    available_baselines,
+    credit_at_k,
+    rank_weak_points,
 )
 
 CASES = ["latency spike", "checkout errors", "slow queries", "auth failures"]

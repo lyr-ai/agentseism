@@ -1,7 +1,12 @@
 from agentseism import EventProjector, run_experiment
 from agentseism.alignment import align_features
 from agentseism.features import MISSING, FeatureSchema, FeatureSpec
-from agentseism.variation import consistency, feature_divergences, outcome_modes, task_variation
+from agentseism.variation import (
+    consistency,
+    feature_divergences,
+    outcome_modes,
+    task_variation,
+)
 
 
 def test_identical_outcomes_are_fully_consistent():

@@ -7,7 +7,15 @@ ranking beats trivial baselines on controlled experiments".
 
 import pytest
 
+from agents.synthetic import (
+    SCHEMA,
+    WEAK_POINTS,
+    make_synthetic_agent,
+    outcome,
+    projector,
+)
 from agentseism import divergence_tables, run_experiment
+from agentseism.features import FeatureSchema, FeatureSpec, ObservationRole
 from agentseism.localization import (
     AGGREGATE_MODE,
     POSITIONED_MODE,
@@ -17,8 +25,6 @@ from agentseism.localization import (
     first_divergence,
     rank_weak_points,
 )
-from agentseism.features import FeatureSchema, FeatureSpec, ObservationRole
-from agents.synthetic import SCHEMA, WEAK_POINTS, make_synthetic_agent, outcome, projector
 
 CASES = ["latency spike", "checkout errors", "slow queries"]
 

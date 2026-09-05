@@ -8,11 +8,16 @@ counts what it claims to.
 import importlib.util
 from pathlib import Path
 
-from agentseism import scan
 from agents.gaia import answer_equivalent
-from agents.gaia_markazhang import GaiaGraphProjector, extract_answer, make_build_state, outcome
+from agents.gaia_markazhang import (
+    GaiaGraphProjector,
+    extract_answer,
+    make_build_state,
+    outcome,
+)
 from agents.langgraph_adapter import LangGraphAgent
 from agents.stub_gaia_graph import StubGaiaGraphApp
+from agentseism import scan
 
 ROOT = Path(__file__).resolve().parents[1]
 CASES = [

@@ -277,14 +277,22 @@ def feature_survival(tables, schema=None, min_pairs: int = 20) -> dict:
     *whose* variation survives::
 
         S_f  = P(dY > 0 | df > 0)
-        A_f  = P(dY > 0 | df > 0) - P(dY > 0)
+        A_f  = P(dY > 0 | df > 0) - P(dY > 0 | not df > 0)
 
     ``S_f`` alone rewards whatever varies most often, because a feature that
-    diverges on nearly every pair inherits the base rate. ``A_f`` subtracts that
-    base rate, so it asks the question the thesis actually cares about: when this
-    feature varies, is the outcome *more* likely to vary than it otherwise would
-    be? A feature whose variation is routinely absorbed scores near zero however
-    noisy it is.
+    diverges on nearly every pair inherits the base rate. ``A_f`` is the risk
+    difference between the two arms, which asks the question the thesis cares
+    about: when this feature varies, is the outcome *more* likely to vary than
+    when it held still? A feature whose variation is routinely absorbed scores
+    near zero however noisy it is.
+
+    Subtracting the *marginal* rate ``P(dY > 0)`` instead would be weaker: the
+    marginal already contains the ``df > 0`` arm, so it is dragged toward the
+    conditional it is meant to be compared against, and the more often a feature
+    varies the more it dilutes its own effect. The risk difference also makes the
+    identifiability requirement structural rather than a bolted-on check -- with
+    no contrast pairs the second arm does not exist and there is nothing to
+    subtract.
 
     Neither is causal. Both are conditional frequencies over run pairs, and a
     feature can score high by moving with an upstream cause it does not produce
@@ -316,6 +324,7 @@ def feature_survival(tables, schema=None, min_pairs: int = 20) -> dict:
     # Contrast is counted only over tasks whose outcome varies: elsewhere there
     # is nothing for the feature to be conditioned against in the first place.
     held_still: dict[str, int] = {}
+    still_outcome_moved: dict[str, int] = {}
     informative_pairs = 0
     for _columns, pairs in tables.values():
         task_varies = any(pair.outcome > 0 for pair in pairs)
@@ -333,6 +342,9 @@ def feature_survival(tables, schema=None, min_pairs: int = 20) -> dict:
                     co_varied[name] = co_varied.get(name, 0) + outcome_moved
                 elif task_varies:
                     held_still[name] = held_still.get(name, 0) + 1
+                    still_outcome_moved[name] = (
+                        still_outcome_moved.get(name, 0) + outcome_moved
+                    )
     if not total:
         return {}
 
@@ -341,9 +353,14 @@ def feature_survival(tables, schema=None, min_pairs: int = 20) -> dict:
     for name, n in sorted(varied.items()):
         s = co_varied[name] / n
         contrast = held_still.get(name, 0)
+        # The second arm: outcome divergence among pairs where the feature held
+        # still, counted only inside tasks whose outcome varies at all.
+        still_and_moved = still_outcome_moved.get(name, 0)
+        baseline = (still_and_moved / contrast) if contrast else None
         out[name] = {
             "survival": s,
-            "amplification": s - base_rate,
+            "held_still_rate": baseline,
+            "amplification": (s - baseline) if baseline is not None else None,
             "pairs_with_variation": n,
             "contrast_pairs": contrast,
             # Precision is bounded by the *smaller* side of the comparison, so

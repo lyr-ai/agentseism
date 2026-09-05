@@ -47,7 +47,10 @@ def test_contrast_makes_it_identifiable():
     assert out["f"]["contrast_pairs"] == 2
     assert out["f"]["identifiable"] is True
     assert out["f"]["survival"] == pytest.approx(1.0)
-    assert out["f"]["amplification"] == pytest.approx(0.5)
+    assert out["f"]["held_still_rate"] == pytest.approx(0.0)
+    # Risk difference between the arms, not against the marginal rate: the
+    # marginal here is 0.5, which would have halved a perfect effect.
+    assert out["f"]["amplification"] == pytest.approx(1.0)
 
 
 def test_enough_is_bounded_by_the_smaller_side():
@@ -91,5 +94,11 @@ def test_cross_task_structure_does_not_become_significance():
         "stable_b": [(0, {"f": 0.0}), (0, {"f": 0.0}), (0, {"f": 0.0})],
     })
     out = gp.feature_survival(tables)
-    assert out["f"]["amplification"] > 0.6, "pooled, it looks like a strong signal"
+    # Under the risk difference the illusion cannot even be computed: the
+    # feature never holds still inside the task whose outcome moves, so the
+    # second arm is empty and there is nothing to subtract.
+    assert out["f"]["contrast_pairs"] == 0
+    assert out["f"]["identifiable"] is False
+    assert out["f"]["amplification"] is None
+    assert out["f"]["survival"] == pytest.approx(1.0), "survival alone still looks total"
     assert gp.within_task_permutation(tables, trials=500)["f"] == pytest.approx(1.0)

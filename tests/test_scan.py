@@ -1,6 +1,6 @@
+from agents.synthetic import SCHEMA, make_synthetic_agent, outcome, projector
 from agentseism import analyze, scan
 from agentseism.types import Experiment
-from agents.synthetic import SCHEMA, make_synthetic_agent, outcome, projector
 
 
 def test_scan_without_trace_reports_outcome_variation_only():

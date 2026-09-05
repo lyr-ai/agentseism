@@ -403,3 +403,41 @@ Open:           Whether `outcome` should remain correctness. On a task with no
                 any value with a comparator. Nothing in the code assumes a
                 reference answer exists; `accuracy` is reported as context and is
                 already `None` when no reference is present.
+
+---
+
+## 2026-09-05 — amplification redefined as a risk difference (corrects earlier entries)
+
+Change:         `A_f = P(dY|df) - P(dY)`  ->  `A_f = P(dY|df) - P(dY|not df)`
+
+Why:            The marginal rate already contains the `df` arm, so it is dragged
+                toward the conditional it is meant to be compared against, and a
+                feature that varies often dilutes its own effect. The risk
+                difference compares the two arms directly, and makes
+                identifiability structural: with no contrast pairs the second arm
+                does not exist and `A_f` is `None` rather than a number.
+
+Effect on the pilot numbers, same 50 runs:
+
+                | feature             | P(dY\|df) | P(dY\|!df) | A_f new | A_f old | contrast |
+                |---------------------|-----------|------------|---------|---------|----------|
+                | evidence_set        | 0.164     | 1.000      | -0.836  | +0.029  | 2        |
+                | tool_call_count     | 0.250     | 1.000      | -0.750  | +0.115  | 4        |
+                | tool_sequence       | 0.250     | 1.000      | -0.750  | +0.115  | 4        |
+                | tool_set            | 0.500     | 0.529      | -0.029  | +0.365  | 17       |
+                | initial_plan        | 0.152     | --         | None    | +0.017  | 0        |
+                | pre_final_reasoning | 0.152     | --         | None    | +0.017  | 0        |
+
+Reading:        The conclusion is unchanged -- still 0 of 6 features estimable,
+                still `p ~ 1.0` under within-task permutation -- but the earlier
+                numbers were more flattering than the data deserved. `P(dY|!df) =
+                1.000` for `evidence_set` is two pairs in which evidence held
+                still and the outcome moved both times; the marginal-baseline
+                form smoothed that into a mild, plausible `+0.029`. The risk
+                difference reports `-0.836` instead, which is not a finding about
+                evidence but a signal that two pairs cannot support an estimate.
+
+                A definition that produces comfortable numbers from unusable data
+                is the more dangerous of the two. Every `A_f` cited in the entries
+                above this one was computed under the superseded form and should
+                be read as such; none of them supported a conclusion that changes.

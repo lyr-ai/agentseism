@@ -19,8 +19,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT / "src"), str(ROOT)]
 
-from agentseism import scan  # noqa: E402
 from agents.synthetic import make_synthetic_agent, outcome, projector  # noqa: E402
+from agentseism import scan  # noqa: E402
 
 CASES = [f"incident-{i}" for i in range(20)]
 TRIALS = 10

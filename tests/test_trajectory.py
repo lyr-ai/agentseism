@@ -1,10 +1,10 @@
 from types import SimpleNamespace
 
+from agents.trajectory import ReActProjector, record_raw_trace, steps_from_messages
 from agentseism import run_experiment
 from agentseism.alignment import align_features
 from agentseism.trace import TraceCollector
 from agentseism.types import Run
-from agents.trajectory import ReActProjector, record_raw_trace, steps_from_messages
 
 
 def _messages(n_iterations: int, tool: str = "search") -> list:
