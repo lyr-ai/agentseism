@@ -32,6 +32,13 @@ swap.
 rent 48 GB (A6000 / A40)  ->  docker run  ->  ./run_qualification.sh  ->  terminate
 ```
 
+**Run it by hand the first time.** The script exists so that nothing is
+improvised at an hourly rate, but a single invocation hands back a CSV and
+teaches nothing about where the memory went. Stop at each step instead:
+`nvidia-smi` on the empty card, then after vLLM loads -- weights against KV cache
+-- then 8k cold, 8k repeated, 16k cold, 16k repeated, reading `gpu.csv`
+alongside. Use the script end-to-end from the second session onward.
+
 `run_qualification.sh` does health, stress, one SWE-bench task, and prints a
 reminder. 48 GB before 80 GB, and not an H100: the first session is for learning
 where the memory goes, and a faster card teaches that less clearly.
@@ -57,6 +64,15 @@ measuring rather than by inheriting.
 
 `enable_prefix_caching` matters more for this workload than for most. The agent
 resends its full history every step, so step N re-prefills everything from step
-N-1, and prefill is the linear cost above. Whether that shows up as a flat TTFT
-on the repeated request in `stress_test.py` is the first thing worth reading in
-the results.
+N-1, and prefill is the linear cost above.
+
+Under two conditions -- history grows roughly linearly per round, and each round
+re-prefills all of it -- total prefill work over N rounds is 1 + 2 + ... + N,
+which is O(N^2). Both conditions hold for this agent and neither is general:
+an agent that summarises its history, or a server that reuses a cached prefix,
+breaks the first and second respectively. Stated without those conditions the
+claim would be wrong about agent serving in general.
+
+Whether the reuse actually happens shows up as a flat TTFT on the repeated
+request in `stress_test.py`, which is the first thing worth reading in the
+results.
