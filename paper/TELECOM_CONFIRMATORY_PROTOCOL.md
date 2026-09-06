@@ -160,3 +160,61 @@ Accuracy is reported in every case and decides nothing on its own.
 
 Market is not touched. If Telecom confirms, Market is the only remaining
 independent system, and spending it now would leave nothing to replicate on.
+
+---
+
+## Amendment — budget-constrained design, written before any Telecom outcome was examined
+
+The 15-task design is infeasible at measured cost. Nothing below was chosen after
+seeing a Telecom result: one Telecom run exists (row 4, run 0, from the batch
+stopped when the balance ran low) and its prediction, trajectory and features
+have not been read. It is discarded and row 4 is rerun as a clean batch, the same
+treatment given to Bank row 23.
+
+### What changed and why
+
+Measured cost is **~$1.1 per run**, against the ~$0.04–0.21 per case reported for
+this benchmark. The gap is structural: the controller resends its full history
+every step (118k input tokens per run, measured over the 40 Bank runs), and the
+Executor holds a second conversation that never appears in the controller's
+saved prompts, so any estimate read off those files is a lower bound. 15 tasks x
+5 runs is ~$83; the available balance is $32.
+
+`gpt-4o-mini` was tested as a cheaper backbone and rejected -- see the feasibility
+entry in `experiments.md`. It is not a drop-in: under the same scaffold it fails
+to converge within the upstream 25-step budget, and `early_commit` does not mean
+the same thing when commitment is not terminal.
+
+### Revised design
+
+**4 tasks x 5 runs = 20 runs, ~$22.** Tasks are the first four of the eligible
+pool already fixed by the original rule -- Telecom rows 4, 7, 11, 12 -- taken in
+file order, not reselected.
+
+Five trials, not four: inference is within-task, and 5 runs give 10 pairs per
+task against 4 runs' 6. Task count is what the budget cuts, as the original
+protocol already specified.
+
+About $10 of the balance is reserved for the intervention smoke test and for
+failed runs, and is not available to this study.
+
+### Everything else is unchanged
+
+One primary hypothesis, `early_commit -> Y_reason`, one-sided, `alpha = 0.05`,
+within-task permutation, no correction because there is one test. Same frozen
+feature, same exclusions, same secondary list.
+
+### This is a small study and will be reported as one
+
+Four tasks is fewer independent units than Bank's eight, so a null result is
+weak evidence against the hypothesis and a positive one is fragile. The honest
+outcomes are:
+
+- `p < 0.05` in the predicted direction: consistent with the discovery
+  observation, on four incidents, and still requiring replication.
+- `p >= 0.05` in the predicted direction: **directionally consistent but
+  underpowered; independent confirmation inconclusive.**
+- Opposite direction: failure to confirm.
+
+No fifth task is added if the result falls just short. Adding tasks after seeing
+a p-value is optional stopping whatever the budget allows.
