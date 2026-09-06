@@ -492,3 +492,77 @@ Reading:        The limitation is ours, not the agent's. Trajectory capture
                 a discrete outcome afterwards, while Ambig-DS already has one and
                 lacks only a published build script. Availability is the kind of
                 problem an email can solve; experimental design is not.
+
+---
+
+## 2026-09-05 — OpenRCA replication sanity (EXPLORATORY, not confirmatory)
+
+Agent:          `OpenRCA` RCA-agent, scaffold unmodified
+Model:          `gpt-4o-2024-05-13` (upstream default, verified still callable)
+Temperature:    0.0 (upstream default; none of the 8 call sites overrides it)
+Tasks:          1 — Bank row 6, `task_7`, selected by rule: sorted by task_index,
+                the first task whose scoring points require component *and*
+                reason *and* datetime. Not hand-picked.
+Trials:         3
+Ground truth:   `apache02` / `network packet loss` / `2021-03-06 18:52:00`
+Artifacts:      `openrca/test/{result,monitor}/Bank/agent-agentseism-runA-*`
+Cost:           under $1
+
+**Exploratory.** The features below were defined *after* reading these three
+trajectories, so this batch cannot also test them. A separate confirmatory batch
+follows, with the definitions frozen in `agents/openrca.py` (`openrca/1`) first.
+
+Result:         Three runs, identical scaffold, prompt, telemetry, model and
+                temperature; three different diagnoses.
+
+                | run | component | reason | datetime | score |
+                |---|---|---|---|---|
+                | 0 | IG01     | network packet loss  | 18:29:00 | 0.33 |
+                | 1 | Tomcat02 | high JVM CPU load    | 18:30:00 | 0.00 |
+                | 2 | Tomcat02 | JVM OOM Heap         | 18:30:27 | 0.00 |
+
+                Raw code text diverged at step 1 of 1, but semantically step 1 was
+                the same in all three (load `metric_container.csv`, list KPIs);
+                the differences were variable names and comments. At a behavioural
+                abstraction the paths separate later and unevenly:
+
+                | feature | run 0 | run 1 | run 2 | contrast |
+                |---|---|---|---|---|
+                | commit_step     | 6 | 11 | 7 | both arms |
+                | candidate_width | 1 | 5  | 1 | both arms |
+                | telemetry_path  | metric,trace,log | metric,trace,log | metric,log | both arms |
+                | service_focus   | IG01 | Tomcat02 | Tomcat02 | both arms |
+                | step_count      | 7 | 10 | 8 | one arm |
+
+Reading:        Two things this batch is good enough to establish, and one it is
+                not.
+
+                It establishes that this configuration is not deterministic. At
+                temperature 0, with the diagnostic policy fixed by the scaffold's
+                own prompt -- workflow, P95 heuristic, metric-then-trace-then-log
+                order, localization rules -- repeated executions still reach
+                different root-cause decisions. The variation is therefore not the
+                agent inventing different methods; it is the same method executed
+                differently.
+
+                It establishes that within-task contrast is available here, which
+                GAIA never produced on any feature. `telemetry_path` and
+                `service_focus` each hold on one pair and change on the other two.
+
+                It does not establish that any of this recurs. Three runs give
+                three pairs.
+
+Structure:      The divergence is upstream of the evidence. Runs 0 and 2 named
+                their component *inside the instruction that requested the trace
+                or log query* -- the component was chosen from metrics and the
+                later evidence gathered to confirm it. Run 1 carried five
+                candidates through both trace and log and narrowed only at step
+                11. So an `evidence_set` feature would have seen this divergence
+                one step after it happened and described a consequence as a cause,
+                which is why the frozen features are decision-level.
+
+                Against ground truth, this single task already shows two of the
+                three variation kinds worth separating: `reason` moves between
+                correct and incorrect (run 0 right, runs 1 and 2 wrong), while
+                `component` moves between two different wrong answers. Neither is
+                visible in a binary correct/incorrect outcome.
