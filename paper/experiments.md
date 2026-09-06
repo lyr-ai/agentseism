@@ -566,3 +566,73 @@ Structure:      The divergence is upstream of the evidence. Runs 0 and 2 named
                 correct and incorrect (run 0 right, runs 1 and 2 wrong), while
                 `component` moves between two different wrong answers. Neither is
                 visible in a binary correct/incorrect outcome.
+
+---
+
+## 2026-09-05 — OpenRCA confirmatory batch (5 new runs, features frozen first)
+
+Agent:          `OpenRCA` RCA-agent, unmodified; `gpt-4o-2024-05-13`; temperature 0
+Task:           Bank row 6, `task_7` — the same task as the exploratory batch
+Trials:         5, executed after `openrca/1` was committed
+Schema:         `openrca/1`, frozen in `a2f9045` before these runs existed
+Artifacts:      `openrca/test/{result,monitor}/Bank/agent-agentseism-confirm-*`
+
+Questions were fixed in advance: do the commitment modes recur, does
+`service_focus` recur, do `commit_step` and `candidate_width` show within-task
+contrast, does the outcome keep varying, and is early commitment related to the
+final answer.
+
+Result:         | run | commit_step | candidate_width | telemetry_path | service_focus | component | reason |
+                |---|---|---|---|---|---|---|
+                | 0 | 8 | 2 | m>t>l | Tomcat02 | Tomcat02 | JVM OOM |
+                | 1 | 6 | 1 | m>t>l>m>t>l | IG01 | Tomcat01 | JVM OOM |
+                | 2 | 8 | 1 | m>t>l | Tomcat02 | Tomcat02 | JVM OOM |
+                | 3 | 8 | 2 | m>t>l>m>t | IG02 | IG02 | network latency |
+                | 4 | 8 | 3 | m>t>l>m>l | IG01 | IG01 | high memory usage |
+
+                Modes recur. `service_focus` takes `Tomcat02` twice, `IG01`
+                twice, `IG02` once; `commit_step` is 8 in four runs and 6 in one;
+                `reason` is JVM OOM in three. The agent is not drifting through
+                unique states, it is moving between a few repeated ones.
+
+                All seven declared quantities have both arms, against zero of six
+                on GAIA.
+
+                The pre-registered early-commitment question has a shape but not
+                an answer. The single run that committed at step 6 is also the
+                only one whose reported component left its investigation target
+                (`IG01` -> `Tomcat01`); the four that committed at step 8 all
+                reported the component they had focused on. One case.
+
+New defect:     **The outcome saturates, which is GAIA's failure mirrored.**
+                Defining outcome divergence as "any of component, reason or
+                datetime differs" gives `P(dY) = 1.00` over all 10 pairs, so both
+                arms of every amplification are 1.00 and `A_f` is identically 0 --
+                not because no feature matters but because the ruler has no
+                gradations left. On `component` alone the base rate is 0.90, which
+                leaves the `not dY` arm resting on a single pair;
+                `telemetry_path` reports `A_f = +1.00` from that one pair, which
+                is noise. `reason` and `occurrence` are better balanced at 0.70.
+
+                So identifiability is a **two-sided** condition, and the earlier
+                statement of it was half a rule:
+
+                    a feature must sometimes vary and sometimes hold
+                    **and the outcome must sometimes vary and sometimes hold**
+
+                GAIA saturated the feature side: features always varied, leaving
+                no control arm. This task saturates the outcome side: outcomes
+                almost always vary, leaving no control arm at the other end.
+                Neither is estimable, for the same structural reason.
+
+Reading:        No number here should be cited; every estimate rests on one or
+                two pairs. What the batch establishes is that OpenRCA clears the
+                gate GAIA failed -- execution features exhibit natural within-task
+                contrast and recurring modes -- and that clearing it exposes the
+                symmetric constraint at the outcome end.
+
+Next:           More tasks, not more trials on this one. Trials deepen a single
+                task's pair count while leaving its outcome base rate where it is;
+                tasks of differing difficulty are what supply pairs whose outcome
+                held still. This is the opposite prescription from GAIA, where the
+                scarcity was informative tasks rather than stable ones.
