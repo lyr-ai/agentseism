@@ -1,0 +1,8 @@
+# Pinned. Resolve exact versions on first deploy and commit them back here --
+# an unpinned serving stack makes every later comparison ambiguous.
+vllm==0.11.2
+torch==2.9.1
+transformers==5.16.1
+huggingface_hub==1.2.1
+openai==2.14.0
+pyyaml==6.0.3

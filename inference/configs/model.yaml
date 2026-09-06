@@ -1,0 +1,37 @@
+# Serving parameters. Everything that can change an inference result is pinned
+# here, so that a later difference is agent variation and not stack drift.
+#
+# The model is deliberately left unset. DeepSeek-Coder-V2-Lite was chosen under a
+# 24 GB unified-memory constraint and that constraint no longer applies; the
+# question on a 48 GB GPU is which open-weight coder is most competent within
+# budget, which is a decision to make with measurements rather than by inheriting
+# the local choice.
+
+model:
+  id: ""                    # e.g. Qwen/Qwen2.5-Coder-32B-Instruct
+  revision: ""              # REQUIRED: exact commit sha, never a branch name
+  quantization: null        # null | awq | gptq | fp8
+  dtype: bfloat16
+  trust_remote_code: false
+
+serving:
+  max_model_len: 32768      # agent trajectories reached ~15k on one task; leave headroom
+  gpu_memory_utilization: 0.90
+  tensor_parallel_size: 1
+  enable_prefix_caching: true
+  # Prefix caching matters more here than in most workloads: this agent resends
+  # its entire history every step, so step N re-prefills everything from step
+  # N-1. Without it, prefill cost is quadratic in trajectory length.
+  max_num_seqs: 8
+  swap_space: 4
+
+sampling:
+  # Frozen so that repeated runs differ only through the sampler's own
+  # nondeterminism, matching how the Sonnet runs were collected.
+  temperature: 0.0
+  top_p: 1.0
+  max_tokens: 4096
+  seed: null                # null: do not fix, variation is the object of study
+
+# Recorded when the deployment runs, not configured:
+#   vllm_version, torch_version, cuda_version, driver_version, gpu_name
