@@ -135,3 +135,41 @@ def test_a_non_proximal_pair_is_reported_as_undeclared():
 
     runs = [{"commit_step": 6, "reason": "x"}, {"commit_step": 8, "reason": "x"}]
     assert proximity_agreement(runs, "commit_step", "reason")["declared_proximal"] is False
+
+
+# --- early_commit, frozen for the Telecom confirmation --------------------
+
+def test_early_commit_when_the_component_is_named_in_the_trace_request():
+    """The discovery-set shape: chosen from metrics, trace gathered to confirm."""
+    p = _prompt(
+        "Compute the global P95 thresholds.",
+        "Load the trace data and filter for IG01 in the window.",
+    )
+    from agents.openrca import early_commit
+
+    assert early_commit(p) is True
+
+
+def test_not_early_when_traces_come_first():
+    from agents.openrca import early_commit
+
+    p = _prompt(
+        "Compute the global P95 thresholds.",
+        "Analyse the trace data for the faulty components.",
+        "Analyse the logs for Tomcat02.",
+    )
+    assert early_commit(p) is False
+
+
+def test_committing_without_ever_consulting_traces_is_early():
+    from agents.openrca import early_commit
+
+    p = _prompt("Compute thresholds.", "Analyse the logs for Tomcat02.")
+    assert early_commit(p) is True
+
+
+def test_never_narrowing_is_not_an_early_commitment():
+    from agents.openrca import early_commit
+
+    p = _prompt("Compute thresholds.", "Analyse the trace data broadly.")
+    assert early_commit(p) is False

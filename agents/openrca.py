@@ -187,6 +187,37 @@ def project_decisions(prompt_json: dict) -> dict[str, Any]:
     }
 
 
+def early_commit(prompt_json: dict) -> bool:
+    """Did the run name one component at or before it first asked for traces?
+
+    Frozen for the Telecom confirmation. The scaffold's own rules make trace
+    analysis the discriminating step -- "if multiple faulty components are
+    identified at the same level, you should use traces and logs to identify the
+    root cause component" -- so naming a single component no later than that
+    request means the choice was made from metrics and the trace was gathered to
+    confirm it.
+
+    "At or before" rather than "before": in the discovery set two runs named
+    their component inside the very instruction that requested the trace.
+
+    Boolean by construction, so no threshold is chosen from data. A run that
+    never commits, or never requests traces, is handled by the sentinels below
+    rather than by a cut point.
+    """
+    steps = instructions(prompt_json)
+    commit = next(
+        (i for i, s in enumerate(steps, 1) if len(named_components(s)) == 1), None
+    )
+    trace = next(
+        (i for i, s in enumerate(steps, 1) if "trace" in telemetry_kinds(s)), None
+    )
+    if commit is None:
+        return False          # never narrowed to one: not an early commitment
+    if trace is None:
+        return True           # committed without ever consulting traces
+    return commit <= trace
+
+
 def parse_prediction(prediction: str) -> dict[str, str]:
     """The graded answer's three fields, empty strings when absent."""
     try:
