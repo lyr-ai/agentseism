@@ -776,3 +776,92 @@ Reading:        The observation worth keeping, and worth not chasing: agent
                 weaker one, under the same scaffold and budget, does not converge
                 on a commitment at all. That is a model-comparison question and
                 this project is not one, so it is recorded here and left.
+
+---
+
+## 2026-09-05 — Telecom confirmation: not confirmed (independent falsification)
+
+Agent:          `OpenRCA` RCA-agent, unmodified; `gpt-4o-2024-05-13`; temperature 0
+System:         Telecom, held out until this run
+Tasks:          4 — rows 4, 7, 11, 12, the first four of the pool fixed by the
+                original eligibility rule (`task_6` + `task_7`, file order)
+Trials:         5 each, 20 runs, 40 within-task pairs, all completed
+Protocol:       `paper/TELECOM_CONFIRMATORY_PROTOCOL.md`, amended to 4x5 in
+                `1c74e70` before any Telecom outcome was examined
+Cost:           ~$22
+
+Extraction defect, found and fixed before the primary test:
+                The first extraction produced 0 of 20 early commitments.
+                Inspection showed the extractor carried Bank's component
+                vocabulary -- `apache02`, `Tomcat01`, `IG01` -- while Telecom
+                names hosts and containers (`os_001`, `docker_004`, `db_001`, 43
+                candidates). No Bank name can appear in a Telecom instruction, so
+                no commitment could ever be recognised and `early_commit` was
+                False by construction. The defect is demonstrable without
+                reference to any outcome value, which is the exception the
+                pre-registration allows, and it was corrected -- per-system
+                vocabularies transcribed from the scaffold's own prompts -- before
+                the primary test was run. After correction, `early_commit` is
+                True in 11 of 20 runs.
+
+Capability:     All four tasks carry within-task contrast on the feature (2/5,
+                4/5, 1/5, 4/5) and `Y_reason` divergence of 0.40–0.60. Neither
+                margin saturates; the design could have detected the effect.
+
+Primary test:   `H1: early_commit -> Y_reason`, one-sided, alpha = 0.05.
+
+                    n00 = 13   n01 = 9   n10 = 7   n11 = 11      40 pairs
+                    P(dY | df)   0.611
+                    P(dY | !df)  0.409
+                    A_f          +0.202        (Bank discovery: +0.34)
+                    p_within     0.203         one-sided
+                    powered      no  (smaller arm 18, threshold 20)
+
+Per task:       | task | n00 n01 n10 n11 | A_f |
+                |---|---|---|
+                | 4  | 1 3 3 3 | -0.25 |
+                | 7  | 3 3 3 1 | -0.25 |
+                | 11 | 3 3 1 3 | +0.25 |
+                | 12 | 6 0 0 4 | +1.00 |
+
+Verdict:        **Not confirmed.** Directionally consistent and underpowered,
+                and that is the weaker half of the reading. Two of four incidents
+                run the *other* way, and the pooled `+0.202` is carried by task
+                12 -- the one task where the feature and the outcome move in
+                perfect lockstep, over 10 pairs.
+
+                The conclusion is therefore not "more samples might reach
+                significance" but: **there is no evidence that early commitment
+                is a system-independent amplification mechanism.** Both halves
+                matter. The test was underpowered; the task-level heterogeneity
+                also removes the main reason to chase power.
+
+                No fifth task is added. No intervention is implemented -- the
+                commitment intervention existed to test a mechanism that
+                held-out data does not support, and building it now would be
+                constructing a causal test for a hypothesis that failed its
+                observational confirmation.
+
+What survives:  The falsified claim is specific: *premature commitment is the
+                amplification point*. It is dropped.
+
+                What the OpenRCA work established is not affected: repeated
+                executions of a fixed policy on identical telemetry reach
+                different diagnoses; execution features exhibit recurring modes
+                and genuine within-task contrast, which GAIA never produced;
+                large intermediate variation coexists with stable outcomes;
+                outcome-proximal features leak and must be excluded per
+                dimension; pooled inference measures task identity and must be
+                stratified.
+
+                It also sharpens the motivation. If one mechanism were the
+                general answer, a localization method would be largely
+                unnecessary -- one would simply measure that mechanism. The
+                task-level heterogeneity here is the case for the method:
+                **which execution decision becomes consequential appears to be
+                task- and system-dependent**, which is what a discovery procedure
+                is for.
+
+Status:         OpenRCA is frozen. Market is not run. The benchmark is recorded
+                as method-development and exploratory, not as the source of a
+                headline mechanism.

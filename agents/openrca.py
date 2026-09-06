@@ -33,11 +33,27 @@ SCHEMA_VERSION = "openrca/1"
 
 TELEMETRY = ("metric", "trace", "log")
 
-COMPONENTS = (
-    "apache01", "apache02", "Tomcat01", "Tomcat02", "Tomcat03", "Tomcat04",
-    "MG01", "MG02", "IG01", "IG02", "Mysql01", "Mysql02", "Redis01", "Redis02",
-)
-"""The candidate set this scaffold gives the agent, from ``basic_prompt_Bank``."""
+CANDIDATES: dict[str, tuple[str, ...]] = {
+    "Bank": ('IG01', 'IG02', 'MG01', 'MG02', 'Mysql01', 'Mysql02', 'Redis01', 'Redis02', 'Tomcat01', 'Tomcat02', 'Tomcat03', 'Tomcat04', 'apache01', 'apache02'),
+    "Telecom": ('db_001', 'db_002', 'db_003', 'db_004', 'db_005', 'db_006', 'db_007', 'db_008', 'db_009', 'db_010', 'db_011', 'db_012', 'db_013', 'docker_001', 'docker_002', 'docker_003', 'docker_004', 'docker_005', 'docker_006', 'docker_007', 'docker_008', 'os_001', 'os_002', 'os_003', 'os_004', 'os_005', 'os_006', 'os_007', 'os_008', 'os_009', 'os_010', 'os_011', 'os_012', 'os_013', 'os_014', 'os_015', 'os_016', 'os_017', 'os_018', 'os_019', 'os_020', 'os_021', 'os_022'),
+    "Market": ('adservice', 'adservice-0', 'adservice-1', 'adservice-2', 'adservice2-0', 'cartservice', 'cartservice-0', 'cartservice-1', 'cartservice-2', 'cartservice2-0', 'checkoutservice', 'checkoutservice-0', 'checkoutservice-1', 'checkoutservice-2', 'checkoutservice2-0', 'currencyservice', 'currencyservice-0', 'currencyservice-1', 'currencyservice-2', 'currencyservice2-0', 'emailservice', 'emailservice-0', 'emailservice-1', 'emailservice-2', 'emailservice2-0', 'frontend', 'frontend-0', 'frontend-1', 'frontend-2', 'frontend2-0', 'node-1', 'node-2', 'node-3', 'node-4', 'node-5', 'node-6', 'paymentservice', 'paymentservice-0', 'paymentservice-1', 'paymentservice-2', 'paymentservice2-0', 'productcatalogservice', 'productcatalogservice-0', 'productcatalogservice-1', 'productcatalogservice-2', 'productcatalogservice2-0', 'recommendationservice', 'recommendationservice-0', 'recommendationservice-1', 'recommendationservice-2', 'recommendationservice2-0', 'shippingservice', 'shippingservice-0', 'shippingservice-1', 'shippingservice-2', 'shippingservice2-0'),
+}
+"""Candidate components per system, transcribed from the scaffold's own prompts.
+
+Each system gives the agent a different candidate set -- Bank names services
+(`apache02`, `Tomcat01`), Telecom names hosts and containers (`os_001`,
+`docker_004`) -- so a single hardcoded list silently reports "never committed"
+on every system but the one it was written for. That is what a Bank-only list
+did to the first Telecom batch: `early_commit` was False in all 20 runs, not
+because the agent behaved differently but because no Bank name can appear in a
+Telecom instruction.
+
+The default stays Bank so existing callers keep their behaviour; pass ``system``
+for anything else.
+"""
+
+COMPONENTS = CANDIDATES["Bank"]
+"""Backwards-compatible default."""
 
 _EXAMPLE = re.compile(r"\(\s*e\.?g\.?[^)]*\)", re.I)
 """Parenthesised examples, which name components illustratively.
@@ -146,9 +162,9 @@ def instructions(prompt_json: dict) -> list[str]:
     return out
 
 
-def named_components(instruction: str) -> list[str]:
+def named_components(instruction: str, system: str = "Bank") -> list[str]:
     text = _EXAMPLE.sub(" ", instruction or "")
-    return [c for c in COMPONENTS if re.search(rf"\b{c}\b", text)]
+    return [c for c in CANDIDATES[system] if re.search(rf"\b{re.escape(c)}\b", text)]
 
 
 def telemetry_kinds(instruction: str) -> list[str]:
@@ -156,7 +172,7 @@ def telemetry_kinds(instruction: str) -> list[str]:
     return [t for t in TELEMETRY if re.search(rf"\b{t}", text)]
 
 
-def project_decisions(prompt_json: dict) -> dict[str, Any]:
+def project_decisions(prompt_json: dict, system: str = "Bank") -> dict[str, Any]:
     """The four decision-level features, from the Administrator's own messages."""
     steps = instructions(prompt_json)
 
@@ -165,7 +181,7 @@ def project_decisions(prompt_json: dict) -> dict[str, Any]:
     width = -1
     last_multi = -1
     for i, instruction in enumerate(steps, start=1):
-        named = named_components(instruction)
+        named = named_components(instruction, system)
         if len(named) > 1:
             last_multi = len(named)
         if len(named) == 1 and commit_step == -1:
@@ -187,7 +203,7 @@ def project_decisions(prompt_json: dict) -> dict[str, Any]:
     }
 
 
-def early_commit(prompt_json: dict) -> bool:
+def early_commit(prompt_json: dict, system: str = "Bank") -> bool:
     """Did the run name one component at or before it first asked for traces?
 
     Frozen for the Telecom confirmation. The scaffold's own rules make trace
@@ -206,7 +222,7 @@ def early_commit(prompt_json: dict) -> bool:
     """
     steps = instructions(prompt_json)
     commit = next(
-        (i for i, s in enumerate(steps, 1) if len(named_components(s)) == 1), None
+        (i for i, s in enumerate(steps, 1) if len(named_components(s, system)) == 1), None
     )
     trace = next(
         (i for i, s in enumerate(steps, 1) if "trace" in telemetry_kinds(s)), None
