@@ -80,6 +80,56 @@ SCHEMA = FeatureSchema(
 )
 
 
+OUTCOME_PROXIMAL: dict[str, tuple[str, ...]] = {
+    "service_focus": ("component",),
+}
+"""Feature/outcome pairs where the feature is a near-copy of the outcome.
+
+The general rule, not a special case for this adapter: **a feature is excluded
+for an outcome dimension when it is a direct semantic precursor or near-copy of
+it.** Ranking such a pair measures a restatement, not a mechanism.
+
+`service_focus` is the component the agent settled on while investigating and
+`component` is the component it then reported. On the Bank discovery set they
+agreed in 31 of 40 runs, and their divergences agreed on 71 of 80 pairs, giving
+`A_f = +0.79` at `p < 0.001` -- a number that says the agent reports what it
+decided, which was never in question. It is the same leakage as ranking a
+declared outcome observation, one step further upstream and correspondingly
+harder to notice.
+
+The exclusion is per outcome dimension, not global: `service_focus` remains
+analysable against `reason` and `occurrence`, which it does not restate.
+
+Proximity is a claim about meaning, so it is declared here rather than inferred
+from a correlation -- a feature that genuinely drives an outcome would also
+correlate highly, and dropping features for being predictive is how a method
+talks itself out of its own findings. :func:`proximity_agreement` measures the
+overlap so a declaration can be checked, never so one can be discovered.
+"""
+
+
+def proximity_agreement(runs: list[dict], feature: str, outcome: str) -> dict:
+    """How often a feature and an outcome move together, for auditing a declaration."""
+    same_value = sum(1 for r in runs if r.get(feature) == r.get(outcome))
+    pairs = agree = 0
+    for i in range(len(runs)):
+        for j in range(i + 1, len(runs)):
+            pairs += 1
+            agree += (runs[i].get(feature) != runs[j].get(feature)) == (
+                runs[i].get(outcome) != runs[j].get(outcome)
+            )
+    return {
+        "identical_value_rate": same_value / len(runs) if runs else None,
+        "codivergence_rate": agree / pairs if pairs else None,
+        "declared_proximal": outcome in OUTCOME_PROXIMAL.get(feature, ()),
+    }
+
+
+def analysable_features(outcome: str, names: list[str]) -> list[str]:
+    """``names`` minus those declared proximal to ``outcome``."""
+    return [n for n in names if outcome not in OUTCOME_PROXIMAL.get(n, ())]
+
+
 def instructions(prompt_json: dict) -> list[str]:
     """The Administrator's per-step instructions, in order."""
     out = []

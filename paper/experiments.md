@@ -636,3 +636,77 @@ Next:           More tasks, not more trials on this one. Trials deepen a single
                 tasks of differing difficulty are what supply pairs whose outcome
                 held still. This is the opposite prescription from GAIA, where the
                 scarcity was informative tasks rather than stable ones.
+
+---
+
+## 2026-09-05 — OpenRCA Bank, 8 tasks x 5 runs (DISCOVERY SET, now frozen)
+
+Agent:          `OpenRCA` RCA-agent, unmodified; `gpt-4o-2024-05-13`; temperature 0
+Tasks:          8 — the first eight `task_7` rows of Bank in file order
+                (6, 8, 23, 26, 33, 35, 43, 44), fixed by rule before running
+Trials:         5 each, 40 runs, 80 within-task pairs
+Schema:         `openrca/1`, frozen in `a2f9045` before any of these runs
+Artifacts:      `openrca/test/{result,monitor}/Bank/agent-as-b8-*`,
+                `agent-as-b8clean-r23-*`
+
+Result:         The outcome regime is mixed, which is what the batch was for.
+                Per-task pair-divergence rates range 0.70–1.00 for `component`,
+                0.40–1.00 for `reason`, 0.40–1.00 for `occurrence`; pooled base
+                rates are 0.78 / 0.70 / 0.76. Neither margin is saturated, so
+                both arms exist at the outcome end as well as the feature end.
+
+                | Y | feature | n00 n01 n10 n11 | A_f | p_within | powered |
+                |---|---|---|---|---|---|
+                | component  | service_focus   | 10 1 8 61 | +0.79 | 0.000 | no |
+                | component  | commit_step     | 4 6 14 56 | +0.20 | 0.191 | no |
+                | component  | candidate_width | 8 17 10 45 | +0.14 | 0.311 | yes |
+                | component  | telemetry_path  | 6 16 12 46 | +0.07 | 0.571 | yes |
+                | reason     | commit_step     | 6 4 18 52 | +0.34 | 0.063 | no |
+                | reason     | service_focus   | 5 6 19 50 | +0.18 | 0.234 | no |
+                | reason     | candidate_width | 7 18 17 38 | -0.03 | 1.000 | yes |
+                | reason     | telemetry_path  | 6 16 18 40 | -0.04 | 0.886 | yes |
+                | occurrence | telemetry_path  | 9 13 10 48 | +0.24 | 0.027 | yes |
+                | occurrence | commit_step     | 4 6 15 55 | +0.19 | 0.187 | no |
+                | occurrence | service_focus   | 4 7 15 54 | +0.15 | 0.412 | no |
+                | occurrence | candidate_width | 7 18 12 43 | +0.06 | 0.669 | yes |
+
+Excluded:       `service_focus -> component` is outcome-proximal and is not a
+                result. `service_focus` is the component the agent settled on
+                while investigating; `component` is the component it then
+                reported. They held the same value in 31 of 40 runs and moved
+                together on 71 of 80 pairs. `A_f = +0.79, p < 0.001` says the
+                agent reports what it decided. This is the leakage already
+                recorded for declared outcome observations, one step further
+                upstream. The rule is declared generally in `agents/openrca.py`:
+                a feature is excluded for an outcome dimension when it is a direct
+                semantic precursor or near-copy of it, per dimension rather than
+                globally -- `service_focus` stays analysable against `reason` and
+                `occurrence`, which it does not restate.
+
+Reading:        Two statements, both required.
+
+                **The benchmark works.** GAIA returned `p = 1.000` for every
+                feature because its feature-held pairs all came from tasks whose
+                outcome never moved, leaving nothing to condition on inside a
+                task. Here the permutation p-values spread across 0.000–1.000:
+                the test has power. Mixed outcome regimes across tasks are what
+                supplied it.
+
+                **The features are not established as amplification points.**
+                Twelve tests were run; Bonferroni gives `alpha = 0.0042`. With
+                the proximal pair excluded, nothing survives correction --
+                `telemetry_path -> occurrence` at 0.027 and `commit_step ->
+                reason` at 0.063 do not. Two of four features are also
+                underpowered by the pre-registered threshold: `commit_step` has
+                only 10 feature-held pairs against 70 feature-moved.
+
+Discovery:      `commit_step -> reason`, `A_f = +0.34`, `p = 0.063`, underpowered.
+                Suggestive and nothing more. The direction matches the mechanism
+                the exploratory batch suggested -- commit early, then gather
+                evidence that confirms the chosen component -- but 0.063 is not
+                0.05, and adding Bank runs until it crosses would be optional
+                stopping.
+
+                **Bank is now the discovery set and is frozen.** No further Bank
+                runs for this hypothesis. Confirmation requires a held-out system;
+                Market and Telecom are downloaded and unextracted for exactly this.

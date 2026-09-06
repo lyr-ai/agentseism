@@ -105,3 +105,33 @@ def test_decision_features_precede_the_outcome_in_the_schema(name):
     """Decision-level features are declared features; the answer fields are outcomes."""
     spec = next(s for s in SCHEMA.specs if s.name == name)
     assert spec.role.name == "FEATURE"
+
+
+def test_proximal_features_are_excluded_per_outcome_not_globally():
+    from agents.openrca import analysable_features
+
+    names = ["commit_step", "candidate_width", "telemetry_path", "service_focus"]
+    assert "service_focus" not in analysable_features("component", names)
+    assert "service_focus" in analysable_features("reason", names)
+    assert "service_focus" in analysable_features("occurrence", names)
+
+
+def test_proximity_agreement_audits_a_declaration():
+    from agents.openrca import proximity_agreement
+
+    runs = [
+        {"service_focus": "A", "component": "A"},
+        {"service_focus": "B", "component": "B"},
+        {"service_focus": "A", "component": "A"},
+    ]
+    out = proximity_agreement(runs, "service_focus", "component")
+    assert out["identical_value_rate"] == 1.0
+    assert out["codivergence_rate"] == 1.0
+    assert out["declared_proximal"] is True
+
+
+def test_a_non_proximal_pair_is_reported_as_undeclared():
+    from agents.openrca import proximity_agreement
+
+    runs = [{"commit_step": 6, "reason": "x"}, {"commit_step": 8, "reason": "x"}]
+    assert proximity_agreement(runs, "commit_step", "reason")["declared_proximal"] is False
