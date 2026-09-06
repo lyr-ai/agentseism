@@ -710,3 +710,69 @@ Discovery:      `commit_step -> reason`, `A_f = +0.34`, `p = 0.063`, underpowere
                 **Bank is now the discovery set and is frozen.** No further Bank
                 runs for this hypothesis. Confirmation requires a held-out system;
                 Market and Telecom are downloaded and unextracted for exactly this.
+
+---
+
+## 2026-09-05 — gpt-4o-mini backbone feasibility (NO-GO)
+
+Purpose:        Not an AgentSeism result. A bridging check on whether a cheaper
+                backbone stays in the behavioural regime the study needs, after
+                measured cost made the pre-registered Telecom design infeasible.
+Tasks:          Bank rows 6, 8, 23 — the first three of the frozen discovery set
+Model:          `gpt-4o-mini`; scaffold, prompt, temperature and task rule
+                otherwise identical to the Bank runs
+
+Accounting:     | | |
+                |---|---|
+                | planned | 15 |
+                | attempted | 3 |
+                | completed | 0 |
+                | censored at the upstream 25-step budget | 3 |
+                | never attempted | 12 |
+
+                The 12 were never attempted, not lost: the upstream runner
+                aborts a task's remaining repetitions after a run ends without a
+                parseable answer, so a censored first run takes the other four
+                with it. Reporting this as "3 of 15 completed" would imply 15
+                attempts and a 20% success rate; there were 3 attempts and a 0%
+                success rate, and the sampling loss is at task granularity.
+
+Result:         Censoring 3 of 3, against a pre-declared NO-GO threshold of 30%.
+                All three runs ran to 48 logged steps, saturating the budget;
+                `gpt-4o` on the same three tasks ran 15–29 and never reached it.
+
+                The mechanism is not what the first log suggested. `gpt-4o-mini`
+                does name single components -- row 6 at steps 6 and 7, row 8 at
+                step 10, row 23 at steps 9 and 10, comparable to `gpt-4o`'s
+                commit points. What differs is that commitment does not hold: row
+                6 names one component at steps 6–7, returns to multiple
+                candidates at steps 8–11, and names a single one again at steps
+                16–17, until the budget runs out.
+
+                So it is not "cannot commit" but "commitment is not terminal",
+                and that is the more consequential difference. `early_commit` is
+                defined as the first instruction naming exactly one candidate,
+                and on `gpt-4o` that event is where the investigation narrows for
+                good. Here the same event is one hypothesis among several the run
+                will revisit. The feature would still compute and would not
+                measure the same thing.
+
+Decision:       **NO-GO for `gpt-4o-mini` as the primary backbone**, on three
+                independent grounds: censoring far past the declared threshold;
+                censoring that corresponds exactly to non-convergent
+                trajectories, which is MNAR on the axis being measured; and a
+                primary feature whose meaning does not survive the substitution.
+
+                The upstream 25-step budget is **not** changed. Unlike GAIA's
+                recursion guard, which AgentSeism set and which sat on the tail
+                of the upstream distribution, `max_step=25` is OpenRCA's own
+                default in OpenRCA's own runner. Reaching it is agent behaviour
+                under its intended budget, and raising it to recover data would
+                change the agent being measured.
+
+Reading:        The observation worth keeping, and worth not chasing: agent
+                instability appears to change *qualitatively* with model
+                capability. The stronger model varies in **when** it commits; the
+                weaker one, under the same scaffold and budget, does not converge
+                on a commitment at all. That is a model-comparison question and
+                this project is not one, so it is recorded here and left.
