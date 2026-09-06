@@ -62,15 +62,28 @@ def test_enough_is_bounded_by_the_smaller_side():
     assert out["f"]["enough"] is False
 
 
-def test_contrast_counted_only_where_the_outcome_varies():
-    """A task whose outcome never moves offers nothing to condition against."""
+def test_the_control_cell_is_counted_everywhere():
+    """Pairs where the feature held and the outcome held are the control cell.
+
+    Counting them only inside outcome-varying tasks removed n00 entirely and
+    pushed P(dY | not df) toward 1.
+    """
     tables = _tables({
         "stable": [(0, {"f": 0.0}), (0, {"f": 1.0})],
         "varying": [(1, {"f": 1.0}), (0, {"f": 1.0})],
     })
-    out = gp.feature_survival(tables)
-    assert out["f"]["contrast_pairs"] == 0
-    assert out["f"]["identifiable"] is False
+    cells = gp.feature_survival(tables)["f"]["cells"]
+    assert cells["n00"] == 1, "the stable task's feature-held pair is the control"
+    assert cells == {"n00": 1, "n01": 0, "n10": 2, "n11": 1}
+
+
+def test_outcome_that_never_holds_is_not_identifiable():
+    """The mirror of a feature that never holds: no gradations left to compare."""
+    tables = _tables({"t": [(1, {"f": 1.0}), (1, {"f": 0.0}), (1, {"f": 1.0})]})
+    out = gp.feature_survival(tables)["f"]
+    assert out["outcome_saturated"] is True
+    assert out["identifiable"] is False
+    assert out["amplification"] == pytest.approx(0.0), "zero for every feature alike"
 
 
 def test_within_task_permutation_returns_one_without_contrast():
@@ -93,12 +106,12 @@ def test_cross_task_structure_does_not_become_significance():
         "stable_a": [(0, {"f": 0.0}), (0, {"f": 0.0}), (0, {"f": 0.0})],
         "stable_b": [(0, {"f": 0.0}), (0, {"f": 0.0}), (0, {"f": 0.0})],
     })
-    out = gp.feature_survival(tables)
-    # Under the risk difference the illusion cannot even be computed: the
-    # feature never holds still inside the task whose outcome moves, so the
-    # second arm is empty and there is nothing to subtract.
-    assert out["f"]["contrast_pairs"] == 0
-    assert out["f"]["identifiable"] is False
-    assert out["f"]["amplification"] is None
-    assert out["f"]["survival"] == pytest.approx(1.0), "survival alone still looks total"
+    out = gp.feature_survival(tables)["f"]
+    # Pooled, every margin is populated and the association looks perfect: the
+    # feature moved in exactly the pairs whose outcome moved. It is entirely
+    # between-task, which no contingency table can see and the within-task
+    # permutation reports immediately.
+    assert out["identifiable"] is True
+    assert out["amplification"] == pytest.approx(1.0)
+    assert out["cells"] == {"n00": 6, "n01": 0, "n10": 0, "n11": 3}
     assert gp.within_task_permutation(tables, trials=500)["f"] == pytest.approx(1.0)

@@ -318,13 +318,14 @@ def feature_survival(tables, schema=None, min_pairs: int = 20) -> dict:
             s.name for s in schema.specs if s.role is ObservationRole.FEATURE
         }
 
+    # The 2x2 contingency of (feature moved?) x (outcome moved?). Earlier this
+    # counted the feature-held-still arm only inside tasks whose outcome varied,
+    # which removed the n00 cell entirely -- pairs where the feature held and the
+    # outcome held -- and so inflated P(dY | not df) toward 1. All four cells are
+    # now counted over every pair. Pooled cells remain confounded by task; the
+    # within-task permutation, not these counts, is the inference.
     total = base = 0
-    varied: dict[str, int] = {}
-    co_varied: dict[str, int] = {}
-    # Contrast is counted only over tasks whose outcome varies: elsewhere there
-    # is nothing for the feature to be conditioned against in the first place.
-    held_still: dict[str, int] = {}
-    still_outcome_moved: dict[str, int] = {}
+    cells: dict[str, dict[str, int]] = {}
     informative_pairs = 0
     for _columns, pairs in tables.values():
         task_varies = any(pair.outcome > 0 for pair in pairs)
@@ -337,36 +338,62 @@ def feature_survival(tables, schema=None, min_pairs: int = 20) -> dict:
             for name, d in pair.features.items():
                 if feature_names is not None and name not in feature_names:
                     continue
-                if d > 0:
-                    varied[name] = varied.get(name, 0) + 1
-                    co_varied[name] = co_varied.get(name, 0) + outcome_moved
-                elif task_varies:
-                    held_still[name] = held_still.get(name, 0) + 1
-                    still_outcome_moved[name] = (
-                        still_outcome_moved.get(name, 0) + outcome_moved
-                    )
+                cell = cells.setdefault(
+                    name, {"n00": 0, "n01": 0, "n10": 0, "n11": 0}
+                )
+                key = f"n{int(d > 0)}{int(outcome_moved)}"
+                cell[key] += 1
     if not total:
         return {}
+
+    varied = {n: c["n10"] + c["n11"] for n, c in cells.items()}
+    co_varied = {n: c["n11"] for n, c in cells.items()}
+    held_still = {n: c["n00"] + c["n01"] for n, c in cells.items()}
+    still_outcome_moved = {n: c["n01"] for n, c in cells.items()}
+    outcome_saturated = base == 0 or base == total
 
     base_rate = base / total
     out = {"_base_rate": base_rate, "_pairs": total}
     for name, n in sorted(varied.items()):
-        s = co_varied[name] / n
+        # A feature that never varied now reaches here too, since every declared
+        # feature gets a contingency table. Its survival arm is empty.
+        s = (co_varied[name] / n) if n else None
         contrast = held_still.get(name, 0)
+        cell = cells[name]
+        # Margins, not cells. A perfect association -- the feature moves exactly
+        # when the outcome moves -- leaves both off-diagonal cells empty and is
+        # nonetheless perfectly estimable. What cannot be estimated is a margin
+        # that is empty: no pair where the feature held, or none where it moved,
+        # or an outcome that never holds, or never moves.
+        f_moved = cell["n10"] + cell["n11"]
+        f_held = cell["n00"] + cell["n01"]
+        y_moved = cell["n01"] + cell["n11"]
+        y_held = cell["n00"] + cell["n10"]
+        margins = (f_moved, f_held, y_moved, y_held)
         # The second arm: outcome divergence among pairs where the feature held
         # still, counted only inside tasks whose outcome varies at all.
         still_and_moved = still_outcome_moved.get(name, 0)
         baseline = (still_and_moved / contrast) if contrast else None
         out[name] = {
             "survival": s,
+            "never_varied": n == 0,
             "held_still_rate": baseline,
-            "amplification": (s - baseline) if baseline is not None else None,
+            "amplification": (
+                (s - baseline) if (s is not None and baseline is not None) else None
+            ),
             "pairs_with_variation": n,
             "contrast_pairs": contrast,
-            # Precision is bounded by the *smaller* side of the comparison, so
-            # 32 varying pairs against 4 contrast pairs is a 4-pair estimate.
-            "enough": n >= min_pairs and contrast >= min_pairs,
-            "identifiable": contrast > 0,
+            "cells": dict(cell),
+            # Precision is bounded by the smallest cell of the 2x2, not by either
+            # margin: 32 varying pairs against 4 contrast pairs is a 4-pair
+            # estimate, and a full margin with an empty cell is none at all.
+            "enough": min(f_moved, f_held) >= min_pairs,
+            # Identifiability is two-sided. A feature that always moves has no
+            # control arm; an outcome that always moves has no gradations left,
+            # and then A_f is 0 for every feature regardless of what any of them
+            # does. Both show up as an empty cell.
+            "identifiable": min(margins) > 0,
+            "outcome_saturated": outcome_saturated,
         }
     out["_informative_pairs"] = informative_pairs
     return out

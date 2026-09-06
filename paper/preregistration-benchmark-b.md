@@ -93,3 +93,39 @@ execution does not decompose into discrete features that recur, and the question
 becomes whether the object of study should be a continuous or trajectory-level
 representation instead. Switching benchmarks until something works would make any
 eventual positive result uninterpretable.
+
+---
+
+## Addendum — outcome dimensions, written before the 8-task batch
+
+The confirmatory batch showed the composite outcome saturating: "component,
+reason or datetime differs" was true on 10 of 10 pairs, which forces `A_f` to
+zero for every feature regardless of what any of them does. Fixed in advance of
+the next batch, and not revisable by its results:
+
+**Primary outcomes, analysed separately.** `Y_component`, `Y_reason`,
+`Y_occurrence`. Each is a discrete field compared exactly. They answer different
+questions -- same component with a different reason is an unstable account of the
+mechanism; a different component with the same reason is unstable localization --
+and pooling them destroys that distinction.
+
+**Composite is descriptive only.** "Any dimension differs" may be reported as
+context and may not carry an amplification estimate.
+
+**Identifiability is judged on the 2x2 margins**, per feature and per outcome
+dimension:
+
+    |               | outcome held | outcome moved |
+    |---------------|--------------|---------------|
+    | feature held  | n00          | n01           |
+    | feature moved | n10          | n11           |
+
+estimable when all four margins are non-empty, powered by
+`min(n10+n11, n00+n01)`. Margins rather than cells: a feature that moves exactly
+when the outcome moves has both off-diagonal cells empty and is perfectly
+estimable. Pooled cells stay confounded by task, so the within-task permutation
+remains the inference and the table is descriptive.
+
+**Batch:** 8 tasks x 5 runs, the first eight `task_7` rows of Bank in file order,
+same scaffold, model and temperature. Tasks rather than trials, because trials
+deepen one task's pair count without moving its outcome base rate.
