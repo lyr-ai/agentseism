@@ -64,15 +64,19 @@ first session cost thirty minutes reaching the same conclusion by hand.
 Nothing here is one-shot. The point of the first session is watching where the
 memory goes.
 
-```bash
-# 1 — the empty card, before anything is loaded
-nvidia-smi
+The official vLLM template has **no git**, and it already serves the model
+configured in the template rather than an idle shell. Fetch single files instead
+of cloning, and check what is already running before starting anything:
 
-# 2 — scripts and config
+```bash
+# 1 — the card, and what is already on it
+nvidia-smi
+env | grep -E 'VLLM_API_KEY|RUNPOD_POD_ID'   # the template sets an API key
+curl -s -H "Authorization: Bearer $VLLM_API_KEY" http://127.0.0.1:8000/v1/models
+
+# 2 — scripts, without git
 cd /workspace
-git clone --depth 1 https://github.com/lyr-ai/agentseism
-cd agentseism/inference
-pip install -q huggingface_hub openai pyyaml
+curl -sO https://raw.githubusercontent.com/lyr-ai/agentseism/master/inference/stress_test.py
 
 # 3 — weights onto the volume (~31 GB, several minutes)
 export HF_HOME=/workspace/hf
