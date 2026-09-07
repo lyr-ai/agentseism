@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import time
 from pathlib import Path
 
@@ -84,9 +85,15 @@ def main() -> None:
                     help="requests per context; the second one shows whether "
                          "prefix caching served the prefill from cache")
     ap.add_argument("--out", default="stress_results.json")
+    ap.add_argument("--api-key", default="",
+                    help="falls back to OPENAI_API_KEY, then VLLM_API_KEY -- the "
+                         "RunPod vLLM template sets the latter and rejects "
+                         "unauthenticated requests")
     args = ap.parse_args()
 
-    client = OpenAI(base_url=args.base_url, api_key="not-needed")
+    key = (args.api_key or os.environ.get("OPENAI_API_KEY")
+           or os.environ.get("VLLM_API_KEY") or "not-needed")
+    client = OpenAI(base_url=args.base_url, api_key=key)
     model = args.model or client.models.list().data[0].id
     print(f"model: {model}\n")
     print(f"{'ctx':>8}{'rep':>5}{'TTFT':>10}{'decode':>12}{'total':>9}")
