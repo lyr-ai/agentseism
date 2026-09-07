@@ -27,6 +27,11 @@ serving:
   # watch the cache grow; opening at 262k would OOM and teach nothing.
   gpu_memory_utilization: 0.90
   tensor_parallel_size: 1
+  # Every example on the model card uses --tensor-parallel-size 8 with a 262k
+  # context. That is a configuration for 8 GPUs, not a requirement: 30.9 GB of
+  # FP8 weights fit one 48 GB card, and max_model_len is 32768 here. Worth
+  # confirming on first boot rather than assuming -- if the architecture turns
+  # out to need sharding, that is a reason to stop early, not to improvise.
   enable_prefix_caching: true
   # Prefix caching matters more here than in most workloads: this agent resends
   # its entire history every step, so step N re-prefills everything from step
@@ -40,10 +45,15 @@ serving:
   # tool calling the agent receives no action at all and every step is empty, so
   # this is not optional for this workload.
   enable_auto_tool_choice: true
-  tool_call_parser: hermes
-  # `hermes` is the parser for Qwen3's tool format. Verify against the model card
-  # on first deploy: an incorrect parser fails as "no actions" rather than as an
-  # error, which is a slow way to lose a billed session.
+  tool_call_parser: qwen3_coder
+  # Both parser names are taken verbatim from the model card's own vllm serve
+  # line, not guessed. An earlier draft had `hermes` here, which would have
+  # produced a healthy endpoint that returned no tool calls -- the failure this
+  # check exists to catch.
+  reasoning_parser: qwen3
+  # Qwen3.6 is a reasoning model. Without this, chain-of-thought is returned in
+  # the message content instead of a separate field, so the agent would read
+  # reasoning as if it were an answer.
 
 sampling:
   # Frozen so that repeated runs differ only through the sampler's own
