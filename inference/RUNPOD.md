@@ -55,6 +55,12 @@ step below is deliberate.
 
 ## Boot sequence
 
+Step 0 is `./preflight.sh`, and nothing else happens until it passes. It checks
+the same three facts that ended the first session -- driver version, whether
+torch can reach the GPU, whether vLLM is present -- and exits non-zero so that a
+mismatch is a stop rather than a note. A failed preflight costs pennies; the
+first session cost thirty minutes reaching the same conclusion by hand.
+
 Nothing here is one-shot. The point of the first session is watching where the
 memory goes.
 
