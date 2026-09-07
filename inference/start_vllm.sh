@@ -41,6 +41,8 @@ ARGS=(--model "$MODEL" --revision "$REV" --host 0.0.0.0 --port 8000
       --swap-space "$(y serving.swap_space)")
 [ "$(y model.quantization)" != "" ] && ARGS+=(--quantization "$(y model.quantization)")
 [ "$(y serving.enable_prefix_caching)" = "True" ] && ARGS+=(--enable-prefix-caching)
+[ "$(y serving.enable_auto_tool_choice)" = "True" ] && ARGS+=(--enable-auto-tool-choice)
+[ -n "$(y serving.tool_call_parser)" ] && ARGS+=(--tool-call-parser "$(y serving.tool_call_parser)")
 [ "$(y model.trust_remote_code)" = "True" ] && ARGS+=(--trust-remote-code)
 
 echo "+ vllm serve ${ARGS[*]}"

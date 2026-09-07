@@ -1,7 +1,7 @@
 # Base image carries CUDA and a matching torch, so only the serving layer is
 # installed here. The tag is pinned: `latest` would make the CUDA and driver
 # combination vary between rentals.
-FROM vllm/vllm-openai:v0.11.2
+FROM vllm/vllm-openai:v0.28.0
 
 WORKDIR /srv
 COPY requirements.txt .

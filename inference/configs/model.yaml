@@ -1,21 +1,30 @@
 # Serving parameters. Everything that can change an inference result is pinned
 # here, so that a later difference is agent variation and not stack drift.
 #
-# The model is deliberately left unset. DeepSeek-Coder-V2-Lite was chosen under a
-# 24 GB unified-memory constraint and that constraint no longer applies; the
-# question on a 48 GB GPU is which open-weight coder is most competent within
-# budget, which is a decision to make with measurements rather than by inheriting
-# the local choice.
+# Selected by measurement, not by inheriting the local choice. Of the candidates
+# that fit a single 48 GB card, this scores highest on SWE-bench Verified (77.2%)
+# and ships official FP8 weights, so no community quantisation and no online
+# quantisation is involved.
+#
+#   Qwen3-Coder-Next-FP8   70.6%   80.4 GB  -- does not fit 48 GB
+#   Qwen3.6-27B (bf16)     77.2%   55.6 GB  -- does not fit 48 GB
+#   Qwen3.6-27B-FP8        77.2%   30.9 GB  -- fits, ~17 GB left for KV cache
+#   Devstral-Small-2-24B   68.0%   51.6 GB  -- does not fit at bf16
 
 model:
-  id: ""                    # e.g. Qwen/Qwen2.5-Coder-32B-Instruct
-  revision: ""              # REQUIRED: exact commit sha, never a branch name
-  quantization: null        # null | awq | gptq | fp8
-  dtype: bfloat16
+  id: "Qwen/Qwen3.6-27B-FP8"
+  revision: "e89b16ebf1988b3d6befa7de50abc2d76f26eb09"
+  quantization: fp8         # weights are already FP8; vLLM reads it from the config
+  dtype: auto
   trust_remote_code: false
 
 serving:
-  max_model_len: 32768      # agent trajectories reached ~15k on one task; leave headroom
+  max_model_len: 32768
+  # Deliberately not the 262k this model supports. max_model_len is what reserves
+  # KV cache, so starting small makes the split between weights, runtime and
+  # cache visible on a 48 GB card -- and the qualification only needs 8k/16k
+  # stress plus one trajectory that reached ~15k. Raise it to 64k afterwards and
+  # watch the cache grow; opening at 262k would OOM and teach nothing.
   gpu_memory_utilization: 0.90
   tensor_parallel_size: 1
   enable_prefix_caching: true
@@ -24,6 +33,17 @@ serving:
   # N-1. Without it, prefill cost is quadratic in trajectory length.
   max_num_seqs: 8
   swap_space: 4
+
+  # mini-swe-agent sends `tools=[BASH_TOOL]` on every request
+  # (models/litellm_model.py) and reads actions back out of `tool_calls`, not out
+  # of fenced code blocks -- the Sonnet trajectories confirm it. Without native
+  # tool calling the agent receives no action at all and every step is empty, so
+  # this is not optional for this workload.
+  enable_auto_tool_choice: true
+  tool_call_parser: hermes
+  # `hermes` is the parser for Qwen3's tool format. Verify against the model card
+  # on first deploy: an incorrect parser fails as "no actions" rather than as an
+  # error, which is a slow way to lose a billed session.
 
 sampling:
   # Frozen so that repeated runs differ only through the sampler's own
