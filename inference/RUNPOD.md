@@ -1,5 +1,34 @@
 # First session on RunPod
 
+## Check the driver before renting anything
+
+**This is the first check, before GPU model and before price.** A session was
+lost to it: an A40 with driver 570.195.03 reports CUDA 12080, and
+`pip install vllm==0.28.0` pulls a torch built for CUDA 13.0, which refuses to
+initialise:
+
+    RuntimeError: The NVIDIA driver on your system is too old (found version 12080)
+
+Forcing a cu128 build did not help -- pip resolved `torch-2.13.0+cu130` from PyPI
+anyway, with `torch.cuda.is_available()` False.
+
+    driver >= 580  ->  CUDA 13.0  ->  vLLM 0.28 default wheels work
+    driver 570.x   ->  CUDA 12.8  ->  needs an older vLLM, or a matched image
+
+The dependency runs downward and the bottom of it is not ours to configure:
+
+    GPU driver  ->  which CUDA torch build can initialise
+                ->  which vLLM version can run at all
+
+Everything else in this package -- vLLM version, model revision, dtype, parsers
+-- was pinned, and none of it mattered because the layer beneath was not checked.
+`stack.txt` recorded `570.195.03` correctly on the first attempt; the information
+was there and was not acted on before spending.
+
+**So: filter for CUDA 13.0 in the GPU list, and prefer RunPod's own vLLM template
+over a generic PyTorch image.** The template ships a driver, torch and vLLM that
+were tested together, which removes the entire pip step below.
+
 ## Image: use vLLM's, not ours
 
 The `Dockerfile` here builds on `vllm/vllm-openai:v0.28.0` and copies scripts in.
