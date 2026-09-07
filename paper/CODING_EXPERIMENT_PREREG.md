@@ -135,3 +135,63 @@ conditions, and the two classifications declared to be measurement bugs.
 
 The original rule is left in place above rather than edited, so that what
 changed, when, and on what evidence is recoverable.
+
+---
+
+## Amendment 2, 2026-09-07 — breadth over depth: ten repositories
+
+**No trajectory outcome from the primary experiment had been observed.** Nothing
+had run when this was written.
+
+Five repositories was chosen against a $1.50 budget. With wall clock measured at
+12.2 minutes per run, thirty trajectories cost about $3 on one A40, and breadth
+is worth more than depth here: the open question is whether the phenomenon
+exists *across* projects, not whether one task's variance can be estimated
+precisely. Three runs per task stays.
+
+**Primary design: 10 repositories x 1 task x 3 runs = 30 trajectories.**
+
+    idx    0   astropy__astropy-12907            astropy/astropy
+    idx   22   django__django-10097              django/django
+    idx  253   matplotlib__matplotlib-13989      matplotlib/matplotlib
+    idx  287   mwaskom__seaborn-3069             mwaskom/seaborn
+    idx  289   pallets__flask-5014               pallets/flask
+    idx  290   psf__requests-1142                psf/requests
+    idx  298   pydata__xarray-2905               pydata/xarray
+    idx  320   pylint-dev__pylint-4551           pylint-dev/pylint
+    idx  330   pytest-dev__pytest-10051          pytest-dev/pytest
+    idx  349   scikit-learn__scikit-learn-10297  scikit-learn/scikit-learn
+
+SWE-bench Verified contains 12 repositories, so this is most of the diversity the
+benchmark has.
+
+### Eligibility, checked before any agent runs
+
+Two conditions require executing something, so they are settled by a smoke test
+that never invokes the model, and **all ten are checked before the first
+trajectory**:
+
+1. the image starts and `/testbed` sits at the instance's base commit with a
+   clean tree;
+2. the repository's own test suite runs inside the container.
+
+A repository failing either is replaced by the next unseen repository in dataset
+order, and both the failure and the replacement are recorded. Deciding
+eligibility while trajectories are already running would let a task be dropped
+for how the agent behaved in it, which is the thing this rule exists to prevent.
+
+### Follow-up runs, defined now
+
+If a task shows divergence, five runs are not added to it because its result
+looked interesting. Any extension applies to **every** task in the design, or to
+a subset fixed by a rule written before those results are read.
+
+### On amending twice
+
+This is the second amendment, both before data and both argued from task
+metadata rather than outcomes. That is defensible individually and has a limit:
+a document revised often enough stops being a pre-registration. **This is the
+last amendment before data collection.** Afterwards, only a measurement-validity
+defect demonstrable independently of the results — the standard already applied
+to `gaia-mz/1` and to the Bank-vocabulary extractor — justifies a change, and it
+gets its own dated entry.
