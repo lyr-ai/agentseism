@@ -92,3 +92,46 @@ the response is to fix the instrumentation, not to interpret the row.
 - A run that fails for infrastructure reasons — endpoint down, container
   failure — is rerun and both attempts recorded. A run the agent itself ends
   without a patch is data and stays.
+
+---
+
+## Amendment, 2026-09-07 — repository confound in the selection rule
+
+**No trajectory outcome from the primary experiment had been observed when this
+was written.** The amendment rests on task metadata alone: applying the original
+rule and reading the repository field of the five instances it returned.
+
+The original rule — SWE-bench Verified in dataset order, first five instances —
+yields five tasks from one repository:
+
+    astropy__astropy-12907 / -13033 / -13236 / -13398 / -13453
+
+The hypothesis concerns cross-task differences in solution landscapes. Five
+instances of one project share its code structure, test framework and repair
+idioms, so repository identity would be structurally confounded with the task
+set: had all five absorbed, "coding tasks absorb divergence" and "this project's
+issues absorb divergence" would be indistinguishable. The defect is in the
+sampling frame, and it is visible before any run.
+
+### Replacement rule, equally deterministic
+
+Traverse the dataset in its original fixed order; take the first instance of each
+repository not yet represented; stop at five repositories. Eligibility is
+otherwise unchanged.
+
+    idx    0   astropy__astropy-12907          astropy/astropy
+    idx   22   django__django-10097            django/django
+    idx  253   matplotlib__matplotlib-13989    matplotlib/matplotlib
+    idx  287   mwaskom__seaborn-3069           mwaskom/seaborn
+    idx  289   pallets__flask-5014             pallets/flask
+
+No repository was chosen for being interesting, and no instance was swapped for
+difficulty or for how the model handled it. `astropy__astropy-12907` remains
+first under both rules.
+
+Everything else in this document stands: three runs per task, `coding/1`
+unchanged, the three quantities and their levels, the support and refutation
+conditions, and the two classifications declared to be measurement bugs.
+
+The original rule is left in place above rather than edited, so that what
+changed, when, and on what evidence is recoverable.
