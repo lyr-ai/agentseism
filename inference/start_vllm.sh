@@ -37,8 +37,7 @@ ARGS=(--model "$MODEL" --revision "$REV" --host 0.0.0.0 --port 8000
       --max-model-len "$(y serving.max_model_len)"
       --gpu-memory-utilization "$(y serving.gpu_memory_utilization)"
       --tensor-parallel-size "$(y serving.tensor_parallel_size)"
-      --max-num-seqs "$(y serving.max_num_seqs)"
-      --swap-space "$(y serving.swap_space)")
+      --max-num-seqs "$(y serving.max_num_seqs)")
 [ "$(y model.quantization)" != "" ] && ARGS+=(--quantization "$(y model.quantization)")
 [ "$(y serving.enable_prefix_caching)" = "True" ] && ARGS+=(--enable-prefix-caching)
 [ "$(y serving.enable_auto_tool_choice)" = "True" ] && ARGS+=(--enable-auto-tool-choice)

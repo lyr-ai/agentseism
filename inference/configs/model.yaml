@@ -37,7 +37,10 @@ serving:
   # its entire history every step, so step N re-prefills everything from step
   # N-1. Without it, prefill cost is quadratic in trajectory length.
   max_num_seqs: 8
-  swap_space: 4
+  # swap_space was removed in vLLM 0.28: CPU KV offload is configured through
+  # --kv-offloading-size now. Not enabled here -- offloading to host memory
+  # would trade the thing this session is measuring for capacity we do not need
+  # at 32k on one sequence.
 
   # mini-swe-agent sends `tools=[BASH_TOOL]` on every request
   # (models/litellm_model.py) and reads actions back out of `tool_calls`, not out
