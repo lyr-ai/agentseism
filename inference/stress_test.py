@@ -128,13 +128,18 @@ def main() -> None:
 
     Path(args.out).write_text(json.dumps(rows, indent=2))
     print(f"\nwrote {args.out}")
-    first = [r for r in rows if r["repeat"] == 0]
-    if len(first) > 1 and all(r["ttft_s"] for r in first):
-        ratio = first[-1]["ttft_s"] / first[0]["ttft_s"]
-        span = first[-1]["prompt_tokens"] / first[0]["prompt_tokens"]
-        print(f"TTFT grew {ratio:.1f}x while context grew {span:.1f}x "
-              f"({'linear prefill' if abs(ratio - span) < 0.5 * span else 'not linear'})")
-
-
-if __name__ == "__main__":
-    main()
+    # Deliberately not comparing repeat==0 rows across contexts. That assumes
+    # the first request at each length is cold, which is only true if nothing
+    # warmed it earlier -- and in the first session two crashed runs had already
+    # sent the shorter prompt, so its "cold" TTFT was 0.23s against a genuinely
+    # cold 12.11s at twice the length. The script duly reported prefill as
+    # 51x superlinear. Within a context, repeat 0 against repeat 1 is a valid
+    # cache comparison; across contexts it is not, unless the cache was cleared.
+    for target in sorted({r["target"] for r in rows}):
+        pair = [r for r in rows if r["target"] == target]
+        if len(pair) > 1 and pair[0]["ttft_s"] and pair[1]["ttft_s"]:
+            speedup = pair[0]["ttft_s"] / pair[1]["ttft_s"]
+            print(f"ctx {pair[0]['prompt_tokens']}: first {pair[0]['ttft_s']:.2f}s, "
+                  f"repeat {pair[1]['ttft_s']:.2f}s  ({speedup:.1f}x)"
+                  f"{'  <- prefix cache hit' if speedup > 2 else ''}")
+    print("\nA first request is only cold if the prefix was never sent before.")
