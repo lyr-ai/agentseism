@@ -74,9 +74,10 @@ nvidia-smi
 env | grep -E 'VLLM_API_KEY|RUNPOD_POD_ID'   # the template sets an API key
 curl -s -H "Authorization: Bearer $VLLM_API_KEY" http://127.0.0.1:8000/v1/models
 
-# 2 — scripts, without git
+# 2 — scripts, without git, and by commit rather than by branch
 cd /workspace
-curl -sO https://raw.githubusercontent.com/lyr-ai/agentseism/master/inference/stress_test.py
+curl -so stress_test.py \
+  https://raw.githubusercontent.com/lyr-ai/agentseism/<sha>/inference/stress_test.py
 
 # 3 — weights onto the volume (~31 GB, several minutes)
 export HF_HOME=/workspace/hf
@@ -115,6 +116,21 @@ Step 8 needs Docker inside the pod for the SWE-bench container, which RunPod doe
 not provide. If that blocks, stop after step 7: the inference measurements are
 the session's main purpose and the agent run can happen anywhere the endpoint is
 reachable.
+
+## Fetch by commit, never by branch
+
+`raw.githubusercontent.com/<repo>/master/...` is CDN-cached, so a fix pushed a
+minute ago is not what comes back. On a billed instance that reads as "the patch
+did not work", and the next twenty minutes go into debugging code that was never
+delivered -- it happened here, twice, on the same file.
+
+    .../agentseism/64cfe2f/inference/stress_test.py    exact, uncached
+    .../agentseism/master/inference/stress_test.py     whatever the CDN holds
+
+Same discipline as the model revision, the vLLM version and the driver: inside a
+billed environment, anything meaning "latest" is a source of uncertainty. Verify
+the fetch landed -- `grep -c` for something only the new version contains --
+before concluding anything about behaviour.
 
 ## Stop early if
 
