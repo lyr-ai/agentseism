@@ -1,0 +1,31 @@
+{
+  "selection_rule": "SWE-bench Verified in dataset order; first instance of each repository not yet represented; stop at 10 eligible repositories or when repositories are exhausted",
+  "eligibility": "container starts, /testbed clean at base commit, and the first five PASS_TO_PASS tests pass under the repository's own SWE-bench test command",
+  "dataset_repositories": 12,
+  "checked": 12,
+  "eligible": [
+    "astropy__astropy-12907",
+    "django__django-10097",
+    "matplotlib__matplotlib-13989",
+    "mwaskom__seaborn-3069",
+    "pallets__flask-5014",
+    "pydata__xarray-2905",
+    "pytest-dev__pytest-10051",
+    "scikit-learn__scikit-learn-10297",
+    "sphinx-doc__sphinx-10323",
+    "sympy__sympy-11618"
+  ],
+  "ineligible": [
+    {
+      "instance_id": "psf__requests-1142",
+      "repo": "psf/requests",
+      "reason": "no benchmark test spec under the frozen harness"
+    },
+    {
+      "instance_id": "pylint-dev__pylint-4551",
+      "repo": "pylint-dev/pylint",
+      "reason": "PASS_TO_PASS baseline failed"
+    }
+  ],
+  "runs_per_task": 3
+}

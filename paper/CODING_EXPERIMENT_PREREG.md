@@ -195,3 +195,64 @@ last amendment before data collection.** Afterwards, only a measurement-validity
 defect demonstrable independently of the results — the standard already applied
 to `gaia-mz/1` and to the Bank-vocabulary extractor — justifies a change, and it
 gets its own dated entry.
+
+---
+
+## Manifest, 2026-09-07 — selection procedure executed, not amended
+
+The rule from Amendment 2 was run to completion. Nothing here changes the design;
+it records what the frozen procedure returned. The eligibility checker was
+corrected twice before any trajectory ran, both times for defects arguable from
+container behaviour alone — details below.
+
+**10 eligible repositories, from all 12 the benchmark contains.**
+
+    astropy__astropy-12907            django__django-10097
+    matplotlib__matplotlib-13989      mwaskom__seaborn-3069
+    pallets__flask-5014               pydata__xarray-2905
+    pytest-dev__pytest-10051          scikit-learn__scikit-learn-10297
+    sphinx-doc__sphinx-10323          sympy__sympy-11618
+
+Frozen in `paper/manifests/coding_manifest.json`. **30 trajectories.**
+
+### The two exclusions
+
+`psf/requests` — no test command exists for it in the pinned harness's
+`MAP_REPO_VERSION_TO_SPECS`. Recorded rather than worked around: writing a
+repository-specific command here would be exactly the hand-tuning the rule
+avoids. Its container also had an unclean tree at the base commit, which alone
+disqualifies it, since the first `tracked_diff_hash` would not be a clean
+baseline.
+
+`pylint-dev/pylint` — 1369 of its baseline tests pass and one fails,
+`test_functional[recursion_error_3152]`. That test is in the instance's own
+`PASS_TO_PASS` list, so the benchmark states it should pass at the base commit.
+A recursion-depth test failing under x86 emulation on arm64 is a plausible
+explanation and is not investigated: the gate asks whether the baseline is valid
+here, and it is not. Not repaired, not exempted.
+
+### Two checker corrections, both before any trajectory
+
+The first checker ran `pytest --collect-only` in every container and returned
+zero eligible repositories, including one that had already completed a full agent
+trajectory with its tests passing.
+
+1. It read the collect summary by line position. astropy collects 21999 tests and
+   then prints `Interrupted: 6 errors during collection` from a numpy version
+   skew, so the summary is not the last line and a successful collection was read
+   as a failure.
+2. It assumed pytest everywhere. Django uses `./tests/runtests.py`, sphinx uses
+   tox, sympy uses `bin/test`. The command now comes from the benchmark's own
+   per-repository mapping and the tests are the instance's own `PASS_TO_PASS`
+   entries, so the framework is never guessed. All three non-pytest repositories
+   pass under it, which is the evidence that the fix was general rather than a
+   patch for django.
+
+Both are defects in the instrument, demonstrable from container output with no
+model involved, which is the standard this project already applied to `gaia-mz/1`
+and to the Bank-vocabulary extractor. A third defect — `while read` silently
+dropping the tenth repository because its line lacked a trailing newline — was
+also fixed; it reported nothing at all, which is worse.
+
+**Task selection is now closed.** No repository is added, dropped, or rechecked
+during the experiment.
