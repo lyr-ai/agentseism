@@ -57,10 +57,23 @@ def measure(client: OpenAI, model: str, prompt: str, max_tokens: int) -> dict:
         stream_options={"include_usage": True},
     )
     prompt_tokens = None
+    reasoning_tokens = 0
     for chunk in stream:
         if chunk.usage is not None:
             prompt_tokens = chunk.usage.prompt_tokens
-        if chunk.choices and chunk.choices[0].delta.content:
+        if not chunk.choices:
+            continue
+        delta = chunk.choices[0].delta
+        # A reasoning model emits its chain of thought first, in a separate
+        # field. Counting only `content` measures time-to-first-*answer*, not
+        # time-to-first-token, and with a small max_tokens the answer may never
+        # arrive at all -- the first attempt returned ttft=None because 40 tokens
+        # were spent entirely on reasoning.
+        thinking = getattr(delta, "reasoning", None) or getattr(
+            delta, "reasoning_content", None)
+        if thinking:
+            reasoning_tokens += 1
+        if thinking or delta.content:
             if ttft is None:
                 ttft = time.time() - start
             tokens += 1
@@ -69,6 +82,7 @@ def measure(client: OpenAI, model: str, prompt: str, max_tokens: int) -> dict:
     return {
         "prompt_tokens": prompt_tokens,
         "output_tokens": tokens,
+        "reasoning_tokens": reasoning_tokens,
         "ttft_s": round(ttft, 3) if ttft else None,
         "total_s": round(total, 3),
         "decode_tok_s": round(decode, 1),
@@ -80,7 +94,9 @@ def main() -> None:
     ap.add_argument("--base-url", default="http://localhost:8000/v1")
     ap.add_argument("--model", default="")
     ap.add_argument("--contexts", default="8000,16000,32000")
-    ap.add_argument("--max-tokens", type=int, default=40)
+    ap.add_argument("--max-tokens", type=int, default=256,
+                    help="must clear the reasoning budget: this model spent 63 "
+                         "of 91 output tokens thinking on a one-line question")
     ap.add_argument("--repeat", type=int, default=2,
                     help="requests per context; the second one shows whether "
                          "prefix caching served the prefill from cache")
@@ -96,7 +112,7 @@ def main() -> None:
     client = OpenAI(base_url=args.base_url, api_key=key)
     model = args.model or client.models.list().data[0].id
     print(f"model: {model}\n")
-    print(f"{'ctx':>8}{'rep':>5}{'TTFT':>10}{'decode':>12}{'total':>9}")
+    print(f"{'ctx':>8}{'rep':>5}{'TTFT':>10}{'decode':>12}{'total':>9}{'think':>8}")
 
     rows = []
     for target in [int(x) for x in args.contexts.split(",")]:
@@ -105,8 +121,10 @@ def main() -> None:
             r = measure(client, model, prompt, args.max_tokens)
             r |= {"target": target, "repeat": rep}
             rows.append(r)
-            print(f"{r['prompt_tokens'] or target:>8}{rep:>5}"
-                  f"{r['ttft_s']:>9.2f}s{r['decode_tok_s']:>11.1f}/s{r['total_s']:>8.1f}s")
+            ttft = f"{r['ttft_s']:.2f}s" if r["ttft_s"] is not None else "none"
+            print(f"{r['prompt_tokens'] or target:>8}{rep:>5}{ttft:>10}"
+                  f"{r['decode_tok_s']:>11.1f}/s{r['total_s']:>8.1f}s"
+                  f"{r['reasoning_tokens']:>7}r")
 
     Path(args.out).write_text(json.dumps(rows, indent=2))
     print(f"\nwrote {args.out}")
