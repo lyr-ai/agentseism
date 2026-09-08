@@ -954,3 +954,55 @@ Next:           Plot source-state evolution for the seven unresolved pairs befor
                 versus persistent" is too coarse a vocabulary. That would be a
                 post-hoc observation and a next hypothesis, not a revision of the
                 pre-registered one.
+
+### Correction and re-analysis, same 30 runs
+
+Two changes to the analysis, neither to the data.
+
+**Outcome identity moved to the canonical source state.** The pre-registration
+compared `submission` strings, and `submission` is not the object the hypothesis
+is about. It is a string the agent produced, and it can carry files that are not
+tracked source: sphinx r2 submitted 19,439 bytes against a 720-byte source diff,
+the extra 18kB being a scratch file it had written, while all three runs of that
+task ended on the identical `tracked_diff_hash` with byte-identical changes to
+the single source file they touched. Counting r2 as a different solution is a
+measurement error, and the mismatch is visible without reference to any result.
+
+The pre-registered measure is **kept and reported**, not overwritten:
+
+    F_v1   submitted patch strings equal    (pre-registered)
+    F_v2   final tracked_diff_hash equal    (correction)
+
+They disagree on 2 of 25 pairs, both sphinx.
+
+**The label was replaced by three separate facts**, because collapsing them lost
+a real topology:
+
+    D   command-signature sequences ever differ
+    R   after D, both runs hold the same non-empty tracked source state
+    F   final source states equal
+
+| topology | D | R | F | |
+|---|---|---|---|---|
+| absorbed | 1 | 1 | 1 | astropy 3/3, sphinx 3/3 |
+| persistent | 1 | 0 | 0 | xarray 3/3, sympy 3/3 |
+| **re-divergence** | 1 | **1** | **0** | **pytest 3/3**, flask 2/3 |
+
+    v2: absorbed 9, persistent 11, re-divergence 5
+    v1: absorbed 7, persistent 11, unresolved 7
+
+The seven unresolved pairs were two different things. Two were the sphinx
+construct mismatch. The other five are `D=1, R=1, F=0` -- runs that meet on a
+real source state and part again -- which the pre-registered scheme could not
+express because it assumed reconvergence is terminal. They are not fixed and not
+forced into a category.
+
+**Primary, pre-registered:** task-level heterogeneity, with astropy fully
+absorbing and xarray and sympy fully persisting. Those three classify identically
+under v1 and v2, so the finding does not rest on the correction.
+
+**Post-hoc:** trajectories can diverge, reconverge, and diverge again, and on
+pytest that is every pair rather than a stray case. Stochasticity here is not one
+branch point whose effect either survives or does not; divergence appears to be
+created and erased repeatedly along an execution. This was not predicted, is not
+a pre-registered result, and is a hypothesis for a separate confirmation.
