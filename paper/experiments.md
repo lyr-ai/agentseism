@@ -1006,3 +1006,62 @@ pytest that is every pair rather than a stray case. Stochasticity here is not on
 branch point whose effect either survives or does not; divergence appears to be
 created and erased repeatedly along an execution. This was not predicted, is not
 a pre-registered result, and is a hypothesis for a separate confirmation.
+
+---
+
+## 2026-09-07 — H2 fork machinery, validated with no model in the loop
+
+Pre-registered in `paper/INTERVENTION_PREREG_H2.md`. Nothing here is a result
+about agents; it is the check that Phase B is capable of measuring what it
+claims to, run before any GPU was rented for it.
+
+**What the intervention needs.** Two continuations that differ only in carried
+context, starting from the same tracked source state. Two mechanical facts have
+to hold before that sentence means anything, and both are checkable offline.
+
+**What made it non-trivial.** At the pytest fork point the three runs held the
+identical tracked source and three *different* workspaces — `test_repro.py`,
+`reproduce_issue.py`, `repro.py`. So a rebuild that restores source and drops the
+scratch files would satisfy the fingerprint the experiment is named after and
+would silently have changed the experiment. And the primary probe stored only
+hashes, which cannot be inverted, so nothing could be forked from that batch at
+all: the archive layer added here keeps the bytes behind each fingerprint, and
+is storage, not representation — `coding/1` is unchanged.
+
+**The bridge.** `experiments/coding/replay.py` re-executes a recorded
+trajectory's own commands with the archive on. No model call, so it costs Docker
+and no GPU, and it is a check on its own premise: if replay does not reproduce
+the recorded fingerprints, those states were not reachable from the commands
+alone.
+
+**Result** (`experiments/coding/fork_validation.py`, local Docker, x86 under
+emulation, zero model calls, reproduced twice):
+
+    fork point 400ed4047a82  held by {r0: step 8, r1: step 12, r2: step 10}
+    donor A = r0 @ 8    donor B = r1 @ 12
+
+    arm A   tracked 400ed4047a82   workspace bad6642622d5   prefix 18 messages
+    arm B   tracked 400ed4047a82   workspace 777d3b59c758   prefix 26 messages
+
+    PASS  source identical across arms, workspace and context arm-specific
+
+Replay reproduced every recorded `tracked_diff_hash` for r0 steps 1–8 and r1
+steps 1–12, and the workspace fingerprint at both fork points. Fresh containers
+rebuilt from the archives agree on source, differ on workspace, each matching its
+own donor, and carry coherent message prefixes of different lengths that both end
+on an observation.
+
+The fork point is selected by the pre-registered rule — non-empty, held by the
+most runs, earliest by latest arrival — and the donors by first-arrival step
+index, never by how they ended. `tests/test_fork.py` pins that rule, including
+that a run which reverts and returns to a state is credited with reaching it
+once: two of the three pytest runs ran `git checkout`, and dating the meeting by
+a return trip would move the fork point.
+
+Serving for Phase A is `inference/configs/model_h2.yaml`: identical to the
+primary config except `max_model_len` 32768 → 131072 and `max_num_seqs` 8 → 4.
+Whether the KV pool holds a 131072-token sequence on one 48 GB card is confirmed
+at boot, not assumed; the recorded fallback is 65536 for every continuation
+alike, never a silent per-run retry.
+
+**Not yet run:** Phase A donors, and Phase B. No GPU has been started for H2.

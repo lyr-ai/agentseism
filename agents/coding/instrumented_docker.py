@@ -94,10 +94,18 @@ def _untracked_paths(sha_lines: str) -> list[str]:
 class InstrumentedDockerEnvironment(DockerEnvironment):
     """`DockerEnvironment` plus a repository snapshot after each action.
 
-    Extra config keys, both optional::
+    Extra config keys, all optional::
 
-        probe_repo    path probed inside the container (default /testbed)
-        probe_output  JSONL file the snapshots are written to
+        probe_repo     path probed inside the container (default /testbed)
+        probe_output   JSONL file the snapshots are written to
+        probe_archive  directory the per-step archive is written to
+
+    The archive is storage, not representation. Nothing written under
+    `probe_archive` is a feature, enters a comparator, or is used to classify a
+    pair: `coding/1` is unchanged. It exists because a fingerprint cannot be
+    inverted -- the primary experiment recorded `tracked_diff_hash` and so the
+    state it identifies cannot be rebuilt, which makes forking from those
+    trajectories impossible. The archive keeps the bytes behind the hash.
     """
 
     def __init__(self, *args, **kwargs):
@@ -105,11 +113,29 @@ class InstrumentedDockerEnvironment(DockerEnvironment):
         self._probe_output = kwargs.pop("probe_output", "") or os.getenv(
             "AGENTSEISM_PROBE_OUTPUT", ""
         )
+        self._probe_archive = kwargs.pop("probe_archive", "") or os.getenv(
+            "AGENTSEISM_PROBE_ARCHIVE", ""
+        )
         super().__init__(*args, **kwargs)
         self._step = 0
         self._previous: dict | None = None
         if self._probe_output:
             Path(self._probe_output).parent.mkdir(parents=True, exist_ok=True)
+        if self._probe_archive:
+            Path(self._probe_archive).mkdir(parents=True, exist_ok=True)
+
+    @property
+    def step_index(self) -> int:
+        """Index of the last completed action, for whoever archives alongside.
+
+        The environment is the single source of truth for step numbering, so an
+        agent writing its message log into the same directory cannot drift by
+        one from the state snapshot it is supposed to accompany.
+        """
+        return self._step
+
+    def step_dir(self, step: int | None = None) -> Path:
+        return Path(self._probe_archive) / f"step_{self._step if step is None else step:04d}"
 
     def execute(self, action: dict, cwd: str = "", **kwargs) -> dict[str, Any]:
         output = super().execute(action, cwd, **kwargs)
@@ -145,8 +171,61 @@ class InstrumentedDockerEnvironment(DockerEnvironment):
             "tracked_diff_bytes": len(tracked.encode()),
         }
 
+    def _exec_bytes(self, script: str) -> bytes:
+        """Run a read-only command in the container and keep stdout as bytes.
+
+        `_snapshot` decodes, and decoding is lossy for a diff that has to apply
+        again later: `text=True` normalises newlines and `errors="replace"`
+        would silently rewrite any byte the locale cannot represent. What is
+        archived has to be what `git apply` will be handed.
+        """
+        return subprocess.run(
+            [self.config.executable, "exec", "-w", "/",
+             self.container_id, *self.config.interpreter, script],
+            capture_output=True, timeout=120,
+        ).stdout
+
+    def _archive(self, snap: dict) -> dict:
+        """Write the bytes behind this step's fingerprints; return an index row.
+
+        Two files, and either may be absent when there is nothing to write::
+
+            tracked.diff   `git diff HEAD`, exactly as git emits it
+            untracked.tar  the untracked files, by the same enumeration the
+                           fingerprint used
+
+        The tar is built from `git ls-files --others --exclude-standard -z`, the
+        list the probe already hashes, so the archive and the fingerprint cannot
+        disagree about which files count as the agent's own.
+        """
+        directory = self.step_dir()
+        directory.mkdir(parents=True, exist_ok=True)
+        row: dict[str, Any] = {"archive_dir": str(directory)}
+
+        diff = self._exec_bytes(f"cd {self._probe_repo} && git diff HEAD")
+        if diff.strip():
+            (directory / "tracked.diff").write_bytes(diff)
+            row["tracked_diff_archived"] = len(diff)
+        # The hash is taken over the decoded, stripped form, so recomputing it
+        # from the archived bytes is the check that the archive is faithful.
+        row["archive_tracked_hash"] = hashlib.sha256(
+            diff.decode("utf-8", "replace").strip().encode()
+        ).hexdigest()
+
+        if snap["untracked_files"]:
+            tar = self._exec_bytes(
+                f"cd {self._probe_repo} && git ls-files --others --exclude-standard -z "
+                f"| tar -c --null -T - -f -"
+            )
+            if tar:
+                (directory / "untracked.tar").write_bytes(tar)
+                row["untracked_tar_bytes"] = len(tar)
+                row["untracked_tar_sha256"] = hashlib.sha256(tar).hexdigest()
+        return row
+
     def _record(self, action: dict, output: dict) -> None:
         snap = self._snapshot()
+        archive = self._archive(snap) if self._probe_archive else {}
         first = self._previous is None
         self._append({
             "step": self._step,
@@ -162,6 +241,7 @@ class InstrumentedDockerEnvironment(DockerEnvironment):
             and snap["workspace_diff_hash"] != self._previous["workspace_diff_hash"],
             "timestamp": time.time(),
             **snap,
+            **archive,
         })
         self._previous = snap
 

@@ -1,0 +1,63 @@
+# Serving parameters for the H2 intervention experiment.
+#
+# Identical to configs/model.yaml -- same weights, same revision, same
+# parsers, same sampler -- except max_model_len and max_num_seqs. Kept as a
+# separate file rather than an edit, so that what served the primary
+# experiment stays readable as what served it.
+
+# Serving parameters. Everything that can change an inference result is pinned
+# here, so that a later difference is agent variation and not stack drift.
+#
+# Selected by measurement, not by inheriting the local choice. Of the candidates
+# that fit a single 48 GB card, this scores highest on SWE-bench Verified (77.2%)
+# and ships official FP8 weights, so no community quantisation and no online
+# quantisation is involved.
+#
+#   Qwen3-Coder-Next-FP8   70.6%   80.4 GB  -- does not fit 48 GB
+#   Qwen3.6-27B (bf16)     77.2%   55.6 GB  -- does not fit 48 GB
+#   Qwen3.6-27B-FP8        77.2%   30.9 GB  -- fits, ~17 GB left for KV cache
+#   Devstral-Small-2-24B   68.0%   51.6 GB  -- does not fit at bf16
+
+model:
+  id: "Qwen/Qwen3.6-27B-FP8"
+  revision: "e89b16ebf1988b3d6befa7de50abc2d76f26eb09"
+  quantization: fp8         # weights are already FP8; vLLM reads it from the config
+  dtype: auto
+  trust_remote_code: false
+
+serving:
+  max_model_len: 131072
+  # Raised from the 32768 the primary experiment served. The reason is recorded
+  # in INTERVENTION_PREREG_H2.md and predates any H2 outcome: 4 of 30 primary
+  # runs exited ContextWindowExceeded, including all three runs of
+  # mwaskom__seaborn-3069, so the censoring is correlated with trajectory
+  # length. A forked continuation carries a donor prefix on top of its own
+  # steps, which makes the pressure worse, not better.
+  #
+  # This is the one parameter that must be confirmed at boot rather than
+  # assumed. max_model_len reserves KV cache, and vLLM refuses to start if the
+  # pool cannot hold one full-length sequence; at 30.9 GB of FP8 weights on a
+  # 48 GB card there is roughly 17 GB left. If the server refuses, the fallback
+  # is 65536 and a recorded note -- not a silent retry at a smaller value, since
+  # every continuation in the experiment has to be served at the same length.
+  gpu_memory_utilization: 0.90
+  tensor_parallel_size: 1
+  enable_prefix_caching: true
+  # Worth more here than in the primary experiment. Every continuation in an arm
+  # shares the same donor prefix, so after the first one the prefix is a cache
+  # hit: 8 continuations pay for it once.
+  max_num_seqs: 4
+  # Halved. Continuations are run one at a time and the pool is being asked for
+  # four times the sequence length; concurrency is not what this experiment
+  # needs, headroom is.
+
+sampling:
+  # Frozen so that repeated runs differ only through the sampler's own
+  # nondeterminism, matching how the Sonnet runs were collected.
+  temperature: 0.0
+  top_p: 1.0
+  max_tokens: 4096
+  seed: null                # null: do not fix, variation is the object of study
+
+# Recorded when the deployment runs, not configured:
+#   vllm_version, torch_version, cuda_version, driver_version, gpu_name
