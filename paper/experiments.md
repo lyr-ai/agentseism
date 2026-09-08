@@ -1065,3 +1065,64 @@ at boot, not assumed; the recorded fallback is 65536 for every continuation
 alike, never a silent per-run retry.
 
 **Not yet run:** Phase A donors, and Phase B. No GPU has been started for H2.
+
+---
+
+## 2026-09-08 — H2 Phase A: donors collected, gate says UNIDENTIFIABLE, Phase B does not start
+
+Five runs of `pytest-dev__pytest-10051`, fresh, `max_model_len` 131072, archive
+on. All five completed. The gate is `experiments/coding/phase_a_gate.py`; its
+report is `paper/manifests/h2_phase_a_gate_report.json`. **No manifest was
+written and no GPU was spent on Phase B.**
+
+    run        exit  steps  forks  wall(s)  ctx peak  reasoning  patch B  final
+      0   Submitted     52     52     1185     65448      42318     1010  102c3fa15ba9
+      1   Submitted     36     36      543     35824      19399      624  ad3317821606
+      2   Submitted     37     37      397     28924      10359      772  fec3a3754204
+      3   Submitted     39     39     1347     57004      37730      851  cbebb12a14c1
+      4   Submitted     27     27      213     23203       4436      624  ad3317821606
+
+    shared non-empty S  400ed4047a8253a9   first arrival {r0:9, r1:12, r2:10, r3:9, r4:8}
+      arm A  r4 @ step  8   workspace ccdbd909f0d7   prefix 18 msgs   F_A ad3317821606
+      arm B  r1 @ step 12   workspace 8557257177f7   prefix 26 msgs   F_B ad3317821606
+      F_A == F_B ?  True
+
+**Why this is a stop.** H2b asks how often a continuation lands on its own
+donor's final state. The pre-registered donor rule takes the smallest and largest
+first-arrival step, and here that is r4 at step 8 and r1 at step 12 — two runs
+that end on the *same* source state. The primary measure cannot separate the arms
+however many continuations are run.
+
+**The pair was not reselected and will not be.** Four distinct final states exist
+among the five runs, so a different pair would be identifiable, and picking it
+after seeing that the rule's pair is not is choosing a comparison by how well it
+separates. That is the failure mode the manifest exists to prevent, arriving one
+step earlier than expected.
+
+**Two things worth recording, neither of them a test.**
+
+*The attractor replicates, exactly.* All five Phase A runs pass through
+`400ed4047a8253a9…`, the identical hash the three primary-batch runs passed
+through at a quarter of the context length. Eight independent runs, two batches,
+two serving configurations, one shared intermediate state.
+
+*The endpoints do not.* Seven distinct final states across those eight runs, and
+**zero overlap between the batches** — the primary batch's three
+(`5c9780ad`, `0311c057`, `b387c8a3`) and Phase A's four (`102c3fa1`, `ad331782`,
+`fec3a375`, `cbebb12a`) are disjoint. The convergence point is reproducible
+across serving configurations; the repair is not reproducible even within one.
+
+This is a descriptive replication of the re-divergence topology on independent
+data. It is not a pre-registered test of it: these runs were collected to
+generate donors, and reporting them as confirmation of a hypothesis they were not
+registered to test would be the same move in a different coat.
+
+**The 128k change earned its place.** Two of the five runs peaked at 65,448 and
+57,004 prompt tokens. Both would have hit `ContextWindowExceeded` at the primary
+experiment's 32768 and been lost, as four primary runs were.
+
+**Open, and not decided here:** the donor rule selects on arrival step, which
+does not guarantee the two donors differ in outcome, and the primary measure
+requires that they do. Whether to amend the rule and rerun Phase A on a fresh
+sample, or to stop on this task, is a decision for the next entry, not a repair
+to this one.

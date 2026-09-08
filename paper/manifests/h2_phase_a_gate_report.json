@@ -1,0 +1,111 @@
+{
+ "task": "pytest-dev__pytest-10051",
+ "image": "swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10051:latest",
+ "runs": {
+  "0": {
+   "exit_status": "Submitted",
+   "steps": 52,
+   "fork_points": 52,
+   "submission_bytes": 1010,
+   "final_tracked_hash": "102c3fa15ba9ae227b0144415a4a50b1bc8f1e4ecc75525221f85119b0e264f1",
+   "api_calls": 53,
+   "wall_clock_s": 1184.9,
+   "context_peak_tokens": 65448,
+   "completion_tokens": 49644,
+   "reasoning_tokens": 42318
+  },
+  "1": {
+   "exit_status": "Submitted",
+   "steps": 36,
+   "fork_points": 36,
+   "submission_bytes": 624,
+   "final_tracked_hash": "ad3317821606bfc375c004b1e7384450d2ff4b2361b530ce71673c90ce6e9dc7",
+   "api_calls": 37,
+   "wall_clock_s": 542.7,
+   "context_peak_tokens": 35824,
+   "completion_tokens": 22622,
+   "reasoning_tokens": 19399
+  },
+  "2": {
+   "exit_status": "Submitted",
+   "steps": 37,
+   "fork_points": 37,
+   "submission_bytes": 772,
+   "final_tracked_hash": "fec3a37542048b115bbdb5392147dae5fc7979c94a9e7b35467a61700bc03941",
+   "api_calls": 38,
+   "wall_clock_s": 397.4,
+   "context_peak_tokens": 28924,
+   "completion_tokens": 15623,
+   "reasoning_tokens": 10359
+  },
+  "3": {
+   "exit_status": "Submitted",
+   "steps": 39,
+   "fork_points": 39,
+   "submission_bytes": 851,
+   "final_tracked_hash": "cbebb12a14c18eb338e7cd99f5ee67b2dbb3f14e216c804dd3acf4d87acdfb0d",
+   "api_calls": 40,
+   "wall_clock_s": 1347.3,
+   "context_peak_tokens": 57004,
+   "completion_tokens": 42333,
+   "reasoning_tokens": 37730
+  },
+  "4": {
+   "exit_status": "Submitted",
+   "steps": 27,
+   "fork_points": 27,
+   "submission_bytes": 624,
+   "final_tracked_hash": "ad3317821606bfc375c004b1e7384450d2ff4b2361b530ce71673c90ce6e9dc7",
+   "api_calls": 28,
+   "wall_clock_s": 213.2,
+   "context_peak_tokens": 23203,
+   "completion_tokens": 8191,
+   "reasoning_tokens": 4436
+  }
+ },
+ "failures": [],
+ "outcome": "UNIDENTIFIABLE",
+ "fork_point": {
+  "tracked_diff_hash": "400ed4047a8253a9cc7268069f079099484f0d279b7bd225a309da40609896c0",
+  "first_arrival_step": {
+   "0": 9,
+   "1": 12,
+   "2": 10,
+   "3": 9,
+   "4": 8
+  }
+ },
+ "arms": {
+  "A": {
+   "run": "4",
+   "fork_step": 8,
+   "archive": "pytest-dev__pytest-10051__r4.archive/step_0008",
+   "tracked_diff_hash": "400ed4047a8253a9cc7268069f079099484f0d279b7bd225a309da40609896c0",
+   "workspace_diff_hash": "ccdbd909f0d72d7a2646f002455e23a66196463bcf70137315b5d1b35350f157",
+   "prefix_messages": 18,
+   "prefix_digest": "13caf597adf237ff4203b685ddfc67019392d39ec8a551b8be9cd91e524c37d7",
+   "prefix_last_role": "tool",
+   "final_tracked_hash": "ad3317821606bfc375c004b1e7384450d2ff4b2361b530ce71673c90ce6e9dc7",
+   "exit_status": "Submitted",
+   "total_steps": 27
+  },
+  "B": {
+   "run": "1",
+   "fork_step": 12,
+   "archive": "pytest-dev__pytest-10051__r1.archive/step_0012",
+   "tracked_diff_hash": "400ed4047a8253a9cc7268069f079099484f0d279b7bd225a309da40609896c0",
+   "workspace_diff_hash": "8557257177f722e8a629fbbca5eb14b8c2966b488294f475e177e75ae3d98612",
+   "prefix_messages": 26,
+   "prefix_digest": "b7df0fd0f954764389796dc5dc1d9ddb1e41ae44e672148d473d016d2ffee09c",
+   "prefix_last_role": "tool",
+   "final_tracked_hash": "ad3317821606bfc375c004b1e7384450d2ff4b2361b530ce71673c90ce6e9dc7",
+   "exit_status": "Submitted",
+   "total_steps": 36
+  }
+ },
+ "continuation_step_limit": 238,
+ "outcome_targets": {
+  "F_A": "ad3317821606bfc375c004b1e7384450d2ff4b2361b530ce71673c90ce6e9dc7",
+  "F_B": "ad3317821606bfc375c004b1e7384450d2ff4b2361b530ce71673c90ce6e9dc7"
+ }
+}
