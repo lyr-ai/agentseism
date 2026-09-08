@@ -1134,3 +1134,35 @@ rule; that is why it will not be. A0 supplies no donor and no confirmatory
 number. Phase A1 is five fresh runs, and there is no third attempt: a second
 `UNIDENTIFIABLE` stops the experiment on this task rather than buying another
 batch.
+
+---
+
+## 2026-09-08 — Phase A1, first attempt, aborted by the endpoint being stopped
+
+Not a result. Recorded so that tomorrow's Phase A1 is legible as the second
+attempt rather than the first.
+
+    r0  2281s  Submitted        724 B  42 calls  forkpoints=41
+    r1   409s  NotFoundError      0 B  21 calls  forkpoints=20
+    r2    12s  NotFoundError      0 B   1 call
+    r3     5s  NotFoundError      0 B   1 call
+    r4     6s  NotFoundError      0 B   1 call
+
+The pod was stopped deliberately, to avoid paying for an idle GPU overnight, and
+r1 through r4 are the endpoint disappearing underneath the runner. `NotFoundError`
+is infrastructure, and the pre-registration says such a run is rerun with both
+attempts recorded.
+
+**The gate was never run on this batch, and r0 was never compared with anything.**
+The decision to discard was taken before any donor could be selected, on a
+billing argument that has nothing to do with what the runs contain.
+
+r0 completed and is valid on its own terms. It is discarded anyway, and the
+reason is homogeneity rather than thrift: the stochasticity this experiment
+studies comes from the serving stack, so a batch assembled across two pod
+sessions — two physical cards, two schedulers — has a stack change inside it.
+That is the same contamination the decision to run sequentially rather than
+concurrently was meant to avoid, and it would be inconsistent to accept it here.
+
+The batch is kept at `runs/h2_phase_a1_aborted_2026-09-08`. Phase A1 proper is
+five runs in one uninterrupted pod session.
