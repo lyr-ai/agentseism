@@ -865,3 +865,92 @@ What survives:  The falsified claim is specific: *premature commitment is the
 Status:         OpenRCA is frozen. Market is not run. The benchmark is recorded
                 as method-development and exploratory, not as the source of a
                 headline mechanism.
+
+---
+
+## 2026-09-07 — coding divergence experiment, 10 repositories x 3 runs
+
+Agent:          `mini-swe-agent` 2.4.6, unmodified
+Model:          `Qwen/Qwen3.6-27B-FP8` @ `e89b16eb`, vLLM 0.28.0, temperature 0,
+                one A40, `max_model_len` 32768
+Schema:         `coding/1`, frozen in `b543af2` before any of these runs
+Protocol:       `paper/CODING_EXPERIMENT_PREREG.md` with two amendments and the
+                manifest, all committed before data
+Runs:           30 of 30 completed, 271 minutes wall clock, ~$2.3 of GPU
+Artifacts:      trajectories, probes and logs per run; analysis in
+                `experiments/coding/divergence.py`
+
+Result:         26 runs submitted a patch; 4 ended in `ContextWindowExceeded`.
+
+                | task | pairs |
+                |---|---|
+                | astropy-12907 | **absorbed 3** |
+                | pydata/xarray-2905 | **persistent 3** |
+                | sympy-11618 | **persistent 3** |
+                | matplotlib-13989 | persistent 2, absorbed 1 |
+                | scikit-learn-10297 | persistent 2, absorbed 1 |
+                | django-10097 | persistent 1 (two runs censored) |
+                | pallets/flask-5014 | absorbed 1, unresolved 2 |
+                | sphinx-10323 | absorbed 1, unresolved 2 |
+                | pytest-10051 | **unresolved 3** |
+                | mwaskom/seaborn-3069 | no usable pair — all three censored |
+
+                Totals: absorbed 7, persistent 11, unresolved 7.
+
+Empty-state defect, fixed before these numbers:
+                The first pass classified 17 of 25 pairs as anomalous, which the
+                pre-registration calls a measurement bug rather than a finding.
+                It was one: the only state two runs shared was `sha256("")`, the
+                hash of an empty diff, which every run holds before it edits
+                anything. Command signatures typically diverge at step 0 or 1
+                while the repository stays untouched for many steps, so every
+                pair "reconverged" on having changed nothing yet. Two runs that
+                have not edited the repository have not converged on a solution;
+                they have not started. Reconvergence now requires a shared
+                *non-empty* source state after the divergence point, and the
+                unresolved count fell from 17 to 7.
+
+The seven that remain are **not** the same kind of problem:
+                They reconverge on a real state and still end with different
+                patches, which is not contradictory. A pair can run
+
+                    A: S0 -> S1 -> S2 -> S3 -> patch A
+                    B: S0 -> T1 -> S2 -> T3 -> patch B
+
+                meeting at `S2` and parting again. The pre-registered
+                classification assumed that once two runs reconverge they stay
+                reconverged, and agent trajectories do not oblige. So the defect
+                may be in the scheme rather than the instrument, and forcing
+                these into `absorbed` or `persistent` would be editing the data
+                to fit the categories. They stay unresolved.
+
+Reading:        **Interim, and deliberately weaker than "H supported".**
+
+                The data show clear task-level heterogeneity, including tasks
+                with complete absorption (astropy, 3 of 3) and tasks with
+                persistent divergence (xarray and sympy, 3 of 3 each), with
+                mixed tasks in between. That is the shape H predicts, and the
+                pre-registered support condition is met on its face.
+
+                But the pre-registered binary treatment of reconvergence is
+                insufficient for trajectories that reconverge and then diverge
+                again, and seven pairs fall there. Until those are understood at
+                the representation level, "H supported" would be claiming more
+                than the classification can carry.
+
+Censoring:      `max_model_len` was set to 32768 against a model that supports
+                262144, deliberately, so that the split between weights and KV
+                cache would be visible on a 48 GB card. That choice censored 4
+                runs, and not at random: seaborn lost all three and django two.
+                Longer trajectories are the ones cut, and longer trajectories are
+                plausibly the more divergent ones -- the same
+                missing-not-at-random shape as GAIA's recursion guard. Any rerun
+                should raise the limit, and that argument does not depend on
+                these results.
+
+Next:           Plot source-state evolution for the seven unresolved pairs before
+                touching the classification. Whether they genuinely re-diverge is
+                a question about trajectory topology, and if they do, "absorbed
+                versus persistent" is too coarse a vocabulary. That would be a
+                post-hoc observation and a next hypothesis, not a revision of the
+                pre-registered one.
