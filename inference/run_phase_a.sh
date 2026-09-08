@@ -29,7 +29,24 @@ environment:
   environment_class: agents.coding.instrumented_docker.InstrumentedDockerEnvironment
   image: $IMG
 model:
+  # Streaming, and a retry loop that can be audited. The reason is measured, not
+  # suspected: RunPod's endpoint sits behind Cloudflare, which returns HTTP 524
+  # with an HTML error page after ~120 s if the origin has sent nothing yet. A
+  # non-streaming completion sends nothing until its last token, so any model
+  # call longer than that dies in transit while vLLM finishes it and records no
+  # error. A tiny prompt with max_tokens 8000 reproduced it in 125.1 s; the same
+  # prompt capped at 200 tokens returned JSON in 4.7 s.
+  #
+  # Adopted only after experiments/coding/stream_equivalence.py passed with a
+  # fixed seed collapsing the baseline: on plain text, tool calls, parallel tool
+  # calls and long reasoning, every field the agent consumes is byte-identical
+  # streamed and unstreamed. Generation length, prompt, sampler and agent are
+  # untouched -- only how the response arrives.
+  model_class: agents.coding.instrumented_model.InstrumentedLitellmModel
   model_name: "openai/Qwen/Qwen3.6-27B-FP8"
+  stream: true
+  attempt_timeout: 180
+  max_attempts: 6
   model_kwargs:
     drop_params: true
 YAML

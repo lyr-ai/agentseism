@@ -1166,3 +1166,95 @@ concurrently was meant to avoid, and it would be inconsistent to accept it here.
 
 The batch is kept at `runs/h2_phase_a1_aborted_2026-09-08`. Phase A1 proper is
 five runs in one uninterrupted pod session.
+
+---
+
+## 2026-09-08 — HTTP 524: a transport timeout that looks exactly like model instability
+
+Two Phase A1 attempts died before this was understood, and the misdiagnosis is
+the point of the entry. Agent steps hung for 5, 8, 46 minutes. The endpoint
+answered `/v1/models` in half a second throughout. It read as a flaky model
+server.
+
+**It was not.** Every hypothesis that sounded plausible was measured and rejected:
+
+| hypothesis | measurement | verdict |
+|---|---|---|
+| container commands stall the connection | command+probe time: median 0.7 s, max 1.7 s, none over 60 s in any run | rejected |
+| idle keep-alive connections are killed | same pooled connection after 0 s / 45 s / 90 s idle: 0.7 s, 0.7 s, 0.5 s | rejected |
+| large request bodies break the proxy | 1.9 KB → 0.5 s, 28 KB → 2.5 s, 116 KB → 8.1 s, 234 KB (53k tokens) → 13.0 s | rejected |
+| vLLM stalls or aborts | 0 aborts, 0 errors, 0 preemptions; all requests ≤240 s server-side; `num_requests_running` = 0 during every observed stall | rejected |
+
+The captured response settled it:
+
+    real agent request (293 KB)     524 in 125.8 s  text/html  7879 B error page
+    tiny prompt, max_tokens 8000    524 in 125.1 s  text/html  same page
+    tiny prompt, max_tokens 200     200 in   4.7 s  application/json
+
+**HTTP 524 is Cloudflare's timeout, and RunPod's HTTP endpoint sits behind it.**
+The second row is what makes the diagnosis clean: a *tiny* prompt, killed at the
+same 125 s, so the boundary is elapsed time and nothing else — not body size,
+not context length, not tools, not connection reuse. A non-streaming completion
+sends no bytes until its last token, so any model call longer than the window
+dies in transit while vLLM finishes it normally and records no error at all.
+
+**It had been happening all along.** Maximum single model call per run:
+
+    A0 r0 105.8 s   A0 r1 86.7 s   A0 r2 60.1 s   A0 r3 409.2 s   A0 r4 23.7 s
+    A1 r0 389.9 s   A1 r1 2839.2 s
+
+A0 r3 crossed the window once — 409 s ≈ three 125 s attempts — and that is the
+run recorded the day before as "anomalously long (1347 s)" without explanation.
+A0 r0's 105.8 s missed the cliff by fifteen seconds. **The batch that produced
+the `UNIDENTIFIABLE` gate result was passing by luck**, and an earlier claim in
+this log that the failure was specific to the second pod is withdrawn.
+
+### The fix, and what licenses calling it transport-only
+
+Streaming. The first chunk arrives immediately, so the window never opens.
+Rejected alternative: capping `max_tokens` to fit generation inside 120 s, which
+would truncate the agent's reasoning and change the object of study.
+
+`experiments/coding/stream_equivalence.py` is the gate, and it needed two
+corrections before it meant anything.
+
+*It had no power.* Run unseeded, the server disagrees with **itself**: two
+identical non-streaming requests differ in `content`, `reasoning`, `tool_calls`,
+`completion_tokens`, and on the parallel-tool-call shape even in `n_tool_calls` —
+the agent is handed a different number of commands to run. With a baseline that
+noisy, "streaming changed nothing beyond baseline" is true no matter what
+streaming does. Fixing the seed collapses it to nothing, and only then does the
+comparison decide anything. (The unseeded numbers are kept: they are a direct
+measurement of the serving-level nondeterminism this project assumes exists, and
+seeding suppressing it locates that nondeterminism in the sampling path.)
+
+*It compared a volatile field.* `actions` carries `tool_call_id`, minted per
+response, so two byte-identical responses always differed there and two shapes
+were reported unprovable. The id is excluded now, as it already was for
+`tool_calls[].id`.
+
+Result, seeded, on plain text / one tool call / parallel tool calls / long
+reasoning: baseline empty and streaming empty on all four. Every field the agent
+consumes — `finish_reason`, `content`, `reasoning`, tool call type, name and
+JSON-parsed arguments, their order and count, `actions`, token counts — is
+byte-identical streamed and unstreamed.
+
+**Stated limitation:** the gate cannot check generations longer than the
+Cloudflare window, because the non-streaming control cannot complete there. Every
+shape is capped at 1500 tokens. Equivalence beyond that is extrapolation. An
+uncapped first draft proved this the expensive way, spending 71 minutes
+reproducing the bug it exists to work around.
+
+### Consequence for the experiment
+
+A retried step is **a fresh sample, not a replay**: this project's premise is
+that temperature 0 leaves serving-level nondeterminism, which the unseeded
+baseline above measures directly. So the retry loop moved into
+`agents/coding/instrumented_model.py`, litellm is set to `num_retries: 0`, and
+every attempt is numbered, timed and recorded with its exception type. Each step
+carries `transport_attempts`, `transport_retried` and `transport_events`. A batch
+with few retries can treat this as a nuisance covariate; a batch with many cannot
+claim its steps came from the same process as unretried ones.
+
+Both aborted A1 attempts stay `infrastructure-invalid`. A1 proper is five fresh
+runs with streaming on.
