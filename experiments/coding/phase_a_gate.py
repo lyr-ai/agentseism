@@ -33,7 +33,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from experiments.coding.fork_validation import shared_state
+from experiments.coding.fork_validation import select_donors, shared_state
 from experiments.coding.replay import probe_rows
 
 STEP_LIMIT = 250
@@ -112,8 +112,13 @@ def build(runs: Path, task: str, image: str, expect: int) -> dict:
         report["failures"].append(str(exc))
         return report
 
-    order = sorted(carriers, key=lambda run: carriers[run])
-    donors = {"A": order[0], "B": order[-1]}
+    donors, reason = select_donors(carriers, {r: finals[r] for r in carriers})
+    if not donors:
+        report["outcome"] = "UNIDENTIFIABLE"
+        report["fork_point"] = {"tracked_diff_hash": state, "first_arrival_step": carriers}
+        report["run_finals_at_fork"] = {r: finals[r] for r in carriers}
+        report["failures"].append(reason)
+        return report
     arms = {}
     for arm, run in donors.items():
         step = carriers[run]
@@ -149,8 +154,6 @@ def build(runs: Path, task: str, image: str, expect: int) -> dict:
         report["failures"].append("donors carry the same workspace; there is nothing to vary")
     if arms["A"]["prefix_digest"] and arms["A"]["prefix_digest"] == arms["B"]["prefix_digest"]:
         report["failures"].append("donors carry the same message prefix; there is nothing to vary")
-    if arms["A"]["final_tracked_hash"] == arms["B"]["final_tracked_hash"]:
-        report["outcome"] = "UNIDENTIFIABLE"
     return report
 
 

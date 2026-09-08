@@ -59,6 +59,50 @@ def shared_state(probes: dict[str, list[dict]]) -> tuple[str, dict[str, int]]:
     return best[1], best[2]
 
 
+def select_donors(carriers: dict[str, int], finals: dict[str, str]) -> tuple[dict[str, str], str | None]:
+    """The donor pair, under amendment H2.1. Returns ({A, B}, reason-if-none).
+
+    Eligibility is a property of the *pair*, not of a run:
+
+        both completed, both carry S, and their final tracked states differ.
+
+    The third condition is what H2.1 adds, and it is an estimand eligibility
+    condition rather than a finding. The primary contrast is
+    `P(F_A | C_A) - P(F_A | C_B)`; if `F_A == F_B` that expression does not
+    distinguish "context carried the agent back to A's repair" from "context
+    carried it back to B's repair", because they are the same repair. The
+    contrast is undefined, not zero.
+
+    Among eligible pairs the tie-break is the original outcome-independent one,
+    made total: the widest spread in first-arrival step -- the earliest arrival
+    against the latest -- then the earliest A, then run id. Nothing in the
+    tie-break reads a final state; eligibility has already done the only reading
+    that H2.1 permits.
+
+    The fork point S itself is still chosen by the unamended rule. Conditioning
+    S on yielding an eligible pair would be a second selection, and the
+    conservative reading is that a batch whose S has no eligible pair has failed,
+    not that another S should be tried.
+    """
+    eligible = [
+        (x, y) for i, x in enumerate(sorted(carriers)) for y in sorted(carriers)[i + 1:]
+        if finals.get(x) and finals.get(y) and finals[x] != finals[y]
+    ]
+    if not eligible:
+        return {}, ("every pair of runs holding S ends on the same source state; "
+                    "the H2b contrast is undefined, not zero")
+    best = min(
+        eligible,
+        key=lambda pair: (
+            -abs(carriers[pair[1]] - carriers[pair[0]]),
+            min(carriers[pair[0]], carriers[pair[1]]),
+            sorted(pair),
+        ),
+    )
+    early, late = sorted(best, key=lambda run: (carriers[run], run))
+    return {"A": early, "B": late}, None
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--runs", required=True, help="directory of *__r*.json / *.probe.jsonl")
@@ -78,11 +122,10 @@ def main() -> None:
         for path in sorted(runs.glob(f"{args.task}__r*.probe.jsonl"))
     }
     state, carriers = shared_state(probes)
-    # Donors: the smallest and largest step index at which the state is first
-    # reached. Chosen on step index alone, a quantity fixed before any outcome
-    # is consulted, so the pair is not selected on how differently they ended.
-    order = sorted(carriers, key=lambda run: carriers[run])
-    donors = {"A": order[0], "B": order[-1]}
+    finals = {run: rows[-1]["tracked_diff_hash"] for run, rows in probes.items() if rows}
+    donors, reason = select_donors(carriers, finals)
+    if not donors:
+        raise SystemExit(reason)
     print(f"fork point {state[:12]}  held by {carriers}")
     print(f"donor A = r{donors['A']} @ step {carriers[donors['A']]}   "
           f"donor B = r{donors['B']} @ step {carriers[donors['B']]}\n")

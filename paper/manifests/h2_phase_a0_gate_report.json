@@ -107,5 +107,7 @@
  "outcome_targets": {
   "F_A": "ad3317821606bfc375c004b1e7384450d2ff4b2361b530ce71673c90ce6e9dc7",
   "F_B": "ad3317821606bfc375c004b1e7384450d2ff4b2361b530ce71673c90ce6e9dc7"
- }
+ },
+ "batch": "A0",
+ "status": "design-discovery; excluded from H2b confirmatory analysis by amendment H2.1"
 }

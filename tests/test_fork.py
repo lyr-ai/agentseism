@@ -74,6 +74,55 @@ class TestForkPoint:
         assert carriers["0"] == 2
 
 
+class TestDonorEligibility:
+    """Amendment H2.1: a pair is a donor pair only if its contrast is defined."""
+
+    def test_no_pair_ends_differently_is_unidentifiable(self):
+        """The failure that stopped Phase A0, in one line.
+
+        Both donors ending on the same repair does not make the effect zero, it
+        makes `P(F_A | C_A) - P(F_A | C_B)` undefined: the two targets are the
+        same target.
+        """
+        donors, reason = validation.select_donors({"0": 8, "1": 12}, {"0": "same", "1": "same"})
+        assert donors == {}
+        assert "undefined" in reason
+
+    def test_widest_arrival_spread_among_eligible_pairs(self):
+        carriers = {"0": 8, "1": 9, "2": 20}
+        finals = {"0": "a", "1": "b", "2": "c"}
+        donors, reason = validation.select_donors(carriers, finals)
+        assert reason is None
+        assert donors == {"A": "0", "B": "2"}
+
+    def test_eligibility_is_applied_before_the_tie_break(self):
+        """The widest pair is skipped when it is not eligible, not the reverse.
+
+        r0 and r2 have the widest spread and the same final. Taking them and
+        reporting an undefined contrast would be the Phase A0 failure again;
+        taking r0/r1 is the rule working.
+        """
+        carriers = {"0": 8, "1": 9, "2": 20}
+        finals = {"0": "a", "1": "b", "2": "a"}
+        donors, _ = validation.select_donors(carriers, finals)
+        assert donors == {"A": "1", "B": "2"}
+
+    def test_a_is_the_earlier_arrival(self):
+        donors, _ = validation.select_donors({"x": 30, "y": 4}, {"x": "a", "y": "b"})
+        assert donors == {"A": "y", "B": "x"}
+
+    def test_selection_never_reads_which_finals_are_which(self):
+        """Relabelling the finals cannot change the pair, only their eligibility.
+
+        The tie-break sees arrival steps only. Two samples that differ solely in
+        the *identity* of the distinct final states select the same donors.
+        """
+        carriers = {"0": 8, "1": 9, "2": 20}
+        first, _ = validation.select_donors(carriers, {"0": "a", "1": "b", "2": "c"})
+        second, _ = validation.select_donors(carriers, {"0": "q", "1": "z", "2": "m"})
+        assert first == second
+
+
 class TestMessagePrefix:
     def messages(self, n):
         out = [{"role": "system", "content": ""}, {"role": "user", "content": ""}]

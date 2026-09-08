@@ -1121,8 +1121,16 @@ registered to test would be the same move in a different coat.
 57,004 prompt tokens. Both would have hit `ContextWindowExceeded` at the primary
 experiment's 32768 and been lost, as four primary runs were.
 
-**Open, and not decided here:** the donor rule selects on arrival step, which
-does not guarantee the two donors differ in outcome, and the primary measure
-requires that they do. Whether to amend the rule and rerun Phase A on a fresh
-sample, or to stop on this task, is a decision for the next entry, not a repair
-to this one.
+**Resolved by amendment H2.1, same day.** The donor rule selects on arrival step,
+which says nothing about where the two runs end, while the primary contrast
+requires different endpoints. Donor eligibility becomes a property of the pair —
+both `Submitted`, both reaching `S`, and `F_A != F_B` — with the original
+arrival-step tie-break applied only among eligible pairs, and the rule for `S`
+itself unchanged. The estimand narrows accordingly and the amendment says so.
+
+**These five runs are frozen out as Phase A0, design-discovery.** Four distinct
+endpoints exist among them, so an eligible pair could be drawn under the new
+rule; that is why it will not be. A0 supplies no donor and no confirmatory
+number. Phase A1 is five fresh runs, and there is no third attempt: a second
+`UNIDENTIFIABLE` stops the experiment on this task rather than buying another
+batch.

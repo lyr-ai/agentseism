@@ -226,3 +226,85 @@ Phase A: 5 runs × ~12 min ≈ 1 h. Phase B: 24 continuations from roughly a thi
 of the way in, ~7 min each ≈ 2.8 h. Total ≈ 4 GPU-hours, ≈ $2 on one A40.
 GPU-hours are recorded; `instance_cost` is unavailable for a self-hosted model
 and `MSWEA_COST_TRACKING=ignore_errors` stays set.
+
+---
+
+## Amendment H2.1, 2026-09-08 — donor eligibility, and a batch frozen out
+
+**This amendment was triggered by an outcome, and that is stated first because it
+cannot be argued away.** Phase A ran five trajectories, all five completed, all
+five passed through the same non-empty source state, and the donor rule above
+selected r4 (arrival step 8) and r1 (arrival step 12) — two runs that ended on
+the *same* final source state, `ad3317821606…`. The gate reported
+`UNIDENTIFIABLE`, no manifest was written, and Phase B did not start. The
+numbers are in `paper/manifests/h2_phase_a0_gate_report.json`.
+
+### What was wrong with the rule
+
+Not the sample. The rule. It selects donors by first-arrival step, a quantity
+that says nothing whatever about where the two runs end, while the primary
+measure is
+
+    P(F_A | C_A) − P(F_A | C_B)
+
+which requires `F_A` and `F_B` to be different states. When they are not, that
+expression does not estimate zero — it is undefined. "Context carried the agent
+back to A's repair" and "context carried it back to B's repair" are the same
+sentence when A and B made the same repair. The original rule could produce a
+comparison that no number of continuations could resolve, and nothing in it
+prevented that.
+
+### The replacement
+
+Donor eligibility becomes a property of the **pair**:
+
+> A pair is H2b-identifiable only if (1) both runs are `Submitted`, (2) both
+> naturally reach the same non-empty tracked source state `S`, and (3) their
+> canonical final tracked states differ, `F_A ≠ F_B`.
+
+Among eligible pairs, the original outcome-independent tie-break applies, made
+total: widest spread in first-arrival step, then earliest arrival, then run id.
+The tie-break reads arrival steps only.
+
+**The fork point `S` is still chosen by the unamended rule.** Conditioning `S` on
+whether it yields an eligible pair would be a second selection, and the
+conservative reading is that a batch whose `S` has no eligible pair has failed —
+not that another `S` should be tried.
+
+### What this costs, said plainly
+
+`F_A ≠ F_B` is an **estimand eligibility condition, not a finding**. H2b no
+longer asks whether carried context matters across reconverged trajectories in
+general. It asks:
+
+> Among donor pairs that naturally reconverge on `S` and then reach *different*
+> repair states, does carried context causally bias a continuation toward its own
+> donor's repair?
+
+That is narrower. It is also the only version of the question the design can
+answer, and stating the restriction is the difference between a narrowed claim
+and an overstated one.
+
+### The five existing runs are frozen out
+
+The five Phase A trajectories are relabelled **Phase A0, design-discovery**. Four
+distinct final states exist among them, so an eligible pair could be drawn from
+them under the new rule — which is exactly why it will not be. Choosing a pair
+after seeing which pairs separate is selection on outcome no matter how
+principled the rule looks written down.
+
+A0 supplies no donor, no continuation, and no confirmatory number. Its
+trajectories may be described; they may not be tested.
+
+### Phase A1
+
+Five fresh runs, same task, same frozen configuration, same archive. The gate
+runs mechanically on them and reports `QUALIFIED`, `UNIDENTIFIABLE`, or
+`NO FORK POINT`.
+
+**There is no third attempt.** If Phase A1 also returns `UNIDENTIFIABLE`, the
+experiment stops on this task and the result is reported as what it is: this
+donor-generation protocol does not reliably produce an identifiable contrast, and
+the intervention needs a different design rather than more sampling. Drawing
+batches until one yields a usable pair would make the eventual pair a selected
+one, and the whole point of the gate is that it cannot be talked past.
