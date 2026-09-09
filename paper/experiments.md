@@ -1258,3 +1258,55 @@ claim its steps came from the same process as unretried ones.
 
 Both aborted A1 attempts stay `infrastructure-invalid`. A1 proper is five fresh
 runs with streaming on.
+
+---
+
+## 2026-09-08 — Phase A1: QUALIFIED, and the attractor holds across three batches
+
+Five fresh runs, streaming, one uninterrupted pod session. All five completed.
+
+    run        exit  steps  wall(s)  ctx peak  reasoning  patch B  final
+      0   Submitted     31      977    36837      18706      844  ed135952e20c
+      1   Submitted     41     3110    62736      40656     1232  901cfacceed3
+      2   Submitted     33      479    31967      15556      979  687e8628805f
+      3   Submitted     47      444    35034      10797     1942  5ece9b7438d7
+      4   Submitted     31      261    21834       6642      691  5b38138161e5
+
+**Transport audit: 188 calls, 188 attempts, 0 retried steps.** Under
+non-streaming the same task produced stalls of 285 s, 391 s, 626 s and 2839 s.
+The prediction made when streaming was adopted — that the stalls were
+non-streaming duration crossing Cloudflare's window, not the model or the server
+— was specific and falsifiable, and it held. Every step in this batch is a
+single draw, so the retry marks are recorded and carry no weight in analysis.
+
+    shared non-empty S  400ed4047a8253a9   first arrival {r0:8, r1:9, r3:10, r4:10}
+      arm A  r0 @ 8    workspace 8557257177f7   prefix 18 msgs   F_A ed135952e20c
+      arm B  r3 @ 10   workspace bad6642622d5   prefix 22 msgs   F_B 5ece9b7438d7
+      F_A != F_B       rebuild verified on both arms
+      continuation step limit 240, identical for A, B and fresh
+
+Donors are r0 and r3 under amendment H2.1: all four carriers end on distinct
+states, so every pair is eligible, and the tie-break takes the widest arrival
+spread (8 against 10) and then the lower run id. The selection read arrival steps
+only; eligibility was the sole place a final state was consulted, and it asks
+whether they differ, never which is which.
+
+### The attractor, three batches in
+
+    primary (32k, non-streaming)   3 runs, 3/3 reach 400ed404…, 3 distinct finals
+    A0      (128k, non-streaming)  5 runs, 5/5 reach 400ed404…, 4 distinct finals
+    A1      (128k, streaming)      5 runs, 4/5 reach 400ed404…, 5 distinct finals
+
+Twelve of thirteen independent runs pass through the byte-identical non-empty
+source state — the one-line `self.records = []` → `self.records.clear()` — across
+two context lengths and two transport paths, and then produce twelve distinct
+final patches, with no final state repeated between batches.
+
+This is descriptive. These runs were collected to generate donors, and none of
+the three batches was registered as a test of the topology. What it licenses is a
+statement about stability of the observation, not a confirmation of the
+hypothesis: whatever drives runs to that state is robust to changes in serving
+that visibly change everything downstream of it.
+
+Phase B may now start. The manifest is frozen at
+`paper/manifests/h2_phase_a1.json`.

@@ -1,0 +1,57 @@
+{
+ "0": {
+  "exit_status": "Submitted",
+  "calls": 32,
+  "attempts": 32,
+  "retried_steps": 0,
+  "retry_rate": 0.0,
+  "seconds_lost": 0.0,
+  "exceptions": {},
+  "retried_at": [],
+  "instrumented": true
+ },
+ "1": {
+  "exit_status": "Submitted",
+  "calls": 42,
+  "attempts": 42,
+  "retried_steps": 0,
+  "retry_rate": 0.0,
+  "seconds_lost": 0.0,
+  "exceptions": {},
+  "retried_at": [],
+  "instrumented": true
+ },
+ "2": {
+  "exit_status": "Submitted",
+  "calls": 34,
+  "attempts": 34,
+  "retried_steps": 0,
+  "retry_rate": 0.0,
+  "seconds_lost": 0.0,
+  "exceptions": {},
+  "retried_at": [],
+  "instrumented": true
+ },
+ "3": {
+  "exit_status": "Submitted",
+  "calls": 48,
+  "attempts": 48,
+  "retried_steps": 0,
+  "retry_rate": 0.0,
+  "seconds_lost": 0.0,
+  "exceptions": {},
+  "retried_at": [],
+  "instrumented": true
+ },
+ "4": {
+  "exit_status": "Submitted",
+  "calls": 32,
+  "attempts": 32,
+  "retried_steps": 0,
+  "retry_rate": 0.0,
+  "seconds_lost": 0.0,
+  "exceptions": {},
+  "retried_at": [],
+  "instrumented": true
+ }
+}
