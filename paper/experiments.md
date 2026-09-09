@@ -1379,3 +1379,72 @@ the only record of a failure. Future batches keep the full stdout.
 
 `B_1` is therefore neither classified as infrastructure nor as data. It is left
 out of arm B's seven usable continuations and recorded as unexplained.
+
+---
+
+## 2026-09-09 — H2b: a degenerate null, and a manipulation check that makes it mean something
+
+First unblinding of Phase B outcomes. The three layers were declared before any
+final state was read and computed in one pass by
+`experiments/coding/h2b_analysis.py`.
+
+    arm A  collected 8   usable 8
+    arm B  collected 8   usable 7      B_1 excluded, unexplained
+    fresh  collected 0                 stop rule
+
+    match F_A    A 0/8 = 0.000   B 0/7 = 0.000   diff +0.000   p = 1.0
+    match F_B    A 0/8 = 0.000   B 0/7 = 0.000   diff +0.000   p = 1.0
+    neither donor's final state: 15 of 15
+    retry-free subset (3 A, 2 B): same, 0 and 0
+    hunk-location secondary:      same, 0 and 0
+
+**Fifteen continuations produced fifteen distinct final states.** The primary
+statistic is `P(F_A|A) − P(F_A|B)` and the event never occurs in either arm, so
+the contrast has no variance to explain. **This is not evidence against H2b.** It
+is a measure with no power on this system, and reporting it as a refutation would
+be a different error from p-hacking but an error of the same family.
+
+### The pre-registered gate is what makes the null readable
+
+    arm A   6 of 8 continuations reproduce donor r0's next 3 command signatures
+    arm B   8 of 8 reproduce donor r3's
+
+    ['sed:-n', 'python:-m,-v', 'cat:heredoc,redirect']
+
+Fourteen of sixteen retrace their donor exactly for three steps. The fork puts
+the agent where it claims to, the containers are right, the prefixes are right,
+and the null is a fact about the system rather than about the apparatus. That
+distinction was written down in the pre-registration before either reading was
+available, and it is the reason this batch is interpretable at all.
+
+### What the two results say together
+
+    short horizon   context determines behaviour exactly: 14/16 retrace 3 steps
+    long horizon    context determines nothing measurable: 0/15 reach the target,
+                    including 0/8 where the context is the target's own
+
+Arm A continuations carry donor A's complete state and complete transcript. They
+are replays of donor A from step 8, at temperature 0, and not one reproduces
+donor A's patch. The repair phase downstream of the shared state is close to
+maximally stochastic: fifteen draws, fifteen outcomes.
+
+This also explains, rather than adds to, the earlier observation that twelve of
+thirteen runs across three batches reached the identical intermediate state and
+produced twelve distinct finals. It was never a fact about batches or serving
+configurations. It is what this task's repair phase does.
+
+### What follows, and what does not
+
+**H2b is untested, not refuted.** Whether carried context biases the repair is a
+question an outcome-identity estimand cannot ask here, because outcome identity
+is an event of probability approximately zero. A distributional estimand — are
+arm A's outcomes more similar to `F_A` than arm B's, under some graded measure —
+might have power, and proposing one now, after seeing that the identity measure
+returned nothing, would be choosing an analysis by its prospects. It belongs in a
+separate pre-registration with its measure fixed in advance.
+
+**H2a is uncollected.** The fresh arm was stopped by the transport rule.
+
+The apparatus works. The fork is verified mechanically and now behaviourally.
+What is missing is an estimand matched to a system whose outcome space is this
+wide.

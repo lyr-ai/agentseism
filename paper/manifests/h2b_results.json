@@ -1,0 +1,245 @@
+{
+ "rows": [
+  {
+   "run": "A_0",
+   "arm": "A",
+   "exit_status": "Submitted",
+   "final": "8d1db73994d7f38d9af2a578c09f0bf04d30ec562eb2b0c7171347689dbe180c",
+   "submission": "diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py\nindex a4f4214b1..63eb8c3aa 100644\n--- a/src/_pytest/logging.py\n+++ b/src/_pytest/logging.py\n@@ -440,7 +440,8 @@ class LogCaptureFixture:\n \n     def clear(self) -> None:\n         \"\"\"Reset the list of log records and the captured log text.\"\"\"\n-        self.handler.reset()\n+        self.handler.records.clear()\n+        self.handler.stream = StringIO()\n \n     def set_level(self, level: Union[int, str], logger: Optional[str] = None) -> None:\n         \"\"\"Set the level of a logger for the duration of a test.\n",
+   "calls": 34,
+   "retried": 1,
+   "excluded": null
+  },
+  {
+   "run": "A_1",
+   "arm": "A",
+   "exit_status": "Submitted",
+   "final": "74f7c2cc1bc793dda23bfa235f4facb7d3816e2f375ec281bd48423a79e703ea",
+   "submission": "diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py\nindex a4f4214b1..2de169ba2 100644\n--- a/src/_pytest/logging.py\n+++ b/src/_pytest/logging.py\n@@ -335,6 +335,7 @@ class LogCaptureHandler(logging_StreamHandler):\n         \"\"\"Create a new log handler.\"\"\"\n         super().__init__(StringIO())\n         self.records: List[logging.LogRecord] = []\n+        self._when: Optional[str] = None\n \n     def emit(self, record: logging.LogRecord) -> None:\n         \"\"\"Keep the log records in a list in addition to the log text.\"\"\"\n@@ -440,7 +441,10 @@ class LogCaptureFixture:\n \n     def clear(self) -> None:\n         \"\"\"Reset the list of log records and the captured log text.\"\"\"\n+        when = self.handler._when\n         self.handler.reset()\n+        if when is not None:\n+            self._item.stash[caplog_records_key][when] = self.handler.records\n \n     def set_level(self, level: Union[int, str], logger: Optional[str] = None) -> None:\n         \"\"\"Set the level of a logger for the duration of a test.\n@@ -695,6 +699,7 @@ class LoggingPlugin:\n             level=self.log_level,\n         ) as report_handler:\n             caplog_handler.reset()\n+            caplog_handler._when = when\n             report_handler.reset()\n             item.stash[caplog_records_key][when] = caplog_handler.records\n             item.stash[caplog_handler_key] = caplog_handler\n",
+   "calls": 32,
+   "retried": 2,
+   "excluded": null
+  },
+  {
+   "run": "A_2",
+   "arm": "A",
+   "exit_status": "Submitted",
+   "final": "57d9a65e02a9214df823beb1fb92d952590948a954c0d174becdacf293b254e3",
+   "submission": "diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py\nindex a4f4214b1..e5d421f93 100644\n--- a/src/_pytest/logging.py\n+++ b/src/_pytest/logging.py\n@@ -46,6 +46,7 @@ DEFAULT_LOG_DATE_FORMAT = \"%H:%M:%S\"\n _ANSI_ESCAPE_SEQ = re.compile(r\"\\x1b\\[[\\d;]+m\")\n caplog_handler_key = StashKey[\"LogCaptureHandler\"]()\n caplog_records_key = StashKey[Dict[str, List[logging.LogRecord]]]()\n+caplog_current_phase_key = StashKey[Optional[str]]()\n \n \n def _remove_ansi_escape_sequences(text: str) -> str:\n@@ -342,7 +343,7 @@ class LogCaptureHandler(logging_StreamHandler):\n         super().emit(record)\n \n     def reset(self) -> None:\n-        self.records = []\n+        self.records.clear()\n         self.stream = StringIO()\n \n     def handleError(self, record: logging.LogRecord) -> None:\n@@ -396,6 +397,12 @@ class LogCaptureFixture:\n \n         .. versionadded:: 3.4\n         \"\"\"\n+        try:\n+            current_phase = self._item.stash[caplog_current_phase_key]\n+        except KeyError:\n+            current_phase = None\n+        if when == current_phase:\n+            return self.handler.records\n         return self._item.stash[caplog_records_key].get(when, [])\n \n     @property\n@@ -694,10 +701,15 @@ class LoggingPlugin:\n             self.report_handler,\n             level=self.log_level,\n         ) as report_handler:\n+            # Copy previous phase records to preserve them (not the current phase)\n+            for phase in item.stash[caplog_records_key]:\n+                item.stash[caplog_records_key][phase] = list(item.stash[caplog_records_key][phase])\n             caplog_handler.reset()\n             report_handler.reset()\n             item.stash[caplog_records_key][when] = caplog_handler.records\n             item.stash[caplog_handler_key] = caplog_handler\n+            # Set current phase so get_records() can return live records\n+            item.stash[caplog_current_phase_key] = when\n \n             yield\n \n",
+   "calls": 45,
+   "retried": 2,
+   "excluded": null
+  },
+  {
+   "run": "A_3",
+   "arm": "A",
+   "exit_status": "Submitted",
+   "final": "31912371fe290ff63469ea43d2c8ea311d4cbcde08813b9437a8beabdd96b043",
+   "submission": "diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py\nindex a4f4214b1..61355bb05 100644\n--- a/src/_pytest/logging.py\n+++ b/src/_pytest/logging.py\n@@ -440,7 +440,10 @@ class LogCaptureFixture:\n \n     def clear(self) -> None:\n         \"\"\"Reset the list of log records and the captured log text.\"\"\"\n+        # Update the stash to point to the handler's new records list after reset\n         self.handler.reset()\n+        for when in self._item.stash[caplog_records_key]:\n+            self._item.stash[caplog_records_key][when] = self.handler.records\n \n     def set_level(self, level: Union[int, str], logger: Optional[str] = None) -> None:\n         \"\"\"Set the level of a logger for the duration of a test.\n",
+   "calls": 29,
+   "retried": 0,
+   "excluded": null
+  },
+  {
+   "run": "A_4",
+   "arm": "A",
+   "exit_status": "Submitted",
+   "final": "8d1db73994d7f38d9af2a578c09f0bf04d30ec562eb2b0c7171347689dbe180c",
+   "submission": "diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py\nindex a4f4214b1..63eb8c3aa 100644\n--- a/src/_pytest/logging.py\n+++ b/src/_pytest/logging.py\n@@ -440,7 +440,8 @@ class LogCaptureFixture:\n \n     def clear(self) -> None:\n         \"\"\"Reset the list of log records and the captured log text.\"\"\"\n-        self.handler.reset()\n+        self.handler.records.clear()\n+        self.handler.stream = StringIO()\n \n     def set_level(self, level: Union[int, str], logger: Optional[str] = None) -> None:\n         \"\"\"Set the level of a logger for the duration of a test.\n",
+   "calls": 24,
+   "retried": 0,
+   "excluded": null
+  },
+  {
+   "run": "A_5",
+   "arm": "A",
+   "exit_status": "Submitted",
+   "final": "11ce8fce3df2a942b02ee92f33b3baa0fbf28f86b2f3f146f619905eb2e8a0d1",
+   "submission": "diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py\nindex a4f4214b1..6e07cb491 100644\n--- a/src/_pytest/logging.py\n+++ b/src/_pytest/logging.py\n@@ -331,17 +331,20 @@ class catching_logs:\n class LogCaptureHandler(logging_StreamHandler):\n     \"\"\"A logging handler that stores log records and the log text.\"\"\"\n \n-    def __init__(self) -> None:\n+    def __init__(self, when: Optional[str] = None) -> None:\n         \"\"\"Create a new log handler.\"\"\"\n         super().__init__(StringIO())\n         self.records: List[logging.LogRecord] = []\n+        self._when: Optional[str] = when\n \n     def emit(self, record: logging.LogRecord) -> None:\n         \"\"\"Keep the log records in a list in addition to the log text.\"\"\"\n         self.records.append(record)\n         super().emit(record)\n \n-    def reset(self) -> None:\n+    def reset(self, when: Optional[str] = None) -> None:\n+        if when is not None:\n+            self._when = when\n         self.records = []\n         self.stream = StringIO()\n \n@@ -396,7 +399,12 @@ class LogCaptureFixture:\n \n         .. versionadded:: 3.4\n         \"\"\"\n-        return self._item.stash[caplog_records_key].get(when, [])\n+        all_records = self._item.stash[caplog_records_key]\n+        # If this is the current phase, return the live records list\n+        # so that clear() is properly reflected.\n+        if when == self.handler._when:\n+            return self.handler.records\n+        return all_records.get(when, [])\n \n     @property\n     def text(self) -> str:\n@@ -440,7 +448,11 @@ class LogCaptureFixture:\n \n     def clear(self) -> None:\n         \"\"\"Reset the list of log records and the captured log text.\"\"\"\n+        when = self.handler._when\n         self.handler.reset()\n+        # Update the stash for the current phase to point to the new records list\n+        if when is not None:\n+            self._item.stash[caplog_records_key][when] = self.handler.records\n \n     def set_level(self, level: Union[int, str], logger: Optional[str] = None) -> None:\n         \"\"\"Set the level of a logger for the duration of a test.\n@@ -694,7 +706,7 @@ class LoggingPlugin:\n             self.report_handler,\n             level=self.log_level,\n         ) as report_handler:\n-            caplog_handler.reset()\n+            caplog_handler.reset(when)\n             report_handler.reset()\n             item.stash[caplog_records_key][when] = caplog_handler.records\n             item.stash[caplog_handler_key] = caplog_handler\n",
+   "calls": 48,
+   "retried": 0,
+   "excluded": null
+  },
+  {
+   "run": "A_6",
+   "arm": "A",
+   "exit_status": "Submitted",
+   "final": "2bb44b683d9c28bfa83ccf03bacdc7d2add11618c2f0c2ae199aa64d1955e4dc",
+   "submission": "diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py\nindex a4f4214b1..3dfcbb802 100644\n--- a/src/_pytest/logging.py\n+++ b/src/_pytest/logging.py\n@@ -441,6 +441,9 @@ class LogCaptureFixture:\n     def clear(self) -> None:\n         \"\"\"Reset the list of log records and the captured log text.\"\"\"\n         self.handler.reset()\n+        records = self._item.stash.get(caplog_records_key, {})\n+        for when in records:\n+            records[when] = self.handler.records\n \n     def set_level(self, level: Union[int, str], logger: Optional[str] = None) -> None:\n         \"\"\"Set the level of a logger for the duration of a test.\n",
+   "calls": 33,
+   "retried": 2,
+   "excluded": null
+  },
+  {
+   "run": "A_7",
+   "arm": "A",
+   "exit_status": "Submitted",
+   "final": "8c81d60d75ee36e043c863f58d35665c537b165890b18be0add08cf03739385c",
+   "submission": "diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py\nindex a4f4214b1..a2bd105b2 100644\n--- a/src/_pytest/logging.py\n+++ b/src/_pytest/logging.py\n@@ -396,6 +396,8 @@ class LogCaptureFixture:\n \n         .. versionadded:: 3.4\n         \"\"\"\n+        if when == \"call\":\n+            return self.records\n         return self._item.stash[caplog_records_key].get(when, [])\n \n     @property\n",
+   "calls": 24,
+   "retried": 5,
+   "excluded": null
+  },
+  {
+   "run": "B_0",
+   "arm": "B",
+   "exit_status": "Submitted",
+   "final": "ad3317821606bfc375c004b1e7384450d2ff4b2361b530ce71673c90ce6e9dc7",
+   "submission": "diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py\nindex a4f4214b1..d896c709e 100644\n--- a/src/_pytest/logging.py\n+++ b/src/_pytest/logging.py\n@@ -441,6 +441,8 @@ class LogCaptureFixture:\n     def clear(self) -> None:\n         \"\"\"Reset the list of log records and the captured log text.\"\"\"\n         self.handler.reset()\n+        for when in self._item.stash[caplog_records_key]:\n+            self._item.stash[caplog_records_key][when] = self.handler.records\n \n     def set_level(self, level: Union[int, str], logger: Optional[str] = None) -> None:\n         \"\"\"Set the level of a logger for the duration of a test.\n",
+   "calls": 33,
+   "retried": 0,
+   "excluded": null
+  },
+  {
+   "run": "B_1",
+   "arm": "B",
+   "exit_status": "",
+   "final": "400ed4047a8253a9cc7268069f079099484f0d279b7bd225a309da40609896c0",
+   "submission": "",
+   "calls": 13,
+   "retried": 0,
+   "excluded": "stopped after 13 calls with no exit status or recorded exception"
+  },
+  {
+   "run": "B_2",
+   "arm": "B",
+   "exit_status": "Submitted",
+   "final": "f828205d0ea21abfd2ff9bdfb8934a4420b0e9c8be4d3c5a93db1b9611b1764b",
+   "submission": "diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py\nindex a4f4214b1..1d640fd43 100644\n--- a/src/_pytest/logging.py\n+++ b/src/_pytest/logging.py\n@@ -440,7 +440,13 @@ class LogCaptureFixture:\n \n     def clear(self) -> None:\n         \"\"\"Reset the list of log records and the captured log text.\"\"\"\n+        # Update the stash entry to point to the new empty records list.\n+        # This ensures that get_records() returns the same list as records.\n+        old_records = self.handler.records\n         self.handler.reset()\n+        for when in self._item.stash[caplog_records_key]:\n+            if self._item.stash[caplog_records_key][when] is old_records:\n+                self._item.stash[caplog_records_key][when] = self.handler.records\n \n     def set_level(self, level: Union[int, str], logger: Optional[str] = None) -> None:\n         \"\"\"Set the level of a logger for the duration of a test.\n",
+   "calls": 25,
+   "retried": 1,
+   "excluded": null
+  },
+  {
+   "run": "B_3",
+   "arm": "B",
+   "exit_status": "Submitted",
+   "final": "4d6cea9d7d54328908a68a4429e09c1d1ad185a78d6c6cd593fa8d60c4f8625d",
+   "submission": "diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py\nindex a4f4214b1..661a36026 100644\n--- a/src/_pytest/logging.py\n+++ b/src/_pytest/logging.py\n@@ -440,7 +440,18 @@ class LogCaptureFixture:\n \n     def clear(self) -> None:\n         \"\"\"Reset the list of log records and the captured log text.\"\"\"\n+        old_records = self.handler.records\n         self.handler.reset()\n+        new_records = self.handler.records\n+        # Update the stash to point to the new records list.\n+        # The stash stores a reference to the records list for the current phase.\n+        # When clear() is called, we need to update that reference to point to the\n+        # new empty list, otherwise caplog.records and get_records(when) would return\n+        # different lists.\n+        caplog_records = self._item.stash[caplog_records_key]\n+        for when in caplog_records:\n+            if caplog_records[when] is old_records:\n+                caplog_records[when] = new_records\n \n     def set_level(self, level: Union[int, str], logger: Optional[str] = None) -> None:\n         \"\"\"Set the level of a logger for the duration of a test.\n",
+   "calls": 36,
+   "retried": 0,
+   "excluded": null
+  },
+  {
+   "run": "B_4",
+   "arm": "B",
+   "exit_status": "Submitted",
+   "final": "7a9b3555f5a53c7bfd6b380586266671df793b0a215e05975c9089a29357b779",
+   "submission": "diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py\nindex a4f4214b1..d6c61bd04 100644\n--- a/src/_pytest/logging.py\n+++ b/src/_pytest/logging.py\n@@ -440,7 +440,17 @@ class LogCaptureFixture:\n \n     def clear(self) -> None:\n         \"\"\"Reset the list of log records and the captured log text.\"\"\"\n+        # Save reference to the old records list before reset()\n+        old_records = self.handler.records\n         self.handler.reset()\n+        # Update the stash entry for the current phase to point to the new list.\n+        # The stash entry for the current phase has the same object identity as\n+        # the old records list.\n+        stash = self._item.stash[caplog_records_key]\n+        for key in stash:\n+            if stash[key] is old_records:\n+                stash[key] = self.handler.records\n+                break\n \n     def set_level(self, level: Union[int, str], logger: Optional[str] = None) -> None:\n         \"\"\"Set the level of a logger for the duration of a test.\n",
+   "calls": 26,
+   "retried": 1,
+   "excluded": null
+  },
+  {
+   "run": "B_5",
+   "arm": "B",
+   "exit_status": "Submitted",
+   "final": "bacc5bb7e7d8b54cd36ecbf44558ef34372aa24a9406934668a7a6de452c1661",
+   "submission": "diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py\nindex a4f4214b1..a63789de5 100644\n--- a/src/_pytest/logging.py\n+++ b/src/_pytest/logging.py\n@@ -335,6 +335,7 @@ class LogCaptureHandler(logging_StreamHandler):\n         \"\"\"Create a new log handler.\"\"\"\n         super().__init__(StringIO())\n         self.records: List[logging.LogRecord] = []\n+        self._stash_entry: Optional[List[logging.LogRecord]] = None\n \n     def emit(self, record: logging.LogRecord) -> None:\n         \"\"\"Keep the log records in a list in addition to the log text.\"\"\"\n@@ -440,7 +441,16 @@ class LogCaptureFixture:\n \n     def clear(self) -> None:\n         \"\"\"Reset the list of log records and the captured log text.\"\"\"\n+        old_records = self.handler.records\n         self.handler.reset()\n+        # Update the stash entry that points to the old records list\n+        # to point to the new records list instead\n+        if self.handler._stash_entry is not None:\n+            stash = self._item.stash[caplog_records_key]\n+            for key in stash:\n+                if stash[key] is old_records:\n+                    stash[key] = self.handler.records\n+                    break\n \n     def set_level(self, level: Union[int, str], logger: Optional[str] = None) -> None:\n         \"\"\"Set the level of a logger for the duration of a test.\n@@ -697,6 +707,7 @@ class LoggingPlugin:\n             caplog_handler.reset()\n             report_handler.reset()\n             item.stash[caplog_records_key][when] = caplog_handler.records\n+            caplog_handler._stash_entry = item.stash[caplog_records_key][when]\n             item.stash[caplog_handler_key] = caplog_handler\n \n             yield\n",
+   "calls": 68,
+   "retried": 8,
+   "excluded": null
+  },
+  {
+   "run": "B_6",
+   "arm": "B",
+   "exit_status": "Submitted",
+   "final": "b7c0b5eebc091f7212555c455747d7b8caebe799e184554b0afec18a4b14c577",
+   "submission": "diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py\nindex a4f4214b1..4fa3a605d 100644\n--- a/src/_pytest/logging.py\n+++ b/src/_pytest/logging.py\n@@ -440,7 +440,16 @@ class LogCaptureFixture:\n \n     def clear(self) -> None:\n         \"\"\"Reset the list of log records and the captured log text.\"\"\"\n+        records = self.handler.records\n         self.handler.reset()\n+        # Clear the current phase's records in the stash.\n+        # The stash maps phase -> records list, and handler.records\n+        # is the current phase's list. After reset(), handler.records\n+        # is a new list, so we need to update the stash to point to it.\n+        stash = self._item.stash[caplog_records_key]\n+        for when, stash_records in stash.items():\n+            if stash_records is records:\n+                stash[when] = self.handler.records\n \n     def set_level(self, level: Union[int, str], logger: Optional[str] = None) -> None:\n         \"\"\"Set the level of a logger for the duration of a test.\n",
+   "calls": 31,
+   "retried": 3,
+   "excluded": null
+  },
+  {
+   "run": "B_7",
+   "arm": "B",
+   "exit_status": "Submitted",
+   "final": "65a33bc84a69cdc35f9d1eb0823e5c294e88ded14081fe1ddc486cc6b56cc40f",
+   "submission": "diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py\nindex a4f4214b1..45faa3349 100644\n--- a/src/_pytest/logging.py\n+++ b/src/_pytest/logging.py\n@@ -46,6 +46,7 @@ DEFAULT_LOG_DATE_FORMAT = \"%H:%M:%S\"\n _ANSI_ESCAPE_SEQ = re.compile(r\"\\x1b\\[[\\d;]+m\")\n caplog_handler_key = StashKey[\"LogCaptureHandler\"]()\n caplog_records_key = StashKey[Dict[str, List[logging.LogRecord]]]()\n+caplog_records_current_when_key = StashKey[str]()\n \n \n def _remove_ansi_escape_sequences(text: str) -> str:\n@@ -396,6 +397,11 @@ class LogCaptureFixture:\n \n         .. versionadded:: 3.4\n         \"\"\"\n+        current_when = self._item.stash.get(caplog_records_current_when_key, None)\n+        # If we're querying the current phase, return the live records from the handler.\n+        # This ensures that caplog.clear() and subsequent logging are reflected correctly.\n+        if when == current_when:\n+            return self.records\n         return self._item.stash[caplog_records_key].get(when, [])\n \n     @property\n@@ -698,6 +704,7 @@ class LoggingPlugin:\n             report_handler.reset()\n             item.stash[caplog_records_key][when] = caplog_handler.records\n             item.stash[caplog_handler_key] = caplog_handler\n+            item.stash[caplog_records_current_when_key] = when\n \n             yield\n \n",
+   "calls": 71,
+   "retried": 6,
+   "excluded": null
+  }
+ ],
+ "results": {
+  "primary_FA": {
+   "label": "match F_A (predicted A > B)",
+   "a": 0,
+   "b": 8,
+   "c": 0,
+   "d": 7,
+   "p_A": 0.0,
+   "p_B": 0.0,
+   "effect": 0.0,
+   "fisher_p": 1.0
+  },
+  "primary_FB": {
+   "label": "match F_B (predicted A < B)",
+   "a": 0,
+   "b": 8,
+   "c": 0,
+   "d": 7,
+   "p_A": 0.0,
+   "p_B": 0.0,
+   "effect": 0.0,
+   "fisher_p": 1.0
+  },
+  "clean_FA": {
+   "label": "retry-free: match F_A",
+   "a": 0,
+   "b": 3,
+   "c": 0,
+   "d": 2,
+   "p_A": 0.0,
+   "p_B": 0.0,
+   "effect": 0.0,
+   "fisher_p": 1.0
+  },
+  "clean_FB": {
+   "label": "retry-free: match F_B",
+   "a": 0,
+   "b": 3,
+   "c": 0,
+   "d": 2,
+   "p_A": 0.0,
+   "p_B": 0.0,
+   "effect": 0.0,
+   "fisher_p": 1.0
+  },
+  "dirty_FA": {
+   "label": "retried only: match F_A",
+   "a": 0,
+   "b": 5,
+   "c": 0,
+   "d": 5,
+   "p_A": 0.0,
+   "p_B": 0.0,
+   "effect": 0.0,
+   "fisher_p": 1.0
+  },
+  "secondary_FA": {
+   "label": "hunks match donor A",
+   "a": 0,
+   "b": 8,
+   "c": 0,
+   "d": 7,
+   "p_A": 0.0,
+   "p_B": 0.0,
+   "effect": 0.0,
+   "fisher_p": 1.0
+  },
+  "secondary_FB": {
+   "label": "hunks match donor B",
+   "a": 0,
+   "b": 8,
+   "c": 0,
+   "d": 7,
+   "p_A": 0.0,
+   "p_B": 0.0,
+   "effect": 0.0,
+   "fisher_p": 1.0
+  }
+ },
+ "F_A": "ed135952e20cc4436cd19204e4596b71cf420e0072c0c8b43950555e0096ab5f",
+ "F_B": "5ece9b7438d7aba4f929f222bbbd28c34c6563aaf2d8f8981226251084d3bd9c"
+}
