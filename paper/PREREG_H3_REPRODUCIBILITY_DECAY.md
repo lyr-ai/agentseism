@@ -127,3 +127,46 @@ only primary result.
   eligibility condition `F_A != F_B` is **not** required here — H3 compares each
   continuation with its own donor and never with the other arm's target — but the
   gate is run unmodified and its verdict recorded either way.
+
+---
+
+## Amendment H3.1, 2026-09-09 — `state` agreement was measuring nothing
+
+**Outcome-independent, and no flask data exists.** The defect is visible from the
+definition of the measure together with the donor's own state sequence, both of
+which were available before this pre-registration was written. It was found by
+running the exploratory pytest curves the pre-registration calls for.
+
+The donor holds the fork state `S` for the first 8 steps after the fork in arm A
+and the first 11 in arm B — that stretch is read-only exploration, `sed`, `cat`,
+`pytest`. So `state` agreement over that window says only that **neither
+trajectory has edited anything yet**, and it reads 1.00 for reasons that have
+nothing to do with reproducibility.
+
+Worse, the donor's next state is `e3b0c4…`, which is `sha256("")`: it ran
+`git checkout` and returned to a clean tree. Agreement there is agreement on
+having no changes, which is where every run begins.
+
+**This is the same trap this project has already corrected once.** In the 30-run
+experiment, 17 of 25 pairs were classified anomalous because the only state they
+shared was the empty diff, and `EMPTY_DIFF` was excluded from reconvergence for
+exactly this reason. The rule was not carried into the horizon measure.
+
+### The replacement
+
+`state` agreement is reported in two forms, and the primary is stated now:
+
+    informative   (primary) undefined while the donor still holds S, and a
+                  shared empty diff never counts as agreement
+    raw           (secondary) as before, reported beside it so the size of the
+                  difference stays visible
+
+`signature` and `command` are unaffected: every action has a signature and a
+string whether or not it changed the repository.
+
+### Consequence for the summary statistics
+
+`half-life` and `terminal` on `state` are computed on the informative form only.
+On the exploratory pytest data the raw form would report a `state` half-life
+beyond h=8 in arm A purely because nobody had edited yet, which is the opposite
+of the truth: `command` diverges by h=3 and `signature` by h=5.
