@@ -8,562 +8,701 @@
      {
       "h": 1,
       "n": 8,
+      "n_risk": 8,
+      "n_informative": 8,
       "matches": 8,
       "pointwise": 1.0,
       "survival": 1.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 2,
       "n": 8,
+      "n_risk": 8,
+      "n_informative": 8,
       "matches": 8,
       "pointwise": 1.0,
       "survival": 1.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 3,
       "n": 8,
+      "n_risk": 8,
+      "n_informative": 8,
       "matches": 6,
       "pointwise": 0.75,
       "survival": 0.75,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 4,
       "n": 7,
+      "n_risk": 6,
+      "n_informative": 7,
       "matches": 6,
       "pointwise": 0.8571428571428571,
-      "survival": 0.8571428571428571,
-      "censored_by_h": 1
+      "survival": 0.75,
+      "censored_by_transport": 1
      },
      {
       "h": 5,
       "n": 6,
+      "n_risk": 5,
+      "n_informative": 6,
       "matches": 3,
       "pointwise": 0.5,
-      "survival": 0.5,
-      "censored_by_h": 2
+      "survival": 0.44999999999999996,
+      "censored_by_transport": 2
      },
      {
       "h": 6,
       "n": 6,
+      "n_risk": 3,
+      "n_informative": 6,
       "matches": 3,
       "pointwise": 0.5,
-      "survival": 0.16666666666666666,
-      "censored_by_h": 2
+      "survival": 0.15,
+      "censored_by_transport": 2
      },
      {
       "h": 7,
       "n": 6,
+      "n_risk": 1,
+      "n_informative": 6,
       "matches": 3,
       "pointwise": 0.5,
-      "survival": 0.16666666666666666,
-      "censored_by_h": 2
+      "survival": 0.15,
+      "censored_by_transport": 2
      },
      {
       "h": 8,
       "n": 6,
+      "n_risk": 1,
+      "n_informative": 6,
       "matches": 3,
       "pointwise": 0.5,
       "survival": 0.0,
-      "censored_by_h": 2
+      "censored_by_transport": 2
      },
      {
       "h": 9,
       "n": 6,
+      "n_risk": 0,
+      "n_informative": 6,
       "matches": 1,
       "pointwise": 0.16666666666666666,
       "survival": 0.0,
-      "censored_by_h": 2
+      "censored_by_transport": 2
      },
      {
       "h": 10,
       "n": 6,
+      "n_risk": 0,
+      "n_informative": 6,
       "matches": 5,
       "pointwise": 0.8333333333333334,
       "survival": 0.0,
-      "censored_by_h": 2
+      "censored_by_transport": 2
      },
      {
       "h": 11,
       "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
       "matches": 2,
       "pointwise": 0.4,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 12,
       "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
       "matches": 5,
       "pointwise": 1.0,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 13,
       "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
       "matches": 1,
       "pointwise": 0.2,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 14,
       "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 15,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 16,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 2,
       "pointwise": 0.5,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 17,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 2,
       "pointwise": 0.5,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 18,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 1,
       "pointwise": 0.25,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 19,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 1,
       "pointwise": 0.25,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 20,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 21,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 22,
       "n": 3,
+      "n_risk": 0,
+      "n_informative": 3,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 23,
       "n": 3,
+      "n_risk": 0,
+      "n_informative": 3,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      }
     ],
     "command": [
      {
       "h": 1,
       "n": 8,
+      "n_risk": 8,
+      "n_informative": 8,
       "matches": 7,
       "pointwise": 0.875,
       "survival": 0.875,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 2,
       "n": 8,
+      "n_risk": 7,
+      "n_informative": 8,
       "matches": 8,
       "pointwise": 1.0,
       "survival": 0.875,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 3,
       "n": 8,
+      "n_risk": 7,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 4,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 3,
       "pointwise": 0.42857142857142855,
       "survival": 0.0,
-      "censored_by_h": 1
+      "censored_by_transport": 1
      },
      {
       "h": 5,
       "n": 6,
+      "n_risk": 0,
+      "n_informative": 6,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 2
+      "censored_by_transport": 2
      },
      {
       "h": 6,
       "n": 6,
+      "n_risk": 0,
+      "n_informative": 6,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 2
+      "censored_by_transport": 2
      },
      {
       "h": 7,
       "n": 6,
+      "n_risk": 0,
+      "n_informative": 6,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 2
+      "censored_by_transport": 2
      },
      {
       "h": 8,
       "n": 6,
+      "n_risk": 0,
+      "n_informative": 6,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 2
+      "censored_by_transport": 2
      },
      {
       "h": 9,
       "n": 6,
+      "n_risk": 0,
+      "n_informative": 6,
       "matches": 1,
       "pointwise": 0.16666666666666666,
       "survival": 0.0,
-      "censored_by_h": 2
+      "censored_by_transport": 2
      },
      {
       "h": 10,
       "n": 6,
+      "n_risk": 0,
+      "n_informative": 6,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 2
+      "censored_by_transport": 2
      },
      {
       "h": 11,
       "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 12,
       "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 13,
       "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 14,
       "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 15,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 16,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 17,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 18,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 19,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 20,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 21,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 22,
       "n": 3,
+      "n_risk": 0,
+      "n_informative": 3,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 23,
       "n": 3,
+      "n_risk": 0,
+      "n_informative": 3,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      }
     ],
     "state": [
      {
       "h": 1,
       "n": 8,
-      "matches": 8,
-      "pointwise": 1.0,
-      "survival": 1.0,
-      "censored_by_h": 0
+      "n_risk": 8,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 2,
       "n": 8,
-      "matches": 8,
-      "pointwise": 1.0,
-      "survival": 1.0,
-      "censored_by_h": 0
+      "n_risk": 8,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 3,
       "n": 8,
-      "matches": 8,
-      "pointwise": 1.0,
-      "survival": 1.0,
-      "censored_by_h": 0
+      "n_risk": 8,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 4,
       "n": 7,
-      "matches": 7,
-      "pointwise": 1.0,
-      "survival": 1.0,
-      "censored_by_h": 1
+      "n_risk": 7,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 1
      },
      {
       "h": 5,
       "n": 6,
-      "matches": 6,
-      "pointwise": 1.0,
-      "survival": 1.0,
-      "censored_by_h": 2
+      "n_risk": 6,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 2
      },
      {
       "h": 6,
       "n": 6,
-      "matches": 6,
-      "pointwise": 1.0,
-      "survival": 1.0,
-      "censored_by_h": 2
+      "n_risk": 6,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 2
      },
      {
       "h": 7,
       "n": 6,
-      "matches": 6,
-      "pointwise": 1.0,
-      "survival": 1.0,
-      "censored_by_h": 2
+      "n_risk": 6,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 2
      },
      {
       "h": 8,
       "n": 6,
-      "matches": 4,
-      "pointwise": 0.6666666666666666,
-      "survival": 0.6666666666666666,
-      "censored_by_h": 2
+      "n_risk": 6,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 2
      },
      {
       "h": 9,
       "n": 6,
-      "matches": 3,
-      "pointwise": 0.5,
-      "survival": 0.16666666666666666,
-      "censored_by_h": 2
+      "n_risk": 6,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 2
      },
      {
       "h": 10,
       "n": 6,
-      "matches": 4,
-      "pointwise": 0.6666666666666666,
-      "survival": 0.16666666666666666,
-      "censored_by_h": 2
+      "n_risk": 6,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 2
      },
      {
       "h": 11,
       "n": 5,
-      "matches": 3,
-      "pointwise": 0.6,
-      "survival": 0.2,
-      "censored_by_h": 3
+      "n_risk": 5,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 3
      },
      {
       "h": 12,
       "n": 5,
-      "matches": 3,
-      "pointwise": 0.6,
-      "survival": 0.2,
-      "censored_by_h": 3
+      "n_risk": 5,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 3
      },
      {
       "h": 13,
       "n": 5,
-      "matches": 2,
-      "pointwise": 0.4,
-      "survival": 0.2,
-      "censored_by_h": 3
+      "n_risk": 5,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 3
      },
      {
       "h": 14,
       "n": 5,
+      "n_risk": 5,
+      "n_informative": 5,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 15,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 16,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 17,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 18,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 19,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 20,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 21,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 22,
       "n": 3,
+      "n_risk": 0,
+      "n_informative": 3,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 23,
       "n": 3,
+      "n_risk": 0,
+      "n_informative": 3,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      }
     ]
    },
-   "donor_steps_after_fork": 23
+   "donor_steps_after_fork": 23,
+   "donor_first_state_change": 9
   },
   "B": {
    "n_continuations": 7,
@@ -572,850 +711,1061 @@
      {
       "h": 1,
       "n": 7,
+      "n_risk": 7,
+      "n_informative": 7,
       "matches": 7,
       "pointwise": 1.0,
       "survival": 1.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 2,
       "n": 5,
+      "n_risk": 5,
+      "n_informative": 5,
       "matches": 5,
       "pointwise": 1.0,
       "survival": 1.0,
-      "censored_by_h": 2
+      "censored_by_transport": 2
      },
      {
       "h": 3,
       "n": 5,
+      "n_risk": 5,
+      "n_informative": 5,
       "matches": 5,
       "pointwise": 1.0,
       "survival": 1.0,
-      "censored_by_h": 2
+      "censored_by_transport": 2
      },
      {
       "h": 4,
       "n": 4,
+      "n_risk": 4,
+      "n_informative": 4,
       "matches": 4,
       "pointwise": 1.0,
       "survival": 1.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 5,
       "n": 4,
+      "n_risk": 4,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 6,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 1,
       "pointwise": 0.25,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 7,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 1,
       "pointwise": 0.25,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 8,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 9,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 10,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 11,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 1,
       "pointwise": 0.25,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 12,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 1,
       "pointwise": 0.25,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 13,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 2,
       "pointwise": 0.5,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 14,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 4,
       "pointwise": 1.0,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 15,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 16,
       "n": 3,
+      "n_risk": 0,
+      "n_informative": 3,
       "matches": 2,
       "pointwise": 0.6666666666666666,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 17,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 18,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 19,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 1,
       "pointwise": 0.5,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 20,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 21,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 1,
       "pointwise": 0.5,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 22,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 23,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 24,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 25,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 26,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 27,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 28,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 29,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 30,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 31,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 32,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 33,
       "n": 1,
+      "n_risk": 0,
+      "n_informative": 1,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 6
+      "censored_by_transport": 6
      },
      {
       "h": 34,
       "n": 1,
+      "n_risk": 0,
+      "n_informative": 1,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 6
+      "censored_by_transport": 6
      },
      {
       "h": 35,
       "n": 1,
+      "n_risk": 0,
+      "n_informative": 1,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 6
+      "censored_by_transport": 6
      }
     ],
     "command": [
      {
       "h": 1,
       "n": 7,
+      "n_risk": 7,
+      "n_informative": 7,
       "matches": 7,
       "pointwise": 1.0,
       "survival": 1.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 2,
       "n": 5,
+      "n_risk": 5,
+      "n_informative": 5,
       "matches": 5,
       "pointwise": 1.0,
       "survival": 1.0,
-      "censored_by_h": 2
+      "censored_by_transport": 2
      },
      {
       "h": 3,
       "n": 5,
+      "n_risk": 5,
+      "n_informative": 5,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 2
+      "censored_by_transport": 2
      },
      {
       "h": 4,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 1,
       "pointwise": 0.25,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 5,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 6,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 7,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 8,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 9,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 10,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 11,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 12,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 1,
       "pointwise": 0.25,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 13,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 14,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 15,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 16,
       "n": 3,
+      "n_risk": 0,
+      "n_informative": 3,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 17,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 18,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 19,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 20,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 21,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 22,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 23,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 24,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 25,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 26,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 27,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 28,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 29,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 30,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 31,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 32,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 33,
       "n": 1,
+      "n_risk": 0,
+      "n_informative": 1,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 6
+      "censored_by_transport": 6
      },
      {
       "h": 34,
       "n": 1,
+      "n_risk": 0,
+      "n_informative": 1,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 6
+      "censored_by_transport": 6
      },
      {
       "h": 35,
       "n": 1,
+      "n_risk": 0,
+      "n_informative": 1,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 6
+      "censored_by_transport": 6
      }
     ],
     "state": [
      {
       "h": 1,
       "n": 7,
-      "matches": 7,
-      "pointwise": 1.0,
-      "survival": 1.0,
-      "censored_by_h": 0
+      "n_risk": 7,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 2,
       "n": 5,
-      "matches": 5,
-      "pointwise": 1.0,
-      "survival": 1.0,
-      "censored_by_h": 2
+      "n_risk": 5,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 2
      },
      {
       "h": 3,
       "n": 5,
-      "matches": 5,
-      "pointwise": 1.0,
-      "survival": 1.0,
-      "censored_by_h": 2
+      "n_risk": 5,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 2
      },
      {
       "h": 4,
       "n": 4,
-      "matches": 4,
-      "pointwise": 1.0,
-      "survival": 1.0,
-      "censored_by_h": 3
+      "n_risk": 4,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 3
      },
      {
       "h": 5,
       "n": 4,
-      "matches": 4,
-      "pointwise": 1.0,
-      "survival": 1.0,
-      "censored_by_h": 3
+      "n_risk": 4,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 3
      },
      {
       "h": 6,
       "n": 4,
-      "matches": 4,
-      "pointwise": 1.0,
-      "survival": 1.0,
-      "censored_by_h": 3
+      "n_risk": 4,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 3
      },
      {
       "h": 7,
       "n": 4,
-      "matches": 4,
-      "pointwise": 1.0,
-      "survival": 1.0,
-      "censored_by_h": 3
+      "n_risk": 4,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 3
      },
      {
       "h": 8,
       "n": 4,
-      "matches": 4,
-      "pointwise": 1.0,
-      "survival": 1.0,
-      "censored_by_h": 3
+      "n_risk": 4,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 3
      },
      {
       "h": 9,
       "n": 4,
-      "matches": 3,
-      "pointwise": 0.75,
-      "survival": 0.75,
-      "censored_by_h": 3
+      "n_risk": 4,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 3
      },
      {
       "h": 10,
       "n": 4,
-      "matches": 2,
-      "pointwise": 0.5,
-      "survival": 0.5,
-      "censored_by_h": 3
+      "n_risk": 4,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 3
      },
      {
       "h": 11,
       "n": 4,
-      "matches": 2,
-      "pointwise": 0.5,
-      "survival": 0.5,
-      "censored_by_h": 3
+      "n_risk": 4,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 3
      },
      {
       "h": 12,
       "n": 4,
-      "matches": 3,
-      "pointwise": 0.75,
-      "survival": 0.25,
-      "censored_by_h": 3
+      "n_risk": 4,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 3
      },
      {
       "h": 13,
       "n": 4,
-      "matches": 3,
-      "pointwise": 0.75,
-      "survival": 0.25,
-      "censored_by_h": 3
+      "n_risk": 4,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 3
      },
      {
       "h": 14,
       "n": 4,
-      "matches": 3,
-      "pointwise": 0.75,
-      "survival": 0.25,
-      "censored_by_h": 3
+      "n_risk": 4,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 3
      },
      {
       "h": 15,
       "n": 4,
-      "matches": 3,
-      "pointwise": 0.75,
-      "survival": 0.25,
-      "censored_by_h": 3
+      "n_risk": 4,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 3
      },
      {
       "h": 16,
       "n": 3,
-      "matches": 2,
-      "pointwise": 0.6666666666666666,
-      "survival": 0.3333333333333333,
-      "censored_by_h": 4
+      "n_risk": 3,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 4
      },
      {
       "h": 17,
       "n": 2,
+      "n_risk": 2,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 18,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 19,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 20,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 21,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 22,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 23,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 24,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 25,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 26,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 27,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 28,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 29,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 30,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 31,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 32,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 33,
       "n": 1,
+      "n_risk": 0,
+      "n_informative": 1,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 6
+      "censored_by_transport": 6
      },
      {
       "h": 34,
       "n": 1,
+      "n_risk": 0,
+      "n_informative": 1,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 6
+      "censored_by_transport": 6
      },
      {
       "h": 35,
       "n": 1,
+      "n_risk": 0,
+      "n_informative": 1,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 6
+      "censored_by_transport": 6
      }
     ]
    },
-   "donor_steps_after_fork": 37
+   "donor_steps_after_fork": 37,
+   "donor_first_state_change": 12
   }
  },
  "raw": {
@@ -1426,562 +1776,701 @@
      {
       "h": 1,
       "n": 8,
+      "n_risk": 8,
+      "n_informative": 8,
       "matches": 8,
       "pointwise": 1.0,
       "survival": 1.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 2,
       "n": 8,
+      "n_risk": 8,
+      "n_informative": 8,
       "matches": 8,
       "pointwise": 1.0,
       "survival": 1.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 3,
       "n": 8,
+      "n_risk": 8,
+      "n_informative": 8,
       "matches": 6,
       "pointwise": 0.75,
       "survival": 0.75,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 4,
       "n": 8,
+      "n_risk": 6,
+      "n_informative": 8,
       "matches": 6,
       "pointwise": 0.75,
       "survival": 0.75,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 5,
       "n": 8,
+      "n_risk": 6,
+      "n_informative": 8,
       "matches": 4,
       "pointwise": 0.5,
       "survival": 0.5,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 6,
       "n": 8,
+      "n_risk": 4,
+      "n_informative": 8,
       "matches": 4,
       "pointwise": 0.5,
       "survival": 0.25,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 7,
       "n": 8,
+      "n_risk": 2,
+      "n_informative": 8,
       "matches": 4,
       "pointwise": 0.5,
       "survival": 0.125,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 8,
       "n": 8,
+      "n_risk": 1,
+      "n_informative": 8,
       "matches": 4,
       "pointwise": 0.5,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 9,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 1,
       "pointwise": 0.125,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 10,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 7,
       "pointwise": 0.875,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 11,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 4,
       "pointwise": 0.5,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 12,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 8,
       "pointwise": 1.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 13,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 3,
       "pointwise": 0.375,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 14,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 15,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 2,
       "pointwise": 0.25,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 16,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 4,
       "pointwise": 0.5,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 17,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 3,
       "pointwise": 0.375,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 18,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 1,
       "pointwise": 0.125,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 19,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 1,
       "pointwise": 0.125,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 20,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 21,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 22,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 1,
       "pointwise": 0.125,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 23,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      }
     ],
     "command": [
      {
       "h": 1,
       "n": 8,
+      "n_risk": 8,
+      "n_informative": 8,
       "matches": 7,
       "pointwise": 0.875,
       "survival": 0.875,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 2,
       "n": 8,
+      "n_risk": 7,
+      "n_informative": 8,
       "matches": 8,
       "pointwise": 1.0,
       "survival": 0.875,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 3,
       "n": 8,
+      "n_risk": 7,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 4,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 3,
       "pointwise": 0.375,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 5,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 1,
       "pointwise": 0.125,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 6,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 7,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 8,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 9,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 1,
       "pointwise": 0.125,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 10,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 11,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 12,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 13,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 14,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 15,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 16,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 17,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 18,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 19,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 20,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 21,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 22,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 23,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      }
     ],
     "state": [
      {
       "h": 1,
       "n": 8,
-      "matches": 8,
-      "pointwise": 1.0,
-      "survival": 1.0,
-      "censored_by_h": 0
+      "n_risk": 8,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 2,
       "n": 8,
-      "matches": 8,
-      "pointwise": 1.0,
-      "survival": 1.0,
-      "censored_by_h": 0
+      "n_risk": 8,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 3,
       "n": 8,
-      "matches": 8,
-      "pointwise": 1.0,
-      "survival": 1.0,
-      "censored_by_h": 0
+      "n_risk": 8,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 4,
       "n": 8,
-      "matches": 8,
-      "pointwise": 1.0,
-      "survival": 1.0,
-      "censored_by_h": 0
+      "n_risk": 8,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 5,
       "n": 8,
-      "matches": 8,
-      "pointwise": 1.0,
-      "survival": 1.0,
-      "censored_by_h": 0
+      "n_risk": 8,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 6,
       "n": 8,
-      "matches": 8,
-      "pointwise": 1.0,
-      "survival": 1.0,
-      "censored_by_h": 0
+      "n_risk": 8,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 7,
       "n": 8,
-      "matches": 8,
-      "pointwise": 1.0,
-      "survival": 1.0,
-      "censored_by_h": 0
+      "n_risk": 8,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 8,
       "n": 8,
-      "matches": 6,
-      "pointwise": 0.75,
-      "survival": 0.75,
-      "censored_by_h": 0
+      "n_risk": 8,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 9,
       "n": 8,
-      "matches": 4,
-      "pointwise": 0.5,
-      "survival": 0.25,
-      "censored_by_h": 0
+      "n_risk": 8,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 10,
       "n": 8,
-      "matches": 5,
-      "pointwise": 0.625,
-      "survival": 0.25,
-      "censored_by_h": 0
+      "n_risk": 8,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 11,
       "n": 8,
-      "matches": 4,
-      "pointwise": 0.5,
-      "survival": 0.125,
-      "censored_by_h": 0
+      "n_risk": 8,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 12,
       "n": 8,
-      "matches": 4,
-      "pointwise": 0.5,
-      "survival": 0.125,
-      "censored_by_h": 0
+      "n_risk": 8,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 13,
       "n": 8,
-      "matches": 2,
-      "pointwise": 0.25,
-      "survival": 0.125,
-      "censored_by_h": 0
+      "n_risk": 8,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 14,
       "n": 8,
+      "n_risk": 8,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 15,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 16,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 17,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 18,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 19,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 20,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 21,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 22,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 23,
       "n": 8,
+      "n_risk": 0,
+      "n_informative": 8,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      }
     ]
    },
-   "donor_steps_after_fork": 23
+   "donor_steps_after_fork": 23,
+   "donor_first_state_change": 9
   },
   "B": {
    "n_continuations": 7,
@@ -1990,898 +2479,2890 @@
      {
       "h": 1,
       "n": 7,
+      "n_risk": 7,
+      "n_informative": 7,
       "matches": 7,
       "pointwise": 1.0,
       "survival": 1.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 2,
       "n": 7,
+      "n_risk": 7,
+      "n_informative": 7,
       "matches": 7,
       "pointwise": 1.0,
       "survival": 1.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 3,
       "n": 7,
+      "n_risk": 7,
+      "n_informative": 7,
       "matches": 7,
       "pointwise": 1.0,
       "survival": 1.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 4,
       "n": 7,
+      "n_risk": 7,
+      "n_informative": 7,
       "matches": 7,
       "pointwise": 1.0,
       "survival": 1.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 5,
       "n": 7,
+      "n_risk": 7,
+      "n_informative": 7,
       "matches": 2,
       "pointwise": 0.2857142857142857,
       "survival": 0.2857142857142857,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 6,
       "n": 7,
+      "n_risk": 2,
+      "n_informative": 7,
       "matches": 4,
       "pointwise": 0.5714285714285714,
       "survival": 0.2857142857142857,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 7,
       "n": 7,
+      "n_risk": 2,
+      "n_informative": 7,
       "matches": 1,
       "pointwise": 0.14285714285714285,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 8,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 9,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 10,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 11,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 1,
       "pointwise": 0.14285714285714285,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 12,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 1,
       "pointwise": 0.14285714285714285,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 13,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 4,
       "pointwise": 0.5714285714285714,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 14,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 4,
       "pointwise": 0.5714285714285714,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 15,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 16,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 3,
       "pointwise": 0.42857142857142855,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 17,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 2,
       "pointwise": 0.2857142857142857,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 18,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 1,
       "pointwise": 0.14285714285714285,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 19,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 1,
       "pointwise": 0.14285714285714285,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 20,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 21,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 2,
       "pointwise": 0.2857142857142857,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 22,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 23,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 24,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 25,
       "n": 6,
+      "n_risk": 0,
+      "n_informative": 6,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 1
+      "censored_by_transport": 1
      },
      {
       "h": 26,
       "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
       "matches": 1,
       "pointwise": 0.2,
       "survival": 0.0,
-      "censored_by_h": 2
+      "censored_by_transport": 2
      },
      {
       "h": 27,
       "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 2
+      "censored_by_transport": 2
      },
      {
       "h": 28,
       "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 2
+      "censored_by_transport": 2
      },
      {
       "h": 29,
       "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 2
+      "censored_by_transport": 2
      },
      {
       "h": 30,
       "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 2
+      "censored_by_transport": 2
      },
      {
       "h": 31,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 32,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 33,
       "n": 3,
+      "n_risk": 0,
+      "n_informative": 3,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 34,
       "n": 3,
+      "n_risk": 0,
+      "n_informative": 3,
       "matches": 1,
       "pointwise": 0.3333333333333333,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 35,
       "n": 3,
+      "n_risk": 0,
+      "n_informative": 3,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 36,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 37,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      }
     ],
     "command": [
      {
       "h": 1,
       "n": 7,
+      "n_risk": 7,
+      "n_informative": 7,
       "matches": 7,
       "pointwise": 1.0,
       "survival": 1.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 2,
       "n": 7,
+      "n_risk": 7,
+      "n_informative": 7,
       "matches": 7,
       "pointwise": 1.0,
       "survival": 1.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 3,
       "n": 7,
+      "n_risk": 7,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 4,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 3,
       "pointwise": 0.42857142857142855,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 5,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 6,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 7,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 8,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 9,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 10,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 11,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 12,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 1,
       "pointwise": 0.14285714285714285,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 13,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 14,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 15,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 16,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 17,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 18,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 19,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 20,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 21,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 22,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 23,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 24,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 25,
       "n": 6,
+      "n_risk": 0,
+      "n_informative": 6,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 1
+      "censored_by_transport": 1
      },
      {
       "h": 26,
       "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 2
+      "censored_by_transport": 2
      },
      {
       "h": 27,
       "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 2
+      "censored_by_transport": 2
      },
      {
       "h": 28,
       "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 2
+      "censored_by_transport": 2
      },
      {
       "h": 29,
       "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 2
+      "censored_by_transport": 2
      },
      {
       "h": 30,
       "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 2
+      "censored_by_transport": 2
      },
      {
       "h": 31,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 32,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 33,
       "n": 3,
+      "n_risk": 0,
+      "n_informative": 3,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 34,
       "n": 3,
+      "n_risk": 0,
+      "n_informative": 3,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 35,
       "n": 3,
+      "n_risk": 0,
+      "n_informative": 3,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 36,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 37,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      }
     ],
     "state": [
      {
       "h": 1,
       "n": 7,
-      "matches": 7,
-      "pointwise": 1.0,
-      "survival": 1.0,
-      "censored_by_h": 0
+      "n_risk": 7,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 2,
       "n": 7,
-      "matches": 7,
-      "pointwise": 1.0,
-      "survival": 1.0,
-      "censored_by_h": 0
+      "n_risk": 7,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 3,
       "n": 7,
-      "matches": 7,
-      "pointwise": 1.0,
-      "survival": 1.0,
-      "censored_by_h": 0
+      "n_risk": 7,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 4,
       "n": 7,
-      "matches": 7,
-      "pointwise": 1.0,
-      "survival": 1.0,
-      "censored_by_h": 0
+      "n_risk": 7,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 5,
       "n": 7,
-      "matches": 7,
-      "pointwise": 1.0,
-      "survival": 1.0,
-      "censored_by_h": 0
+      "n_risk": 7,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 6,
       "n": 7,
-      "matches": 7,
-      "pointwise": 1.0,
-      "survival": 1.0,
-      "censored_by_h": 0
+      "n_risk": 7,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 7,
       "n": 7,
-      "matches": 7,
-      "pointwise": 1.0,
-      "survival": 1.0,
-      "censored_by_h": 0
+      "n_risk": 7,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 8,
       "n": 7,
-      "matches": 7,
-      "pointwise": 1.0,
-      "survival": 1.0,
-      "censored_by_h": 0
+      "n_risk": 7,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 9,
       "n": 7,
-      "matches": 6,
-      "pointwise": 0.8571428571428571,
-      "survival": 0.8571428571428571,
-      "censored_by_h": 0
+      "n_risk": 7,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 10,
       "n": 7,
-      "matches": 5,
-      "pointwise": 0.7142857142857143,
-      "survival": 0.7142857142857143,
-      "censored_by_h": 0
+      "n_risk": 7,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 11,
       "n": 7,
-      "matches": 3,
-      "pointwise": 0.42857142857142855,
-      "survival": 0.42857142857142855,
-      "censored_by_h": 0
+      "n_risk": 7,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 12,
       "n": 7,
-      "matches": 5,
-      "pointwise": 0.7142857142857143,
-      "survival": 0.2857142857142857,
-      "censored_by_h": 0
+      "n_risk": 7,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 13,
       "n": 7,
-      "matches": 4,
-      "pointwise": 0.5714285714285714,
-      "survival": 0.14285714285714285,
-      "censored_by_h": 0
+      "n_risk": 7,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 14,
       "n": 7,
-      "matches": 4,
-      "pointwise": 0.5714285714285714,
-      "survival": 0.14285714285714285,
-      "censored_by_h": 0
+      "n_risk": 7,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 15,
       "n": 7,
-      "matches": 4,
-      "pointwise": 0.5714285714285714,
-      "survival": 0.14285714285714285,
-      "censored_by_h": 0
+      "n_risk": 7,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 16,
       "n": 7,
-      "matches": 4,
-      "pointwise": 0.5714285714285714,
-      "survival": 0.14285714285714285,
-      "censored_by_h": 0
+      "n_risk": 7,
+      "n_informative": 0,
+      "matches": 0,
+      "pointwise": null,
+      "survival": null,
+      "censored_by_transport": 0
      },
      {
       "h": 17,
       "n": 7,
+      "n_risk": 7,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 18,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 19,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 20,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 21,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 22,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 23,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 24,
       "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 0
+      "censored_by_transport": 0
      },
      {
       "h": 25,
       "n": 6,
+      "n_risk": 0,
+      "n_informative": 6,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 1
+      "censored_by_transport": 1
      },
      {
       "h": 26,
       "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 2
+      "censored_by_transport": 2
      },
      {
       "h": 27,
       "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 2
+      "censored_by_transport": 2
      },
      {
       "h": 28,
       "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 2
+      "censored_by_transport": 2
      },
      {
       "h": 29,
       "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 2
+      "censored_by_transport": 2
      },
      {
       "h": 30,
       "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 2
+      "censored_by_transport": 2
      },
      {
       "h": 31,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 32,
       "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 3
+      "censored_by_transport": 3
      },
      {
       "h": 33,
       "n": 3,
+      "n_risk": 0,
+      "n_informative": 3,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 34,
       "n": 3,
+      "n_risk": 0,
+      "n_informative": 3,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 35,
       "n": 3,
+      "n_risk": 0,
+      "n_informative": 3,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 4
+      "censored_by_transport": 4
      },
      {
       "h": 36,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      },
      {
       "h": 37,
       "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
       "matches": 0,
       "pointwise": 0.0,
       "survival": 0.0,
-      "censored_by_h": 5
+      "censored_by_transport": 5
      }
     ]
    },
-   "donor_steps_after_fork": 37
+   "donor_steps_after_fork": 37,
+   "donor_first_state_change": 12
   }
- }
+ },
+ "raw_state": {
+  "A": {
+   "n_continuations": 8,
+   "points": {
+    "signature": [
+     {
+      "h": 1,
+      "n": 8,
+      "n_risk": 8,
+      "n_informative": 8,
+      "matches": 8,
+      "pointwise": 1.0,
+      "survival": 1.0,
+      "censored_by_transport": 0
+     },
+     {
+      "h": 2,
+      "n": 8,
+      "n_risk": 8,
+      "n_informative": 8,
+      "matches": 8,
+      "pointwise": 1.0,
+      "survival": 1.0,
+      "censored_by_transport": 0
+     },
+     {
+      "h": 3,
+      "n": 8,
+      "n_risk": 8,
+      "n_informative": 8,
+      "matches": 6,
+      "pointwise": 0.75,
+      "survival": 0.75,
+      "censored_by_transport": 0
+     },
+     {
+      "h": 4,
+      "n": 7,
+      "n_risk": 6,
+      "n_informative": 7,
+      "matches": 6,
+      "pointwise": 0.8571428571428571,
+      "survival": 0.75,
+      "censored_by_transport": 1
+     },
+     {
+      "h": 5,
+      "n": 6,
+      "n_risk": 5,
+      "n_informative": 6,
+      "matches": 3,
+      "pointwise": 0.5,
+      "survival": 0.44999999999999996,
+      "censored_by_transport": 2
+     },
+     {
+      "h": 6,
+      "n": 6,
+      "n_risk": 3,
+      "n_informative": 6,
+      "matches": 3,
+      "pointwise": 0.5,
+      "survival": 0.15,
+      "censored_by_transport": 2
+     },
+     {
+      "h": 7,
+      "n": 6,
+      "n_risk": 1,
+      "n_informative": 6,
+      "matches": 3,
+      "pointwise": 0.5,
+      "survival": 0.15,
+      "censored_by_transport": 2
+     },
+     {
+      "h": 8,
+      "n": 6,
+      "n_risk": 1,
+      "n_informative": 6,
+      "matches": 3,
+      "pointwise": 0.5,
+      "survival": 0.0,
+      "censored_by_transport": 2
+     },
+     {
+      "h": 9,
+      "n": 6,
+      "n_risk": 0,
+      "n_informative": 6,
+      "matches": 1,
+      "pointwise": 0.16666666666666666,
+      "survival": 0.0,
+      "censored_by_transport": 2
+     },
+     {
+      "h": 10,
+      "n": 6,
+      "n_risk": 0,
+      "n_informative": 6,
+      "matches": 5,
+      "pointwise": 0.8333333333333334,
+      "survival": 0.0,
+      "censored_by_transport": 2
+     },
+     {
+      "h": 11,
+      "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
+      "matches": 2,
+      "pointwise": 0.4,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 12,
+      "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
+      "matches": 5,
+      "pointwise": 1.0,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 13,
+      "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
+      "matches": 1,
+      "pointwise": 0.2,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 14,
+      "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 15,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 4
+     },
+     {
+      "h": 16,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 2,
+      "pointwise": 0.5,
+      "survival": 0.0,
+      "censored_by_transport": 4
+     },
+     {
+      "h": 17,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 2,
+      "pointwise": 0.5,
+      "survival": 0.0,
+      "censored_by_transport": 4
+     },
+     {
+      "h": 18,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 1,
+      "pointwise": 0.25,
+      "survival": 0.0,
+      "censored_by_transport": 4
+     },
+     {
+      "h": 19,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 1,
+      "pointwise": 0.25,
+      "survival": 0.0,
+      "censored_by_transport": 4
+     },
+     {
+      "h": 20,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 4
+     },
+     {
+      "h": 21,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 4
+     },
+     {
+      "h": 22,
+      "n": 3,
+      "n_risk": 0,
+      "n_informative": 3,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 23,
+      "n": 3,
+      "n_risk": 0,
+      "n_informative": 3,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     }
+    ],
+    "command": [
+     {
+      "h": 1,
+      "n": 8,
+      "n_risk": 8,
+      "n_informative": 8,
+      "matches": 7,
+      "pointwise": 0.875,
+      "survival": 0.875,
+      "censored_by_transport": 0
+     },
+     {
+      "h": 2,
+      "n": 8,
+      "n_risk": 7,
+      "n_informative": 8,
+      "matches": 8,
+      "pointwise": 1.0,
+      "survival": 0.875,
+      "censored_by_transport": 0
+     },
+     {
+      "h": 3,
+      "n": 8,
+      "n_risk": 7,
+      "n_informative": 8,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 0
+     },
+     {
+      "h": 4,
+      "n": 7,
+      "n_risk": 0,
+      "n_informative": 7,
+      "matches": 3,
+      "pointwise": 0.42857142857142855,
+      "survival": 0.0,
+      "censored_by_transport": 1
+     },
+     {
+      "h": 5,
+      "n": 6,
+      "n_risk": 0,
+      "n_informative": 6,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 2
+     },
+     {
+      "h": 6,
+      "n": 6,
+      "n_risk": 0,
+      "n_informative": 6,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 2
+     },
+     {
+      "h": 7,
+      "n": 6,
+      "n_risk": 0,
+      "n_informative": 6,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 2
+     },
+     {
+      "h": 8,
+      "n": 6,
+      "n_risk": 0,
+      "n_informative": 6,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 2
+     },
+     {
+      "h": 9,
+      "n": 6,
+      "n_risk": 0,
+      "n_informative": 6,
+      "matches": 1,
+      "pointwise": 0.16666666666666666,
+      "survival": 0.0,
+      "censored_by_transport": 2
+     },
+     {
+      "h": 10,
+      "n": 6,
+      "n_risk": 0,
+      "n_informative": 6,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 2
+     },
+     {
+      "h": 11,
+      "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 12,
+      "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 13,
+      "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 14,
+      "n": 5,
+      "n_risk": 0,
+      "n_informative": 5,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 15,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 4
+     },
+     {
+      "h": 16,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 4
+     },
+     {
+      "h": 17,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 4
+     },
+     {
+      "h": 18,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 4
+     },
+     {
+      "h": 19,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 4
+     },
+     {
+      "h": 20,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 4
+     },
+     {
+      "h": 21,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 4
+     },
+     {
+      "h": 22,
+      "n": 3,
+      "n_risk": 0,
+      "n_informative": 3,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 23,
+      "n": 3,
+      "n_risk": 0,
+      "n_informative": 3,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     }
+    ],
+    "state": [
+     {
+      "h": 1,
+      "n": 8,
+      "n_risk": 8,
+      "n_informative": 8,
+      "matches": 8,
+      "pointwise": 1.0,
+      "survival": 1.0,
+      "censored_by_transport": 0
+     },
+     {
+      "h": 2,
+      "n": 8,
+      "n_risk": 8,
+      "n_informative": 8,
+      "matches": 8,
+      "pointwise": 1.0,
+      "survival": 1.0,
+      "censored_by_transport": 0
+     },
+     {
+      "h": 3,
+      "n": 8,
+      "n_risk": 8,
+      "n_informative": 8,
+      "matches": 8,
+      "pointwise": 1.0,
+      "survival": 1.0,
+      "censored_by_transport": 0
+     },
+     {
+      "h": 4,
+      "n": 7,
+      "n_risk": 7,
+      "n_informative": 7,
+      "matches": 7,
+      "pointwise": 1.0,
+      "survival": 1.0,
+      "censored_by_transport": 1
+     },
+     {
+      "h": 5,
+      "n": 6,
+      "n_risk": 6,
+      "n_informative": 6,
+      "matches": 6,
+      "pointwise": 1.0,
+      "survival": 1.0,
+      "censored_by_transport": 2
+     },
+     {
+      "h": 6,
+      "n": 6,
+      "n_risk": 6,
+      "n_informative": 6,
+      "matches": 6,
+      "pointwise": 1.0,
+      "survival": 1.0,
+      "censored_by_transport": 2
+     },
+     {
+      "h": 7,
+      "n": 6,
+      "n_risk": 6,
+      "n_informative": 6,
+      "matches": 6,
+      "pointwise": 1.0,
+      "survival": 1.0,
+      "censored_by_transport": 2
+     },
+     {
+      "h": 8,
+      "n": 6,
+      "n_risk": 6,
+      "n_informative": 6,
+      "matches": 4,
+      "pointwise": 0.6666666666666666,
+      "survival": 0.6666666666666667,
+      "censored_by_transport": 2
+     },
+     {
+      "h": 9,
+      "n": 6,
+      "n_risk": 4,
+      "n_informative": 6,
+      "matches": 3,
+      "pointwise": 0.5,
+      "survival": 0.16666666666666669,
+      "censored_by_transport": 2
+     },
+     {
+      "h": 10,
+      "n": 6,
+      "n_risk": 1,
+      "n_informative": 6,
+      "matches": 4,
+      "pointwise": 0.6666666666666666,
+      "survival": 0.16666666666666669,
+      "censored_by_transport": 2
+     },
+     {
+      "h": 11,
+      "n": 5,
+      "n_risk": 1,
+      "n_informative": 5,
+      "matches": 3,
+      "pointwise": 0.6,
+      "survival": 0.16666666666666669,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 12,
+      "n": 5,
+      "n_risk": 1,
+      "n_informative": 5,
+      "matches": 3,
+      "pointwise": 0.6,
+      "survival": 0.16666666666666669,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 13,
+      "n": 5,
+      "n_risk": 1,
+      "n_informative": 5,
+      "matches": 2,
+      "pointwise": 0.4,
+      "survival": 0.16666666666666669,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 14,
+      "n": 5,
+      "n_risk": 1,
+      "n_informative": 5,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 15,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 4
+     },
+     {
+      "h": 16,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 4
+     },
+     {
+      "h": 17,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 4
+     },
+     {
+      "h": 18,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 4
+     },
+     {
+      "h": 19,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 4
+     },
+     {
+      "h": 20,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 4
+     },
+     {
+      "h": 21,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 4
+     },
+     {
+      "h": 22,
+      "n": 3,
+      "n_risk": 0,
+      "n_informative": 3,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 23,
+      "n": 3,
+      "n_risk": 0,
+      "n_informative": 3,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     }
+    ]
+   },
+   "donor_steps_after_fork": 23,
+   "donor_first_state_change": 9
+  },
+  "B": {
+   "n_continuations": 7,
+   "points": {
+    "signature": [
+     {
+      "h": 1,
+      "n": 7,
+      "n_risk": 7,
+      "n_informative": 7,
+      "matches": 7,
+      "pointwise": 1.0,
+      "survival": 1.0,
+      "censored_by_transport": 0
+     },
+     {
+      "h": 2,
+      "n": 5,
+      "n_risk": 5,
+      "n_informative": 5,
+      "matches": 5,
+      "pointwise": 1.0,
+      "survival": 1.0,
+      "censored_by_transport": 2
+     },
+     {
+      "h": 3,
+      "n": 5,
+      "n_risk": 5,
+      "n_informative": 5,
+      "matches": 5,
+      "pointwise": 1.0,
+      "survival": 1.0,
+      "censored_by_transport": 2
+     },
+     {
+      "h": 4,
+      "n": 4,
+      "n_risk": 4,
+      "n_informative": 4,
+      "matches": 4,
+      "pointwise": 1.0,
+      "survival": 1.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 5,
+      "n": 4,
+      "n_risk": 4,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 6,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 1,
+      "pointwise": 0.25,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 7,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 1,
+      "pointwise": 0.25,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 8,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 9,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 10,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 11,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 1,
+      "pointwise": 0.25,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 12,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 1,
+      "pointwise": 0.25,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 13,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 2,
+      "pointwise": 0.5,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 14,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 4,
+      "pointwise": 1.0,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 15,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 16,
+      "n": 3,
+      "n_risk": 0,
+      "n_informative": 3,
+      "matches": 2,
+      "pointwise": 0.6666666666666666,
+      "survival": 0.0,
+      "censored_by_transport": 4
+     },
+     {
+      "h": 17,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 18,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 19,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 1,
+      "pointwise": 0.5,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 20,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 21,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 1,
+      "pointwise": 0.5,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 22,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 23,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 24,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 25,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 26,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 27,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 28,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 29,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 30,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 31,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 32,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 33,
+      "n": 1,
+      "n_risk": 0,
+      "n_informative": 1,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 6
+     },
+     {
+      "h": 34,
+      "n": 1,
+      "n_risk": 0,
+      "n_informative": 1,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 6
+     },
+     {
+      "h": 35,
+      "n": 1,
+      "n_risk": 0,
+      "n_informative": 1,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 6
+     }
+    ],
+    "command": [
+     {
+      "h": 1,
+      "n": 7,
+      "n_risk": 7,
+      "n_informative": 7,
+      "matches": 7,
+      "pointwise": 1.0,
+      "survival": 1.0,
+      "censored_by_transport": 0
+     },
+     {
+      "h": 2,
+      "n": 5,
+      "n_risk": 5,
+      "n_informative": 5,
+      "matches": 5,
+      "pointwise": 1.0,
+      "survival": 1.0,
+      "censored_by_transport": 2
+     },
+     {
+      "h": 3,
+      "n": 5,
+      "n_risk": 5,
+      "n_informative": 5,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 2
+     },
+     {
+      "h": 4,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 1,
+      "pointwise": 0.25,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 5,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 6,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 7,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 8,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 9,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 10,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 11,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 12,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 1,
+      "pointwise": 0.25,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 13,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 14,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 15,
+      "n": 4,
+      "n_risk": 0,
+      "n_informative": 4,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 16,
+      "n": 3,
+      "n_risk": 0,
+      "n_informative": 3,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 4
+     },
+     {
+      "h": 17,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 18,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 19,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 20,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 21,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 22,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 23,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 24,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 25,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 26,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 27,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 28,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 29,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 30,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 31,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 32,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 33,
+      "n": 1,
+      "n_risk": 0,
+      "n_informative": 1,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 6
+     },
+     {
+      "h": 34,
+      "n": 1,
+      "n_risk": 0,
+      "n_informative": 1,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 6
+     },
+     {
+      "h": 35,
+      "n": 1,
+      "n_risk": 0,
+      "n_informative": 1,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.0,
+      "censored_by_transport": 6
+     }
+    ],
+    "state": [
+     {
+      "h": 1,
+      "n": 7,
+      "n_risk": 7,
+      "n_informative": 7,
+      "matches": 7,
+      "pointwise": 1.0,
+      "survival": 1.0,
+      "censored_by_transport": 0
+     },
+     {
+      "h": 2,
+      "n": 5,
+      "n_risk": 5,
+      "n_informative": 5,
+      "matches": 5,
+      "pointwise": 1.0,
+      "survival": 1.0,
+      "censored_by_transport": 2
+     },
+     {
+      "h": 3,
+      "n": 5,
+      "n_risk": 5,
+      "n_informative": 5,
+      "matches": 5,
+      "pointwise": 1.0,
+      "survival": 1.0,
+      "censored_by_transport": 2
+     },
+     {
+      "h": 4,
+      "n": 4,
+      "n_risk": 4,
+      "n_informative": 4,
+      "matches": 4,
+      "pointwise": 1.0,
+      "survival": 1.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 5,
+      "n": 4,
+      "n_risk": 4,
+      "n_informative": 4,
+      "matches": 4,
+      "pointwise": 1.0,
+      "survival": 1.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 6,
+      "n": 4,
+      "n_risk": 4,
+      "n_informative": 4,
+      "matches": 4,
+      "pointwise": 1.0,
+      "survival": 1.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 7,
+      "n": 4,
+      "n_risk": 4,
+      "n_informative": 4,
+      "matches": 4,
+      "pointwise": 1.0,
+      "survival": 1.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 8,
+      "n": 4,
+      "n_risk": 4,
+      "n_informative": 4,
+      "matches": 4,
+      "pointwise": 1.0,
+      "survival": 1.0,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 9,
+      "n": 4,
+      "n_risk": 4,
+      "n_informative": 4,
+      "matches": 3,
+      "pointwise": 0.75,
+      "survival": 0.75,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 10,
+      "n": 4,
+      "n_risk": 3,
+      "n_informative": 4,
+      "matches": 2,
+      "pointwise": 0.5,
+      "survival": 0.5,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 11,
+      "n": 4,
+      "n_risk": 2,
+      "n_informative": 4,
+      "matches": 2,
+      "pointwise": 0.5,
+      "survival": 0.5,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 12,
+      "n": 4,
+      "n_risk": 2,
+      "n_informative": 4,
+      "matches": 3,
+      "pointwise": 0.75,
+      "survival": 0.25,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 13,
+      "n": 4,
+      "n_risk": 1,
+      "n_informative": 4,
+      "matches": 3,
+      "pointwise": 0.75,
+      "survival": 0.25,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 14,
+      "n": 4,
+      "n_risk": 1,
+      "n_informative": 4,
+      "matches": 3,
+      "pointwise": 0.75,
+      "survival": 0.25,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 15,
+      "n": 4,
+      "n_risk": 1,
+      "n_informative": 4,
+      "matches": 3,
+      "pointwise": 0.75,
+      "survival": 0.25,
+      "censored_by_transport": 3
+     },
+     {
+      "h": 16,
+      "n": 3,
+      "n_risk": 1,
+      "n_informative": 3,
+      "matches": 2,
+      "pointwise": 0.6666666666666666,
+      "survival": 0.25,
+      "censored_by_transport": 4
+     },
+     {
+      "h": 17,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.25,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 18,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.25,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 19,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.25,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 20,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.25,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 21,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.25,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 22,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.25,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 23,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.25,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 24,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.25,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 25,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.25,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 26,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.25,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 27,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.25,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 28,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.25,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 29,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.25,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 30,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.25,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 31,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.25,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 32,
+      "n": 2,
+      "n_risk": 0,
+      "n_informative": 2,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.25,
+      "censored_by_transport": 5
+     },
+     {
+      "h": 33,
+      "n": 1,
+      "n_risk": 0,
+      "n_informative": 1,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.25,
+      "censored_by_transport": 6
+     },
+     {
+      "h": 34,
+      "n": 1,
+      "n_risk": 0,
+      "n_informative": 1,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.25,
+      "censored_by_transport": 6
+     },
+     {
+      "h": 35,
+      "n": 1,
+      "n_risk": 0,
+      "n_informative": 1,
+      "matches": 0,
+      "pointwise": 0.0,
+      "survival": 0.25,
+      "censored_by_transport": 6
+     }
+    ]
+   },
+   "donor_steps_after_fork": 37,
+   "donor_first_state_change": 12
+  }
+ },
+ "sanity_failures": []
 }
