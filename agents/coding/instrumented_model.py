@@ -90,12 +90,15 @@ class InstrumentedLitellmModel(LitellmModel):
         # active generation -- chunks arrive several times a second -- can only
         # happen if the stream is broken. Prefill on a 60k-token prompt is
         # seconds, so 90 leaves it untouched.
-        self.config.model_kwargs = dict(self.config.model_kwargs) | {
-            "timeout": httpx.Timeout(
-                connect=15.0, read=float(self._read_timeout), write=30.0, pool=15.0
-            ),
-            "num_retries": 0,
-        }
+        # Held here rather than in `config.model_kwargs`, and passed per call.
+        # The config is serialised into every saved trajectory with pydantic's
+        # json mode, which cannot encode an httpx.Timeout: putting it there made
+        # all 24 continuations of a batch die on `PydanticSerializationError`
+        # before their first step. Only json-safe values belong in the config.
+        self._timeout = httpx.Timeout(
+            connect=15.0, read=float(self._read_timeout), write=30.0, pool=15.0
+        )
+        self.config.model_kwargs = dict(self.config.model_kwargs) | {"num_retries": 0}
         self._events: list[dict[str, Any]] = []
 
     def _streamed(self, messages: list[dict], **kwargs):
@@ -109,7 +112,8 @@ class InstrumentedLitellmModel(LitellmModel):
         """
         deadline = time.time() + self._attempt_timeout
         chunks = []
-        stream = super()._query(messages, stream=True, stream_options={"include_usage": True}, **kwargs)
+        stream = super()._query(messages, stream=True, stream_options={"include_usage": True},
+                                timeout=self._timeout, **kwargs)
         for chunk in stream:
             chunks.append(chunk)
             # Second bound, for a stream that keeps trickling but never ends.
@@ -128,7 +132,8 @@ class InstrumentedLitellmModel(LitellmModel):
         for attempt in range(1, self._max_attempts + 1):
             start = time.time()
             try:
-                response = (self._streamed if self._stream else super()._query)(messages, **kwargs)
+                response = (self._streamed(messages, **kwargs) if self._stream
+                            else super()._query(messages, timeout=self._timeout, **kwargs))
             except Exception as exc:  # noqa: BLE001
                 self._events.append({
                     "attempt": attempt,
