@@ -31,14 +31,31 @@ import os
 from pathlib import Path
 
 
-def audit(directory: str, pattern: str) -> dict:
+def audit(directory: str, pattern: str, manifest: dict | None = None) -> dict:
+    """Per-run transport numbers, counting only the run's own model calls.
+
+    A continuation's message list opens with its donor's prefix, and that prefix
+    contains the donor's assistant turns -- eight of them for arm A, ten for arm
+    B. Counting those as calls of this run inflates the denominator by roughly a
+    quarter and credits this batch with steps that Phase A1 made. The first
+    version of this file did exactly that and under-reported arm A's retry rate
+    as 0.036 when the run's own calls put it at 0.045.
+
+    The prefix length is read from the frozen manifest, so the boundary is the
+    one the experiment was built on rather than one inferred here.
+    """
     rows, per_run = [], {}
     for path in sorted(glob.glob(f"{directory}/{pattern}")):
         if path.endswith(".probe.jsonl"):
             continue
         run = os.path.basename(path)[:-5]
         data = json.loads(Path(path).read_text())
-        calls = [m.get("extra", {}) for m in data["messages"] if m.get("role") == "assistant"]
+        messages = data["messages"]
+        if manifest:
+            arm = run.rsplit("_", 1)[0]
+            prefix = 2 if arm == "fresh" else manifest["arms"][arm]["prefix_messages"]
+            messages = messages[prefix:]
+        calls = [m.get("extra", {}) for m in messages if m.get("role") == "assistant"]
         retried, attempts, exceptions, seconds_lost, where = 0, 0, collections.Counter(), 0.0, []
         for index, call in enumerate(calls, 1):
             events = call.get("transport_events") or []
@@ -78,10 +95,12 @@ def main() -> None:
     ap.add_argument("--runs", required=True)
     ap.add_argument("--task", default="pytest-dev__pytest-10051")
     ap.add_argument("--pattern", help="filename glob; defaults to the task's Phase A runs")
+    ap.add_argument("--manifest", help="frozen manifest, to skip donor prefixes")
     ap.add_argument("--out")
     args = ap.parse_args()
 
-    per_run = audit(args.runs, args.pattern or f"{args.task}__r*.json")
+    manifest = json.loads(Path(args.manifest).read_text()) if args.manifest else None
+    per_run = audit(args.runs, args.pattern or f"{args.task}__r*.json", manifest)
     if not per_run:
         raise SystemExit(f"no trajectories matching in {args.runs}")
 

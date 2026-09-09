@@ -1310,3 +1310,72 @@ that visibly change everything downstream of it.
 
 Phase B may now start. The manifest is frozen at
 `paper/manifests/h2_phase_a1.json`.
+
+---
+
+## 2026-09-09 — Phase B arms A and B: the transport stop rule fires, fresh arm paused
+
+Transport only. **No outcome was computed**: no final state, hash or patch from
+any continuation has been read. The rule applied here was frozen in
+`paper/PHASE_B_TRANSPORT_STOP_RULE.md` and committed before these numbers
+existed.
+
+    arm  calls  retried   rate  runs w/ retry  max attempts@1 step  lost   exceptions
+     A     269       12  0.045            5/8                    6  4.8 h  Timeout 11, ISE 6
+     B     303       19  0.063            5/8                    3  3.7 h  Timeout 19, ISE 3
+
+    per-run retry rate by index
+     A   0.029  0.062  0.044  0.000  0.000  0.000  0.061  0.208
+     B   0.000  0.000  0.040  0.000  0.038  0.118  0.097  0.085
+
+**The denominator was wrong before this entry and the correction makes it
+worse.** A continuation's messages open with its donor's prefix, which contains
+the donor's own assistant turns — eight for arm A, ten for arm B — and counting
+them credited this batch with Phase A1's steps. Arm A was reported at 0.036; on
+its own calls it is 0.045. `experiments/coding/transport_audit.py` now reads the
+prefix length from the frozen manifest.
+
+### The rule fires
+
+Written before the data: pause if arm B produces a run above 10 % retry, a step
+resampled several times over, or hours of stall — **especially if later runs are
+worse**.
+
+    B_5   0.118, above the 10 % clause, 6515 s lost
+    trend the three worst runs in arm B are its last three
+    arm   0.045 -> 0.063
+
+Two sub-criteria moved the other way and that is recorded rather than buried:
+arm B's worst single step took 3 attempts against arm A's 6, and it lost 3.7
+hours against 4.8. The rule is disjunctive and `B_5` satisfies its first clause,
+so **the fresh arm does not run.** Applying it as written is the only thing that
+makes having written it worth anything.
+
+The exception mix also changed: arm B is 19 stream `Timeout` against 3
+`InternalServerError`, where arm A was 11 against 6. Streams breaking
+mid-generation, not connections refused at setup.
+
+### What this does and does not block
+
+The fresh arm serves **H2a**, whether abandoning `S` is state-carried. That is
+paused.
+
+**H2b's primary contrast needs only arms A and B**, and both are collected: 8
+and 7 usable continuations. Pausing costs the third arm, not the primary
+comparison. Whether those 15 support an analysis is a separate question the
+three declared layers — all runs, split by retry, retry-free subset — exist to
+answer, and it is not answered here.
+
+### `B_1`, unexplained
+
+Thirteen own calls, zero retries, ends on an ordinary observation, no exit
+status, no exception recorded, and the runner printed no line for it.
+
+**The evidence for why may have been destroyed by the way the batch was run.**
+The runner's stdout was piped through `grep -E "^(A|B|fresh)_[0-9]"`, so any
+traceback or diagnostic that did not begin with a run label was discarded. That
+is a self-inflicted gap: a filter meant to keep progress readable also threw away
+the only record of a failure. Future batches keep the full stdout.
+
+`B_1` is therefore neither classified as infrastructure nor as data. It is left
+out of arm B's seven usable continuations and recorded as unexplained.

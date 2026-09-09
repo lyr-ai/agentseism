@@ -1,0 +1,156 @@
+{
+ "A_0": {
+  "exit_status": "Submitted",
+  "calls": 34,
+  "attempts": 35,
+  "retried_steps": 1,
+  "retry_rate": 0.0294,
+  "seconds_lost": 0.2,
+  "exceptions": {
+   "InternalServerError": 1
+  },
+  "retried_at": [
+   {
+    "step": 15,
+    "attempt_used": 2
+   }
+  ],
+  "instrumented": true
+ },
+ "A_1": {
+  "exit_status": "Submitted",
+  "calls": 32,
+  "attempts": 34,
+  "retried_steps": 2,
+  "retry_rate": 0.0625,
+  "seconds_lost": 845.9,
+  "exceptions": {
+   "InternalServerError": 1,
+   "Timeout": 1
+  },
+  "retried_at": [
+   {
+    "step": 4,
+    "attempt_used": 2
+   },
+   {
+    "step": 9,
+    "attempt_used": 2
+   }
+  ],
+  "instrumented": true
+ },
+ "A_2": {
+  "exit_status": "Submitted",
+  "calls": 45,
+  "attempts": 47,
+  "retried_steps": 2,
+  "retry_rate": 0.0444,
+  "seconds_lost": 0.4,
+  "exceptions": {
+   "InternalServerError": 2
+  },
+  "retried_at": [
+   {
+    "step": 22,
+    "attempt_used": 2
+   },
+   {
+    "step": 36,
+    "attempt_used": 2
+   }
+  ],
+  "instrumented": true
+ },
+ "A_3": {
+  "exit_status": "Submitted",
+  "calls": 29,
+  "attempts": 29,
+  "retried_steps": 0,
+  "retry_rate": 0.0,
+  "seconds_lost": 0.0,
+  "exceptions": {},
+  "retried_at": [],
+  "instrumented": true
+ },
+ "A_4": {
+  "exit_status": "Submitted",
+  "calls": 24,
+  "attempts": 24,
+  "retried_steps": 0,
+  "retry_rate": 0.0,
+  "seconds_lost": 0.0,
+  "exceptions": {},
+  "retried_at": [],
+  "instrumented": true
+ },
+ "A_5": {
+  "exit_status": "Submitted",
+  "calls": 48,
+  "attempts": 48,
+  "retried_steps": 0,
+  "retry_rate": 0.0,
+  "seconds_lost": 0.0,
+  "exceptions": {},
+  "retried_at": [],
+  "instrumented": true
+ },
+ "A_6": {
+  "exit_status": "Submitted",
+  "calls": 33,
+  "attempts": 35,
+  "retried_steps": 2,
+  "retry_rate": 0.0606,
+  "seconds_lost": 996.5,
+  "exceptions": {
+   "InternalServerError": 1,
+   "Timeout": 1
+  },
+  "retried_at": [
+   {
+    "step": 5,
+    "attempt_used": 2
+   },
+   {
+    "step": 22,
+    "attempt_used": 2
+   }
+  ],
+  "instrumented": true
+ },
+ "A_7": {
+  "exit_status": "Submitted",
+  "calls": 24,
+  "attempts": 34,
+  "retried_steps": 5,
+  "retry_rate": 0.2083,
+  "seconds_lost": 15578.0,
+  "exceptions": {
+   "Timeout": 9,
+   "InternalServerError": 1
+  },
+  "retried_at": [
+   {
+    "step": 11,
+    "attempt_used": 2
+   },
+   {
+    "step": 12,
+    "attempt_used": 6
+   },
+   {
+    "step": 13,
+    "attempt_used": 3
+   },
+   {
+    "step": 20,
+    "attempt_used": 2
+   },
+   {
+    "step": 24,
+    "attempt_used": 2
+   }
+  ],
+  "instrumented": true
+ }
+}
