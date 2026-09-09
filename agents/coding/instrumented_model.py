@@ -35,6 +35,7 @@ from __future__ import annotations
 import time
 from typing import Any
 
+import httpx
 import litellm
 from minisweagent.models.litellm_model import LitellmModel
 
@@ -48,6 +49,7 @@ class InstrumentedLitellmModel(LitellmModel):
         max_attempts       total attempts including the first (default 6)
         retry_backoff      seconds added per retry, linearly (default 5)
         stream             receive the response as it is generated (default False)
+        read_timeout       seconds of silence that mean the stream is dead (default 90)
 
     `stream` is the fix for the failure this class was built to see. RunPod's
     HTTP endpoint sits behind Cloudflare, which returns **HTTP 524 with an HTML
@@ -68,14 +70,30 @@ class InstrumentedLitellmModel(LitellmModel):
 
     def __init__(self, **kwargs):
         self._attempt_timeout = kwargs.pop("attempt_timeout", 180)
+        self._read_timeout = kwargs.pop("read_timeout", 90)
         self._max_attempts = kwargs.pop("max_attempts", 6)
         self._retry_backoff = kwargs.pop("retry_backoff", 5)
         self._stream = kwargs.pop("stream", False)
         super().__init__(**kwargs)
         # Exactly one attempt per call underneath. Any retry above is ours, and
         # is counted; a hidden one would make the count a lie.
+        # A scalar `timeout` does not bound a streamed response. litellm applies
+        # it to issuing the request; consuming the chunks is a separate sequence
+        # of socket reads, and a stream that dies mid-generation leaves the
+        # client blocked inside `next()`, where a wall-clock check between chunks
+        # never gets control. Measured on the first Phase B attempt: single
+        # attempts ran 1157 s, 3463 s and 3559 s against `attempt_timeout` 180,
+        # each ending in "The read operation timed out" from a lower layer.
+        #
+        # An httpx.Timeout with an explicit `read` component is the bound that
+        # actually applies: it means "no bytes for this long", which during
+        # active generation -- chunks arrive several times a second -- can only
+        # happen if the stream is broken. Prefill on a 60k-token prompt is
+        # seconds, so 90 leaves it untouched.
         self.config.model_kwargs = dict(self.config.model_kwargs) | {
-            "timeout": self._attempt_timeout,
+            "timeout": httpx.Timeout(
+                connect=15.0, read=float(self._read_timeout), write=30.0, pool=15.0
+            ),
             "num_retries": 0,
         }
         self._events: list[dict[str, Any]] = []
@@ -89,9 +107,19 @@ class InstrumentedLitellmModel(LitellmModel):
         final chunk that is otherwise dropped, and the trajectory records token
         counts.
         """
-        chunks = list(super()._query(
-            messages, stream=True, stream_options={"include_usage": True}, **kwargs
-        ))
+        deadline = time.time() + self._attempt_timeout
+        chunks = []
+        stream = super()._query(messages, stream=True, stream_options={"include_usage": True}, **kwargs)
+        for chunk in stream:
+            chunks.append(chunk)
+            # Second bound, for a stream that keeps trickling but never ends.
+            # The read timeout above cannot see that case: bytes are arriving.
+            if time.time() > deadline:
+                getattr(stream, "close", lambda: None)()
+                raise litellm.Timeout(
+                    f"attempt exceeded {self._attempt_timeout}s while streaming",
+                    model=self.config.model_name, llm_provider="openai",
+                )
         return litellm.stream_chunk_builder(chunks, messages=messages)
 
     def _query(self, messages: list[dict], **kwargs):

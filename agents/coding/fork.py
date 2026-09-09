@@ -19,6 +19,7 @@ and `forking` seeds the message log from the same arm.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 from pathlib import Path
@@ -86,6 +87,7 @@ def materialize(
     expected: dict,
     *,
     repo: str = "/testbed",
+    include_untracked: bool = True,
     **env_kwargs,
 ) -> tuple["InstrumentedDockerEnvironment", dict]:
     """Start a container and put it into the archived state. Verify, or raise.
@@ -110,17 +112,27 @@ def materialize(
             code, out = _run(env, f"cd {repo} && git apply --whitespace=nowarn /tmp/fork.diff && rm -f /tmp/fork.diff")
             if code != 0:
                 raise ForkMismatch(f"git apply failed in {step_dir}: {out.strip()[:800]}")
-        if archived["untracked_tar"]:
+        if archived["untracked_tar"] and include_untracked:
             _copy_in(env, archived["untracked_tar"], "/tmp/fork.tar")
             code, out = _run(env, f"cd {repo} && tar -xf /tmp/fork.tar && rm -f /tmp/fork.tar")
             if code != 0:
                 raise ForkMismatch(f"untracked restore failed in {step_dir}: {out.strip()[:800]}")
 
         snapshot = env._snapshot()
-        checks = {
-            "tracked_diff_hash": (snapshot["tracked_diff_hash"], expected.get("tracked_diff_hash")),
-            "workspace_diff_hash": (snapshot["workspace_diff_hash"], expected.get("workspace_diff_hash")),
-        }
+        checks = {"tracked_diff_hash": (snapshot["tracked_diff_hash"], expected.get("tracked_diff_hash"))}
+        if include_untracked:
+            checks["workspace_diff_hash"] = (snapshot["workspace_diff_hash"],
+                                             expected.get("workspace_diff_hash"))
+        else:
+            # The fresh arm carries the source state and none of the donor's
+            # scratch files, so the donor's workspace fingerprint is the wrong
+            # target. The right one is computable from the archived diff alone:
+            # the same canonical form with an empty untracked section.
+            tracked = archived["tracked_diff"].decode("utf-8", "replace").strip()
+            want = hashlib.sha256(
+                (tracked + "\n<<<UNTRACKED>>>\n").encode()
+            ).hexdigest()
+            checks["workspace_diff_hash"] = (snapshot["workspace_diff_hash"], want)
         bad = {k: v for k, v in checks.items() if v[1] and v[0] != v[1]}
         if bad:
             raise ForkMismatch(
