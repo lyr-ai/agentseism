@@ -4,9 +4,18 @@ The earlier covers were one idea each -- a slogan, then a single chart. This one
 carries what the work actually found, because a cover for an engineering post is
 read by people deciding whether the article has anything in it.
 
-    left     one task, thirteen executions: they meet, they end apart
-    middle   how fast agreement with a donor decays, by granularity
-    right    across ten tasks, the fate of divergence differs by task
+    left, large    one task: they meet, and they end apart
+    right, top     how fast agreement with a donor decays, by granularity
+    right, bottom  across ten tasks, the fate of divergence differs
+
+The weighting is deliberate. Three panels of equal size make a reader choose
+where to look, and in a feed they choose to scroll. One result leads and two
+support it.
+
+The headline numbers are 12 -> 1 -> 11 and the arithmetic matters: thirteen runs
+exist, twelve reach the shared state, and those twelve end at eleven distinct
+states, because two of them land on the same one. "13 -> 1 -> 12" is tidier and
+says something the data does not.
 
 Every number is computed here from probe files and the frozen analysis modules,
 not typed in. Nothing is marked correct or incorrect: these runs carry no
@@ -61,31 +70,37 @@ def load_module(name, relative):
     return module
 
 
-def frame(ax, title, number, caption):
+def frame(ax, title=None, number=None, caption=None, title_y=0.088, caption_y=0.038):
     ax.set_facecolor(PANEL)
     for side in ax.spines.values():
         side.set_visible(False)
     ax.tick_params(colors=MUTED, labelsize=8.5, length=2.5)
+    if title is None:
+        return
     box = ax.get_position()
-    ax.figure.text(box.x0, box.y1 + 0.088, number, fontsize=13, color=ACCENT,
+    ax.figure.text(box.x0, box.y1 + title_y, number, fontsize=13, color=ACCENT,
                    va="center", family="monospace")
-    ax.figure.text(box.x0 + 0.022, box.y1 + 0.088, title, fontsize=14.5, color=TEXT,
+    ax.figure.text(box.x0 + 0.022, box.y1 + title_y, title, fontsize=14.5, color=TEXT,
                    va="center")
     # Captions are wrapped by hand rather than by width: at this panel pitch an
     # unwrapped line runs into the next panel's title, and the right-hand one
     # runs off the canvas entirely.
-    ax.figure.text(box.x0, box.y1 + 0.038, caption, fontsize=9.6, color=MUTED,
+    ax.figure.text(box.x0, box.y1 + caption_y, caption, fontsize=9.6, color=MUTED,
                    va="center", linespacing=1.55)
 
 
-def panel_attractor(ax):
+def panel_attractor(ax, big=False):
     runs = []
     for directory in ("exp1", "h2_phase_a", "h2_phase_a1"):
         for path in sorted(glob(f"{RUNS}/{directory}/{TASK}__r*.probe.jsonl")):
             runs.append([json.loads(line) for line in open(path)])
     finals = list(dict.fromkeys(s[-1]["tracked_diff_hash"] for s in runs))
     colour = {h: ENDS[i % len(ENDS)] for i, h in enumerate(finals)}
-    reached = sum(1 for s in runs if any(x["tracked_diff_hash"] == S for x in s))
+    hit = [s for s in runs if any(x["tracked_diff_hash"] == S for x in s)]
+    # Distinct endings **among the runs that met**, which is the number the
+    # headline claims. Counting distinct endings over all thirteen would mix in
+    # the one that never reached the shared state.
+    endings = len({s[-1]["tracked_diff_hash"] for s in hit})
 
     for index, steps in enumerate(runs):
         y = len(runs) - index
@@ -100,19 +115,20 @@ def panel_attractor(ax):
         if start is not None:
             spans.append((start, steps[-1]["step"]))
         for a, b in spans:
-            ax.plot([a, max(b, a + 0.5)], [y, y], color=ACCENT, lw=6.5, alpha=0.18,
-                    solid_capstyle="round", zorder=2)
-            ax.plot([a, max(b, a + 0.5)], [y, y], color=ACCENT, lw=2.6,
-                    solid_capstyle="round", zorder=3)
-        ax.plot(len(steps), y, "o", ms=6, color=colour[steps[-1]["tracked_diff_hash"]], zorder=4)
+            ax.plot([a, max(b, a + 0.5)], [y, y], color=ACCENT,
+                    lw=11 if big else 6.5, alpha=0.16, solid_capstyle="round", zorder=2)
+            ax.plot([a, max(b, a + 0.5)], [y, y], color=ACCENT,
+                    lw=4.2 if big else 2.6, solid_capstyle="round", zorder=3)
+        ax.plot(len(steps), y, "o", ms=9.5 if big else 6,
+                color=colour[steps[-1]["tracked_diff_hash"]], zorder=4)
 
     ax.set_xlim(-1, max(len(s) for s in runs) + 3)
     ax.set_ylim(0.3, len(runs) + 0.7)
     ax.set_yticks([])
-    ax.set_xlabel("agent step", fontsize=9, color=MUTED, labelpad=3)
+    ax.set_xlabel("agent step", fontsize=9.5, color=MUTED, labelpad=4)
     ax.spines["bottom"].set_visible(True)
     ax.spines["bottom"].set_color(LINE)
-    return reached, len(runs), len(finals)
+    return len(hit), len(runs), endings
 
 
 def panel_decay(ax):
@@ -160,14 +176,14 @@ def panel_topology(ax):
         for name, colour in TOPO.items():
             width = counts[task].get(name, 0)
             if width:
-                ax.barh(y, width, left=left, height=0.56, color=colour, zorder=2)
+                ax.barh(y, width, left=left, height=0.5, color=colour, zorder=2)
                 left += width
-        ax.text(-0.25, y, task, ha="right", va="center", fontsize=9, color=MUTED)
-    ax.set_xlim(0, 3.15)
+        ax.text(-0.12, y, task, ha="right", va="center", fontsize=11, color=TEXT)
+    ax.set_xlim(0, 3.1)
     ax.set_ylim(0.3, len(order) + 0.7)
     ax.set_yticks([])
     ax.set_xticks([0, 1, 2, 3])
-    ax.set_xlabel("pairs of runs", fontsize=9, color=MUTED, labelpad=3)
+    ax.set_xlabel("pairs of runs", fontsize=9, color=MUTED, labelpad=2)
     ax.spines["bottom"].set_visible(True)
     ax.spines["bottom"].set_color(LINE)
     total = collections.Counter()
@@ -182,50 +198,67 @@ def main() -> None:
     fig = plt.figure(figsize=(16, 9), dpi=100)
     fig.patch.set_facecolor(BG)
 
-    top, height = 0.125, 0.50
-    ax_a = fig.add_axes([0.045, top, 0.265, height])
-    ax_b = fig.add_axes([0.395, top, 0.250, height])
-    ax_c = fig.add_axes([0.760, top, 0.200, height])
+    # One result leads. Equal panels make the reader choose where to look, and
+    # in a feed they choose to scroll.
+    ax_a = fig.add_axes([0.045, 0.135, 0.455, 0.455])
+    ax_b = fig.add_axes([0.615, 0.450, 0.245, 0.150])
+    ax_c = fig.add_axes([0.615, 0.125, 0.245, 0.168])
 
-    reached, n_runs, n_finals = panel_attractor(ax_a)
+    frame(ax_a)  # the big numbers above it are its title
+    reached, n_runs, endings = panel_attractor(ax_a, big=True)
     panel_decay(ax_b)
     total = panel_topology(ax_c)
-
-    frame(ax_a, "They meet, then end apart", "01",
-          f"{n_runs} executions of one task, three batches\n"
-          f"{reached} hold one identical source state · {n_finals} distinct endings")
-    frame(ax_b, "Agreement decays with horizon", "02",
-          "continuations forked from that state, compared\n"
-          "against the execution they were forked from")
-    frame(ax_c, "The fate differs by task", "03",
-          f"{sum(total.values())} pairs of runs, 9 tasks\n"
-          + " · ".join(f"{v} {k}" for k, v in total.most_common()))
 
     fig.text(0.045, 0.945, "S A M E   T A S K      S A M E   M O D E L      "
                            "T E M P E R A T U R E   =   0",
              fontsize=10.5, color=MUTED, va="center")
-    fig.text(0.045, 0.872, "Same state. Different futures.",
-             fontsize=40, color=TEXT, va="center")
-    fig.text(0.045, 0.807,
-             "Reproducibility in long-horizon agent execution is not one number: "
-             "it depends on how far you look and how closely.",
-             fontsize=14, color=MUTED, va="center")
+    fig.text(0.045, 0.868, "Same state. Different futures.",
+             fontsize=42, color=TEXT, va="center")
+    fig.text(0.045, 0.797,
+             "At temperature 0, agent executions still vary. "
+             "The question is which variations actually matter.",
+             fontsize=14.5, color=MUTED, va="center")
+
+    # The headline, as an equation the reader can hold: met, once, apart.
+    # Positions are explicit rather than advanced by string length -- "12/13"
+    # and "1" are very different widths and the computed version overlapped its
+    # own labels.
+    columns = [(0.045, f"{reached}/{n_runs}", "executions reached", TEXT),
+               (0.215, "1", "identical source state", ACCENT),
+               (0.375, f"{endings}", "distinct endings", TEXT)]
+    for x, value, label, tone in columns:
+        fig.text(x, 0.678, value, fontsize=46, color=tone, va="center", ha="left")
+        fig.text(x, 0.622, label, fontsize=11.5, color=MUTED, va="center", ha="left")
+    for x in (0.170, 0.330):
+        # Helvetica Neue has no U+2192; fall back for this glyph only rather
+        # than losing the whole heading to a substitution box.
+        fig.text(x, 0.678, "\u2192", fontsize=24, color=DIM, va="center",
+                 ha="center", family="DejaVu Sans")
+
+    frame(ax_b, "Agreement decays within a few steps", "02",
+          "exact commands stop matching by step 3 · action types survive to step 8",
+          title_y=0.098, caption_y=0.055)
+    frame(ax_c, "The fate of variation depends on the task", "03",
+          f"{sum(total.values())} pairs of runs across 9 tasks",
+          title_y=0.098, caption_y=0.055)
 
     handles = [Line2D([], [], marker="s", ls="", ms=8, color=c, label=k)
                for k, c in TOPO.items()]
-    fig.legend(handles=handles, loc="lower right", bbox_to_anchor=(0.962, 0.040),
+    fig.legend(handles=handles, loc="lower left", bbox_to_anchor=(0.615, 0.052),
                frameon=False, fontsize=9.5, labelcolor=MUTED, ncol=3,
-               handletextpad=0.5, columnspacing=1.6)
-    fig.text(0.045, 0.050,
-             "Every value computed from AgentSeism probe records: the canonical git diff "
-             "of the repository, sampled after each action.\nNo execution is labelled "
-             "correct or incorrect — these runs carry no correctness label.",
-             fontsize=8.5, color=DIM, va="center", linespacing=1.6)
+               handletextpad=0.5, columnspacing=1.4)
+
+    fig.text(0.045, 0.068, "Next question: which of these differences change correctness?",
+             fontsize=15, color=ACCENT, va="center")
+    fig.text(0.045, 0.030,
+             "All values computed from recorded agent executions. No correctness labels "
+             "are used here — a different ending is not a wrong ending.",
+             fontsize=9, color=DIM, va="center")
 
     out = ROOT / "paper/figures"
     fig.savefig(out / "poster.png", dpi=100, facecolor=BG)
     fig.savefig(out / "poster.svg", format="svg", facecolor=BG)
-    print(f"panel 1: {n_runs} runs, {reached} reach S, {n_finals} finals")
+    print(f"headline: {reached}/{n_runs} reached S, {endings} distinct endings among them")
     print(f"panel 3: {dict(total)}")
     print("wrote paper/figures/poster.png (1600x900) and poster.svg")
 
