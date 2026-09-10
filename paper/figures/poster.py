@@ -147,8 +147,8 @@ def panel_decay(ax):
     ax.set_xlabel("steps after the fork", fontsize=9, color=MUTED, labelpad=3)
     ax.axhline(0.5, color=DIM, lw=0.8, ls=(0, (2, 3)), zorder=0)
     ax.text(15.9, 0.545, "half", fontsize=8, color=DIM, ha="right")
-    ax.text(3.15, 0.86, "exact command", fontsize=9.5, color=ACCENT)
-    ax.text(8.4, 0.62, "action type", fontsize=9.5, color=BLUE)
+    ax.text(4.6, 0.80, "exact command", fontsize=8.5, color=ACCENT)
+    ax.text(9.0, 0.42, "action type", fontsize=8.5, color=BLUE)
     ax.legend(handles=[Line2D([], [], color=MUTED, lw=1.6, label="donor A"),
                        Line2D([], [], color=MUTED, lw=1.6, ls=(0, (3, 2)), label="donor B")],
               loc="upper right", frameon=False, fontsize=8.2, labelcolor=MUTED,
@@ -166,7 +166,7 @@ def panel_topology(ax):
         labels = collections.Counter(
             divergence.classify(runs[task][x], runs[task][y])["topology"]
             for x, y in itertools.combinations(usable, 2))
-        counts[task.split("__")[-1].split("-")[0]] = labels
+        counts[task.split("__")[-1].rsplit("-", 1)[0]] = labels
 
     order = sorted(counts, key=lambda t: (-counts[t].get("re-divergence", 0),
                                           -counts[t].get("persistent", 0)))
@@ -200,8 +200,10 @@ def main() -> None:
 
     # One result leads. Equal panels make the reader choose where to look, and
     # in a feed they choose to scroll.
-    ax_a = fig.add_axes([0.045, 0.135, 0.455, 0.455])
-    ax_b = fig.add_axes([0.615, 0.450, 0.245, 0.150])
+    ax_a = fig.add_axes([0.045, 0.135, 0.455, 0.425])
+    # The chart in 02 is support, not the point: the two numbers above it are.
+    # A hero should not ask the reader to find an axis.
+    ax_b = fig.add_axes([0.615, 0.455, 0.245, 0.115])
     ax_c = fig.add_axes([0.615, 0.125, 0.245, 0.168])
 
     frame(ax_a)  # the big numbers above it are its title
@@ -224,23 +226,34 @@ def main() -> None:
     # and "1" are very different widths and the computed version overlapped its
     # own labels.
     columns = [(0.045, f"{reached}/{n_runs}", "executions reached", TEXT),
-               (0.215, "1", "identical source state", ACCENT),
-               (0.375, f"{endings}", "distinct endings", TEXT)]
+               (0.240, "1", "identical source state", ACCENT),
+               # "distinct endings" alone invites reading it across all thirteen.
+               # It is eleven among the twelve that met.
+               (0.435, f"{endings}", "distinct endings among them", TEXT)]
     for x, value, label, tone in columns:
-        fig.text(x, 0.678, value, fontsize=46, color=tone, va="center", ha="left")
-        fig.text(x, 0.622, label, fontsize=11.5, color=MUTED, va="center", ha="left")
-    for x in (0.170, 0.330):
+        fig.text(x, 0.690, value, fontsize=58, color=tone, va="center", ha="left")
+        fig.text(x, 0.620, label, fontsize=12, color=MUTED, va="center", ha="left")
+    for x in (0.200, 0.395):
         # Helvetica Neue has no U+2192; fall back for this glyph only rather
         # than losing the whole heading to a substitution box.
-        fig.text(x, 0.678, "\u2192", fontsize=24, color=DIM, va="center",
+        fig.text(x, 0.690, "\u2192", fontsize=28, color=DIM, va="center",
                  ha="center", family="DejaVu Sans")
 
-    frame(ax_b, "Agreement decays within a few steps", "02",
-          "exact commands stop matching by step 3 · action types survive to step 8",
-          title_y=0.098, caption_y=0.055)
+    frame(ax_b)
+    box = ax_b.get_position()
+    fig.text(box.x0, box.y1 + 0.155, "02", fontsize=13, color=ACCENT, va="center",
+             family="monospace")
+    fig.text(box.x0 + 0.022, box.y1 + 0.155, "Agreement decays within a few steps",
+             fontsize=14.5, color=TEXT, va="center")
+    # Stacked, not side by side: the column is 0.245 wide and two labels of this
+    # length sat on top of each other's numbers.
+    for y, number, label, tone in ((0.668, "3", "steps until exact commands diverge", ACCENT),
+                                   (0.614, "8", "steps until action types diverge", BLUE)):
+        fig.text(box.x0, y, number, fontsize=30, color=tone, va="center", ha="left")
+        fig.text(box.x0 + 0.022, y, label, fontsize=10, color=MUTED, va="center", ha="left")
     frame(ax_c, "The fate of variation depends on the task", "03",
           f"{sum(total.values())} pairs of runs across 9 tasks",
-          title_y=0.098, caption_y=0.055)
+          title_y=0.100, caption_y=0.058)
 
     handles = [Line2D([], [], marker="s", ls="", ms=8, color=c, label=k)
                for k, c in TOPO.items()]
@@ -253,7 +266,7 @@ def main() -> None:
     fig.text(0.045, 0.030,
              "All values computed from recorded agent executions. No correctness labels "
              "are used here — a different ending is not a wrong ending.",
-             fontsize=9, color=DIM, va="center")
+             fontsize=9.5, color=MUTED, va="center")
 
     out = ROOT / "paper/figures"
     fig.savefig(out / "poster.png", dpi=100, facecolor=BG)
