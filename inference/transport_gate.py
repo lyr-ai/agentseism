@@ -68,12 +68,16 @@ def main() -> None:
         except Exception as exc:  # noqa: BLE001
             failures.append(f"tool-call request did not return JSON: {r.status_code} {exc}")
 
-        # 3 — the one that matters. Long enough to be well past the window.
+        # 3 — the one that matters. `ignore_eos` is what makes it a test: asking
+        #     politely for a long answer is not enough, the model stopped after
+        #     751 tokens in 15 s the first time this ran and exercised nothing.
+        #     Forcing the full budget puts the request well past the window at
+        #     the ~49 tokens/s measured here.
         t = time.time()
         r = c.post(f"{args.base}/chat/completions", headers=headers, json={
             "model": model["id"],
             "messages": [{"role": "user", "content": "Count from 1 to 20000, one per line."}],
-            "temperature": 0, "max_tokens": args.long_tokens})
+            "temperature": 0, "max_tokens": args.long_tokens, "ignore_eos": True})
         elapsed = time.time() - t
         content_type = r.headers.get("content-type", "")
         try:

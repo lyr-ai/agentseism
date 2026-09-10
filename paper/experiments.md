@@ -1448,3 +1448,58 @@ separate pre-registration with its measure fixed in advance.
 The apparatus works. The fork is verified mechanically and now behaviourally.
 What is missing is an estimand matched to a system whose outcome space is this
 wide.
+
+---
+
+## 2026-09-10 — Direct TCP fails differently, and the fix is to delete the network
+
+The flask batch was not collected. `inference/transport_gate.py` refused the
+endpoint, and the reason changes what the earlier diagnosis is allowed to claim.
+
+A pod was rebuilt with port 8000 exposed as a **TCP** port rather than an HTTP
+service, so nothing passes through Cloudflare. Measured from the same client:
+
+    2000 tok, non-streamed   200        9 KB   41.0 s   ok
+    2000 tok, streamed       ttfb 0.2s  447 KB 40.9 s   ok
+    8000 tok, streamed       FAIL       1463 s          ReadTimeout
+
+    5000 tok, streamed, three times -- the largest single completion anywhere
+    in the H2 data was 4954 tokens, so this is the observed worst case:
+      run 0  FAIL   382.2 s   466 KB in   worst gap 0.4 s   ReadTimeout
+      run 1  ok     102.5 s  1123 KB      worst gap 0.2 s
+      run 2  FAIL    96.3 s   889 KB in   worst gap 0.2 s   RemoteProtocolError
+
+**Two of three fail on the realistic worst case.** Run 1 is what healthy looks
+like — 102.5 s is exactly 5000 tokens at the 49 tok/s this endpoint sustains —
+so the failures are not throughput limits. They are connections dying: run 0's
+apparent 7 tok/s was a dying stream dribbling, not throttling.
+
+**Direct TCP did not solve the problem, it changed its shape.** Cloudflare
+returned 524 with an HTML page, which is at least legible. This path fails
+silently, sometimes as a read timeout and sometimes as a protocol error, and
+succeeds a third of the time. Intermittent failure is worse for an experiment
+than systematic failure: it leaves holes that cannot be attributed. The
+distinction matters for anyone reading the earlier entry as "Cloudflare was the
+bug" — the bug is the wide-area path, and Cloudflare was one way it showed.
+
+### The response is to remove the path, not to try a third one
+
+Every model step sends the whole transcript across the public internet and
+streams megabytes of SSE back, because the agent and its Docker sandboxes run on
+a laptop and the model runs in a datacentre. That link is now part of the
+experimental system and it is not what is being studied. A third region would be
+a bet on the next path being better.
+
+The migration is to a GPU VM with root and Docker, running vLLM, the SWE-bench
+containers and the agent on one host, with `OPENAI_API_BASE=http://127.0.0.1:8000/v1`.
+The requirement is not a provider, it is that Docker and vLLM can share a host.
+
+`inference/vm_gate.sh` is the gate: the card, `docker run hello-world`, disk,
+the endpoint checks over localhost, and the observed worst case three times. It
+keeps the 8000-token test deliberately. **If that collapses over localhost too,
+the diagnosis above is wrong** and the throughput problem was never the network
+— which is worth discovering in a gate rather than inside the confirmatory batch.
+
+Cost note, since the migration looks more expensive per hour: `A_7` alone spent
+4.3 hours waiting on failed transport attempts. Cheap GPU-hours are not cheap
+when they are spent on a broken link.
