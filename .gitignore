@@ -11,3 +11,7 @@ build/
 
 # raw experiment dumps (large, regenerable); summary artifacts are committed
 results/*_experiment.json
+
+# Step archives: 86 MB of tar and diff blobs. See data/README.md — kept local,
+# deliberately not versioned, and the risk of losing them is recorded there.
+data/runs/*/*.archive/

@@ -1,0 +1,7 @@
+environment:
+  environment_class: agents.coding.instrumented_docker.InstrumentedDockerEnvironment
+  image: swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10051:latest
+model:
+  model_name: "openai/Qwen/Qwen3.6-27B-FP8"
+  model_kwargs:
+    drop_params: true

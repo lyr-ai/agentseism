@@ -1,0 +1,14 @@
+batch=A1
+date=2026-09-08
+gpu=NVIDIA A100-SXM4-80GB
+driver=580.126.16
+cuda=13.0
+vllm=0.28.0
+model=Qwen/Qwen3.6-27B-FP8
+revision=e89b16ebf1988b3d6befa7de50abc2d76f26eb09
+max_model_len=131072
+serving_config=inference/configs/model_h2.yaml
+container=4c68842b7851
+note=all five runs in one uninterrupted pod session
+client_timeout_s=180
+client_num_retries=5
