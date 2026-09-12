@@ -11,7 +11,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 2,
@@ -19,7 +20,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 3,
@@ -27,7 +29,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 4,
@@ -35,7 +38,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 5,
@@ -43,7 +47,8 @@
     "n_fail": 4,
     "pass_mean": 0.5,
     "fail_mean": 0.5,
-    "delta": 0.0
+    "delta": 0.0,
+    "cohen_d": 0.0
    },
    {
     "h": 6,
@@ -51,7 +56,8 @@
     "n_fail": 4,
     "pass_mean": 0.5,
     "fail_mean": 0.5,
-    "delta": 0.0
+    "delta": 0.0,
+    "cohen_d": 0.0
    },
    {
     "h": 7,
@@ -59,7 +65,8 @@
     "n_fail": 4,
     "pass_mean": 1,
     "fail_mean": 1,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 8,
@@ -67,7 +74,8 @@
     "n_fail": 4,
     "pass_mean": 1.4375,
     "fail_mean": 1.5,
-    "delta": 0.0625
+    "delta": 0.0625,
+    "cohen_d": 0.1258218365970065
    },
    {
     "h": 9,
@@ -75,7 +83,8 @@
     "n_fail": 4,
     "pass_mean": 1.5,
     "fail_mean": 1.5,
-    "delta": 0.0
+    "delta": 0.0,
+    "cohen_d": 0.0
    },
    {
     "h": 10,
@@ -83,7 +92,8 @@
     "n_fail": 4,
     "pass_mean": 2,
     "fail_mean": 2,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 11,
@@ -91,7 +101,8 @@
     "n_fail": 4,
     "pass_mean": 2.3125,
     "fail_mean": 2.5,
-    "delta": 0.1875
+    "delta": 0.1875,
+    "cohen_d": 0.3991140631426436
    },
    {
     "h": 12,
@@ -99,7 +110,8 @@
     "n_fail": 4,
     "pass_mean": 2.4375,
     "fail_mean": 2.5,
-    "delta": 0.0625
+    "delta": 0.0625,
+    "cohen_d": 0.1258218365970065
    },
    {
     "h": 13,
@@ -107,7 +119,8 @@
     "n_fail": 4,
     "pass_mean": 3,
     "fail_mean": 3,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": 0.0
    },
    {
     "h": 14,
@@ -115,7 +128,8 @@
     "n_fail": 4,
     "pass_mean": 3.125,
     "fail_mean": 3,
-    "delta": -0.125
+    "delta": -0.125,
+    "cohen_d": -0.22841609628806428
    },
    {
     "h": 15,
@@ -123,7 +137,8 @@
     "n_fail": 4,
     "pass_mean": 3.3125,
     "fail_mean": 3,
-    "delta": -0.3125
+    "delta": -0.3125,
+    "cohen_d": -0.5020964452534338
    },
    {
     "h": 16,
@@ -131,7 +146,8 @@
     "n_fail": 4,
     "pass_mean": 3.375,
     "fail_mean": 3.25,
-    "delta": -0.125
+    "delta": -0.125,
+    "cohen_d": -0.189547207081969
    },
    {
     "h": 17,
@@ -139,7 +155,8 @@
     "n_fail": 4,
     "pass_mean": 3.6875,
     "fail_mean": 3.5,
-    "delta": -0.1875
+    "delta": -0.1875,
+    "cohen_d": -0.25677629550654774
    },
    {
     "h": 18,
@@ -147,7 +164,8 @@
     "n_fail": 4,
     "pass_mean": 3.75,
     "fail_mean": 3.5,
-    "delta": -0.25
+    "delta": -0.25,
+    "cohen_d": -0.31889640207164033
    },
    {
     "h": 19,
@@ -155,7 +173,8 @@
     "n_fail": 4,
     "pass_mean": 4,
     "fail_mean": 3.75,
-    "delta": -0.25
+    "delta": -0.25,
+    "cohen_d": -0.3086066999241838
    },
    {
     "h": 20,
@@ -163,7 +182,8 @@
     "n_fail": 4,
     "pass_mean": 4.0625,
     "fail_mean": 3.75,
-    "delta": -0.3125
+    "delta": -0.3125,
+    "cohen_d": -0.4031296848350825
    },
    {
     "h": 21,
@@ -171,7 +191,8 @@
     "n_fail": 4,
     "pass_mean": 4.375,
     "fail_mean": 4,
-    "delta": -0.375
+    "delta": -0.375,
+    "cohen_d": -0.3556173508621198
    },
    {
     "h": 22,
@@ -179,7 +200,8 @@
     "n_fail": 4,
     "pass_mean": 4.75,
     "fail_mean": 4.5,
-    "delta": -0.25
+    "delta": -0.25,
+    "cohen_d": -0.21566554640687682
    },
    {
     "h": 23,
@@ -187,7 +209,8 @@
     "n_fail": 4,
     "pass_mean": 5,
     "fail_mean": 4.5,
-    "delta": -0.5
+    "delta": -0.5,
+    "cohen_d": -0.4588314677411235
    },
    {
     "h": 24,
@@ -195,7 +218,8 @@
     "n_fail": 4,
     "pass_mean": 5.25,
     "fail_mean": 4.5,
-    "delta": -0.75
+    "delta": -0.75,
+    "cohen_d": -0.5827715174143585
    },
    {
     "h": 25,
@@ -203,7 +227,8 @@
     "n_fail": 4,
     "pass_mean": 5.5625,
     "fail_mean": 5,
-    "delta": -0.5625
+    "delta": -0.5625,
+    "cohen_d": -0.46968953731336527
    },
    {
     "h": 26,
@@ -211,7 +236,8 @@
     "n_fail": 4,
     "pass_mean": 5.9375,
     "fail_mean": 5,
-    "delta": -0.9375
+    "delta": -0.9375,
+    "cohen_d": -0.7201613342103189
    },
    {
     "h": 27,
@@ -219,7 +245,8 @@
     "n_fail": 4,
     "pass_mean": 6.3125,
     "fail_mean": 5.25,
-    "delta": -1.0625
+    "delta": -1.0625,
+    "cohen_d": -0.849469247528643
    },
    {
     "h": 28,
@@ -227,7 +254,8 @@
     "n_fail": 4,
     "pass_mean": 6.375,
     "fail_mean": 5.25,
-    "delta": -1.125
+    "delta": -1.125,
+    "cohen_d": -0.8947954953972421
    },
    {
     "h": 29,
@@ -235,7 +263,8 @@
     "n_fail": 4,
     "pass_mean": 6.5,
     "fail_mean": 5.25,
-    "delta": -1.25
+    "delta": -1.25,
+    "cohen_d": -0.9901475429766744
    },
    {
     "h": 30,
@@ -243,7 +272,98 @@
     "n_fail": 4,
     "pass_mean": 6.625,
     "fail_mean": 5.5,
-    "delta": -1.125
+    "delta": -1.125,
+    "cohen_d": -0.9225715981783333
+   },
+   {
+    "h": 31,
+    "n_pass": 16,
+    "n_fail": 4,
+    "pass_mean": 6.625,
+    "fail_mean": 5.75,
+    "delta": -0.875,
+    "cohen_d": -0.7200822998230956
+   },
+   {
+    "h": 32,
+    "n_pass": 13,
+    "n_fail": 3,
+    "pass_mean": 6.846153846153846,
+    "fail_mean": 6,
+    "delta": -0.8461538461538458,
+    "cohen_d": -0.6047451967750155
+   },
+   {
+    "h": 33,
+    "n_pass": 13,
+    "n_fail": 3,
+    "pass_mean": 7,
+    "fail_mean": 6.333333333333333,
+    "delta": -0.666666666666667,
+    "cohen_d": -0.44214106550343346
+   },
+   {
+    "h": 34,
+    "n_pass": 12,
+    "n_fail": 3,
+    "pass_mean": 7.25,
+    "fail_mean": 6.333333333333333,
+    "delta": -0.916666666666667,
+    "cohen_d": -0.4846455303929967
+   },
+   {
+    "h": 35,
+    "n_pass": 11,
+    "n_fail": 3,
+    "pass_mean": 7.818181818181818,
+    "fail_mean": 6.333333333333333,
+    "delta": -1.4848484848484853,
+    "cohen_d": -0.6957298693256146
+   },
+   {
+    "h": 36,
+    "n_pass": 10,
+    "n_fail": 3,
+    "pass_mean": 8.1,
+    "fail_mean": 6.333333333333333,
+    "delta": -1.7666666666666666,
+    "cohen_d": -0.8298488890878113
+   },
+   {
+    "h": 37,
+    "n_pass": 10,
+    "n_fail": 2,
+    "pass_mean": 8.3,
+    "fail_mean": 6.5,
+    "delta": -1.8000000000000007,
+    "cohen_d": -0.736444284471837
+   },
+   {
+    "h": 38,
+    "n_pass": 10,
+    "n_fail": 2,
+    "pass_mean": 8.4,
+    "fail_mean": 6.5,
+    "delta": -1.9000000000000004,
+    "cohen_d": -0.7875076862815916
+   },
+   {
+    "h": 39,
+    "n_pass": 10,
+    "n_fail": 2,
+    "pass_mean": 8.6,
+    "fail_mean": 6.5,
+    "delta": -2.0999999999999996,
+    "cohen_d": -0.9138211617695139
+   },
+   {
+    "h": 40,
+    "n_pass": 9,
+    "n_fail": 2,
+    "pass_mean": 8.777777777777779,
+    "fail_mean": 6.5,
+    "delta": -2.2777777777777786,
+    "cohen_d": -0.9699482983701249
    }
   ],
   "cum_tests": [
@@ -253,7 +373,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 2,
@@ -261,7 +382,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 3,
@@ -269,7 +391,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 4,
@@ -277,7 +400,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 5,
@@ -285,7 +409,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 6,
@@ -293,7 +418,8 @@
     "n_fail": 4,
     "pass_mean": 0.5,
     "fail_mean": 0.5,
-    "delta": 0.0
+    "delta": 0.0,
+    "cohen_d": 0.0
    },
    {
     "h": 7,
@@ -301,7 +427,8 @@
     "n_fail": 4,
     "pass_mean": 0.5,
     "fail_mean": 0.5,
-    "delta": 0.0
+    "delta": 0.0,
+    "cohen_d": 0.0
    },
    {
     "h": 8,
@@ -309,7 +436,8 @@
     "n_fail": 4,
     "pass_mean": 1,
     "fail_mean": 1,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 9,
@@ -317,7 +445,8 @@
     "n_fail": 4,
     "pass_mean": 1,
     "fail_mean": 1,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 10,
@@ -325,7 +454,8 @@
     "n_fail": 4,
     "pass_mean": 1.4375,
     "fail_mean": 1.5,
-    "delta": 0.0625
+    "delta": 0.0625,
+    "cohen_d": 0.1258218365970065
    },
    {
     "h": 11,
@@ -333,7 +463,8 @@
     "n_fail": 4,
     "pass_mean": 1.625,
     "fail_mean": 1.5,
-    "delta": -0.125
+    "delta": -0.125,
+    "cohen_d": -0.1873171623163388
    },
    {
     "h": 12,
@@ -341,7 +472,8 @@
     "n_fail": 4,
     "pass_mean": 2.375,
     "fail_mean": 2.5,
-    "delta": 0.125
+    "delta": 0.125,
+    "cohen_d": 0.21401291250192653
    },
    {
     "h": 13,
@@ -349,7 +481,8 @@
     "n_fail": 4,
     "pass_mean": 2.625,
     "fail_mean": 3,
-    "delta": 0.375
+    "delta": 0.375,
+    "cohen_d": 0.42497294818489706
    },
    {
     "h": 14,
@@ -357,7 +490,8 @@
     "n_fail": 4,
     "pass_mean": 3.25,
     "fail_mean": 4,
-    "delta": 0.75
+    "delta": 0.75,
+    "cohen_d": 0.8721028496007166
    },
    {
     "h": 15,
@@ -365,7 +499,8 @@
     "n_fail": 4,
     "pass_mean": 3.6875,
     "fail_mean": 4.5,
-    "delta": 0.8125
+    "delta": 0.8125,
+    "cohen_d": 0.8835159658397603
    },
    {
     "h": 16,
@@ -373,7 +508,8 @@
     "n_fail": 4,
     "pass_mean": 4.1875,
     "fail_mean": 4.75,
-    "delta": 0.5625
+    "delta": 0.5625,
+    "cohen_d": 0.6826152405526172
    },
    {
     "h": 17,
@@ -381,7 +517,8 @@
     "n_fail": 4,
     "pass_mean": 4.3125,
     "fail_mean": 4.75,
-    "delta": 0.4375
+    "delta": 0.4375,
+    "cohen_d": 0.4786965935566857
    },
    {
     "h": 18,
@@ -389,7 +526,8 @@
     "n_fail": 4,
     "pass_mean": 4.5,
     "fail_mean": 5,
-    "delta": 0.5
+    "delta": 0.5,
+    "cohen_d": 0.6324555320336759
    },
    {
     "h": 19,
@@ -397,7 +535,8 @@
     "n_fail": 4,
     "pass_mean": 4.75,
     "fail_mean": 5,
-    "delta": 0.25
+    "delta": 0.25,
+    "cohen_d": 0.30382181012509996
    },
    {
     "h": 20,
@@ -405,7 +544,8 @@
     "n_fail": 4,
     "pass_mean": 5,
     "fail_mean": 5,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": 0.0
    },
    {
     "h": 21,
@@ -413,7 +553,8 @@
     "n_fail": 4,
     "pass_mean": 5.1875,
     "fail_mean": 5,
-    "delta": -0.1875
+    "delta": -0.1875,
+    "cohen_d": -0.1913378412429842
    },
    {
     "h": 22,
@@ -421,7 +562,8 @@
     "n_fail": 4,
     "pass_mean": 5.25,
     "fail_mean": 5,
-    "delta": -0.25
+    "delta": -0.25,
+    "cohen_d": -0.2656844656620286
    },
    {
     "h": 23,
@@ -429,7 +571,8 @@
     "n_fail": 4,
     "pass_mean": 5.4375,
     "fail_mean": 5.25,
-    "delta": -0.1875
+    "delta": -0.1875,
+    "cohen_d": -0.23203121459484913
    },
    {
     "h": 24,
@@ -437,7 +580,8 @@
     "n_fail": 4,
     "pass_mean": 5.6875,
     "fail_mean": 5.75,
-    "delta": 0.0625
+    "delta": 0.0625,
+    "cohen_d": 0.07415889498137043
    },
    {
     "h": 25,
@@ -445,7 +589,8 @@
     "n_fail": 4,
     "pass_mean": 6,
     "fail_mean": 6,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": 0.0
    },
    {
     "h": 26,
@@ -453,7 +598,8 @@
     "n_fail": 4,
     "pass_mean": 6.125,
     "fail_mean": 6.25,
-    "delta": 0.125
+    "delta": 0.125,
+    "cohen_d": 0.10921734946179222
    },
    {
     "h": 27,
@@ -461,7 +607,8 @@
     "n_fail": 4,
     "pass_mean": 6.375,
     "fail_mean": 7,
-    "delta": 0.625
+    "delta": 0.625,
+    "cohen_d": 0.4860251767562509
    },
    {
     "h": 28,
@@ -469,7 +616,8 @@
     "n_fail": 4,
     "pass_mean": 6.6875,
     "fail_mean": 7.5,
-    "delta": 0.8125
+    "delta": 0.8125,
+    "cohen_d": 0.591418451481997
    },
    {
     "h": 29,
@@ -477,7 +625,8 @@
     "n_fail": 4,
     "pass_mean": 7.125,
     "fail_mean": 8.25,
-    "delta": 1.125
+    "delta": 1.125,
+    "cohen_d": 0.8362299776613897
    },
    {
     "h": 30,
@@ -485,7 +634,98 @@
     "n_fail": 4,
     "pass_mean": 7.4375,
     "fail_mean": 8.75,
-    "delta": 1.3125
+    "delta": 1.3125,
+    "cohen_d": 0.8656574303649015
+   },
+   {
+    "h": 31,
+    "n_pass": 16,
+    "n_fail": 4,
+    "pass_mean": 7.8125,
+    "fail_mean": 9,
+    "delta": 1.1875,
+    "cohen_d": 0.7026602873159038
+   },
+   {
+    "h": 32,
+    "n_pass": 13,
+    "n_fail": 3,
+    "pass_mean": 8.23076923076923,
+    "fail_mean": 9.666666666666666,
+    "delta": 1.4358974358974361,
+    "cohen_d": 0.7933889827066981
+   },
+   {
+    "h": 33,
+    "n_pass": 13,
+    "n_fail": 3,
+    "pass_mean": 8.461538461538462,
+    "fail_mean": 10,
+    "delta": 1.5384615384615383,
+    "cohen_d": 0.8687444855261387
+   },
+   {
+    "h": 34,
+    "n_pass": 12,
+    "n_fail": 3,
+    "pass_mean": 8.916666666666666,
+    "fail_mean": 10.666666666666666,
+    "delta": 1.75,
+    "cohen_d": 0.8942556251817491
+   },
+   {
+    "h": 35,
+    "n_pass": 11,
+    "n_fail": 3,
+    "pass_mean": 8.909090909090908,
+    "fail_mean": 11,
+    "delta": 2.0909090909090917,
+    "cohen_d": 1.0496800848309107
+   },
+   {
+    "h": 36,
+    "n_pass": 10,
+    "n_fail": 3,
+    "pass_mean": 8.9,
+    "fail_mean": 11,
+    "delta": 2.0999999999999996,
+    "cohen_d": 0.9955632694730168
+   },
+   {
+    "h": 37,
+    "n_pass": 10,
+    "n_fail": 2,
+    "pass_mean": 9.2,
+    "fail_mean": 11.5,
+    "delta": 2.3000000000000007,
+    "cohen_d": 1.042336506750378
+   },
+   {
+    "h": 38,
+    "n_pass": 10,
+    "n_fail": 2,
+    "pass_mean": 9.4,
+    "fail_mean": 11.5,
+    "delta": 2.0999999999999996,
+    "cohen_d": 0.9279870309984025
+   },
+   {
+    "h": 39,
+    "n_pass": 10,
+    "n_fail": 2,
+    "pass_mean": 9.5,
+    "fail_mean": 11.5,
+    "delta": 2.0,
+    "cohen_d": 0.9523809523809523
+   },
+   {
+    "h": 40,
+    "n_pass": 9,
+    "n_fail": 2,
+    "pass_mean": 9.555555555555555,
+    "fail_mean": 11.5,
+    "delta": 1.9444444444444446,
+    "cohen_d": 0.9248678592448564
    }
   ],
   "cum_suite_tests": [
@@ -495,7 +735,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 2,
@@ -503,7 +744,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 3,
@@ -511,7 +753,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 4,
@@ -519,7 +762,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 5,
@@ -527,7 +771,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 6,
@@ -535,7 +780,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 7,
@@ -543,7 +789,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 8,
@@ -551,7 +798,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 9,
@@ -559,7 +807,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 10,
@@ -567,7 +816,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 11,
@@ -575,7 +825,8 @@
     "n_fail": 4,
     "pass_mean": 0.125,
     "fail_mean": 0,
-    "delta": -0.125
+    "delta": -0.125,
+    "cohen_d": -0.4140393356054125
    },
    {
     "h": 12,
@@ -583,7 +834,8 @@
     "n_fail": 4,
     "pass_mean": 0.125,
     "fail_mean": 0,
-    "delta": -0.125
+    "delta": -0.125,
+    "cohen_d": -0.4140393356054125
    },
    {
     "h": 13,
@@ -591,7 +843,8 @@
     "n_fail": 4,
     "pass_mean": 0.3125,
     "fail_mean": 0.5,
-    "delta": 0.1875
+    "delta": 0.1875,
+    "cohen_d": 0.3991140631426436
    },
    {
     "h": 14,
@@ -599,7 +852,8 @@
     "n_fail": 4,
     "pass_mean": 0.375,
     "fail_mean": 1,
-    "delta": 0.625
+    "delta": 0.625,
+    "cohen_d": 0.9154172965460302
    },
    {
     "h": 15,
@@ -607,7 +861,8 @@
     "n_fail": 4,
     "pass_mean": 0.75,
     "fail_mean": 1.5,
-    "delta": 0.75
+    "delta": 0.75,
+    "cohen_d": 1.3645764784420262
    },
    {
     "h": 16,
@@ -615,7 +870,8 @@
     "n_fail": 4,
     "pass_mean": 1,
     "fail_mean": 1.75,
-    "delta": 0.75
+    "delta": 0.75,
+    "cohen_d": 1.1206310514564426
    },
    {
     "h": 17,
@@ -623,7 +879,8 @@
     "n_fail": 4,
     "pass_mean": 1.125,
     "fail_mean": 1.75,
-    "delta": 0.625
+    "delta": 0.625,
+    "cohen_d": 0.8512565307587486
    },
    {
     "h": 18,
@@ -631,7 +888,8 @@
     "n_fail": 4,
     "pass_mean": 1.1875,
     "fail_mean": 2,
-    "delta": 0.8125
+    "delta": 0.8125,
+    "cohen_d": 1.101985143949332
    },
    {
     "h": 19,
@@ -639,7 +897,8 @@
     "n_fail": 4,
     "pass_mean": 1.4375,
     "fail_mean": 2,
-    "delta": 0.5625
+    "delta": 0.5625,
+    "cohen_d": 0.7133726400418013
    },
    {
     "h": 20,
@@ -647,7 +906,8 @@
     "n_fail": 4,
     "pass_mean": 1.625,
     "fail_mean": 2,
-    "delta": 0.375
+    "delta": 0.375,
+    "cohen_d": 0.41403933560541256
    },
    {
     "h": 21,
@@ -655,7 +915,8 @@
     "n_fail": 4,
     "pass_mean": 1.6875,
     "fail_mean": 2,
-    "delta": 0.3125
+    "delta": 0.3125,
+    "cohen_d": 0.34850751767866145
    },
    {
     "h": 22,
@@ -663,7 +924,8 @@
     "n_fail": 4,
     "pass_mean": 1.75,
     "fail_mean": 2,
-    "delta": 0.25
+    "delta": 0.25,
+    "cohen_d": 0.282842712474619
    },
    {
     "h": 23,
@@ -671,7 +933,8 @@
     "n_fail": 4,
     "pass_mean": 1.75,
     "fail_mean": 2,
-    "delta": 0.25
+    "delta": 0.25,
+    "cohen_d": 0.282842712474619
    },
    {
     "h": 24,
@@ -679,7 +942,8 @@
     "n_fail": 4,
     "pass_mean": 1.875,
     "fail_mean": 2,
-    "delta": 0.125
+    "delta": 0.125,
+    "cohen_d": 0.14770978917519928
    },
    {
     "h": 25,
@@ -687,7 +951,8 @@
     "n_fail": 4,
     "pass_mean": 1.9375,
     "fail_mean": 2,
-    "delta": 0.0625
+    "delta": 0.0625,
+    "cohen_d": 0.0761386987626881
    },
    {
     "h": 26,
@@ -695,7 +960,8 @@
     "n_fail": 4,
     "pass_mean": 2,
     "fail_mean": 2.25,
-    "delta": 0.25
+    "delta": 0.25,
+    "cohen_d": 0.28669108954049793
    },
    {
     "h": 27,
@@ -703,7 +969,8 @@
     "n_fail": 4,
     "pass_mean": 2.0625,
     "fail_mean": 2.5,
-    "delta": 0.4375
+    "delta": 0.4375,
+    "cohen_d": 0.4604001269075899
    },
    {
     "h": 28,
@@ -711,7 +978,8 @@
     "n_fail": 4,
     "pass_mean": 2.1875,
     "fail_mean": 3,
-    "delta": 0.8125
+    "delta": 0.8125,
+    "cohen_d": 0.9502307916687613
    },
    {
     "h": 29,
@@ -719,7 +987,8 @@
     "n_fail": 4,
     "pass_mean": 2.3125,
     "fail_mean": 3.5,
-    "delta": 1.1875
+    "delta": 1.1875,
+    "cohen_d": 1.3074976552139195
    },
    {
     "h": 30,
@@ -727,7 +996,98 @@
     "n_fail": 4,
     "pass_mean": 2.4375,
     "fail_mean": 3.75,
-    "delta": 1.3125
+    "delta": 1.3125,
+    "cohen_d": 1.294505365713846
+   },
+   {
+    "h": 31,
+    "n_pass": 16,
+    "n_fail": 4,
+    "pass_mean": 2.75,
+    "fail_mean": 3.75,
+    "delta": 1.0,
+    "cohen_d": 0.846414739030318
+   },
+   {
+    "h": 32,
+    "n_pass": 13,
+    "n_fail": 3,
+    "pass_mean": 3.076923076923077,
+    "fail_mean": 3.6666666666666665,
+    "delta": 0.5897435897435894,
+    "cohen_d": 0.4317828287895882
+   },
+   {
+    "h": 33,
+    "n_pass": 13,
+    "n_fail": 3,
+    "pass_mean": 3.230769230769231,
+    "fail_mean": 4,
+    "delta": 0.7692307692307692,
+    "cohen_d": 0.5597671852663255
+   },
+   {
+    "h": 34,
+    "n_pass": 12,
+    "n_fail": 3,
+    "pass_mean": 3.4166666666666665,
+    "fail_mean": 4.333333333333333,
+    "delta": 0.9166666666666665,
+    "cohen_d": 0.6616613286932489
+   },
+   {
+    "h": 35,
+    "n_pass": 11,
+    "n_fail": 3,
+    "pass_mean": 3.272727272727273,
+    "fail_mean": 4.666666666666667,
+    "delta": 1.393939393939394,
+    "cohen_d": 1.1438209926881469
+   },
+   {
+    "h": 36,
+    "n_pass": 10,
+    "n_fail": 3,
+    "pass_mean": 3.2,
+    "fail_mean": 4.666666666666667,
+    "delta": 1.4666666666666668,
+    "cohen_d": 1.241531825562821
+   },
+   {
+    "h": 37,
+    "n_pass": 10,
+    "n_fail": 2,
+    "pass_mean": 3.3,
+    "fail_mean": 4.5,
+    "delta": 1.2000000000000002,
+    "cohen_d": 0.9817613873476321
+   },
+   {
+    "h": 38,
+    "n_pass": 10,
+    "n_fail": 2,
+    "pass_mean": 3.4,
+    "fail_mean": 4.5,
+    "delta": 1.1,
+    "cohen_d": 0.8020441719763131
+   },
+   {
+    "h": 39,
+    "n_pass": 10,
+    "n_fail": 2,
+    "pass_mean": 3.4,
+    "fail_mean": 4.5,
+    "delta": 1.1,
+    "cohen_d": 0.8020441719763131
+   },
+   {
+    "h": 40,
+    "n_pass": 9,
+    "n_fail": 2,
+    "pass_mean": 3.3333333333333335,
+    "fail_mean": 4.5,
+    "delta": 1.1666666666666665,
+    "cohen_d": 0.8192880303729139
    }
   ],
   "cum_reverts": [
@@ -737,7 +1097,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 2,
@@ -745,7 +1106,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 3,
@@ -753,7 +1115,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 4,
@@ -761,7 +1124,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 5,
@@ -769,7 +1133,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 6,
@@ -777,7 +1142,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 7,
@@ -785,7 +1151,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 8,
@@ -793,7 +1160,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 9,
@@ -801,7 +1169,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 10,
@@ -809,7 +1178,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 11,
@@ -817,7 +1187,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 12,
@@ -825,7 +1196,8 @@
     "n_fail": 4,
     "pass_mean": 0.0625,
     "fail_mean": 0,
-    "delta": -0.0625
+    "delta": -0.0625,
+    "cohen_d": -0.282842712474619
    },
    {
     "h": 13,
@@ -833,7 +1205,8 @@
     "n_fail": 4,
     "pass_mean": 0.0625,
     "fail_mean": 0,
-    "delta": -0.0625
+    "delta": -0.0625,
+    "cohen_d": -0.282842712474619
    },
    {
     "h": 14,
@@ -841,7 +1214,8 @@
     "n_fail": 4,
     "pass_mean": 0.0625,
     "fail_mean": 0,
-    "delta": -0.0625
+    "delta": -0.0625,
+    "cohen_d": -0.282842712474619
    },
    {
     "h": 15,
@@ -849,7 +1223,8 @@
     "n_fail": 4,
     "pass_mean": 0.0625,
     "fail_mean": 0,
-    "delta": -0.0625
+    "delta": -0.0625,
+    "cohen_d": -0.282842712474619
    },
    {
     "h": 16,
@@ -857,7 +1232,8 @@
     "n_fail": 4,
     "pass_mean": 0.125,
     "fail_mean": 0.25,
-    "delta": 0.125
+    "delta": 0.125,
+    "cohen_d": 0.3572948005052482
    },
    {
     "h": 17,
@@ -865,7 +1241,8 @@
     "n_fail": 4,
     "pass_mean": 0.3125,
     "fail_mean": 0.5,
-    "delta": 0.1875
+    "delta": 0.1875,
+    "cohen_d": 0.3991140631426436
    },
    {
     "h": 18,
@@ -873,7 +1250,8 @@
     "n_fail": 4,
     "pass_mean": 0.375,
     "fail_mean": 0.5,
-    "delta": 0.125
+    "delta": 0.125,
+    "cohen_d": 0.25677629550654774
    },
    {
     "h": 19,
@@ -881,7 +1259,8 @@
     "n_fail": 4,
     "pass_mean": 0.375,
     "fail_mean": 0.75,
-    "delta": 0.375
+    "delta": 0.375,
+    "cohen_d": 0.7878385971583353
    },
    {
     "h": 20,
@@ -889,7 +1268,8 @@
     "n_fail": 4,
     "pass_mean": 0.4375,
     "fail_mean": 0.75,
-    "delta": 0.3125
+    "delta": 0.3125,
+    "cohen_d": 0.6428243465332251
    },
    {
     "h": 21,
@@ -897,7 +1277,8 @@
     "n_fail": 4,
     "pass_mean": 0.625,
     "fail_mean": 0.75,
-    "delta": 0.125
+    "delta": 0.125,
+    "cohen_d": 0.2626128657194451
    },
    {
     "h": 22,
@@ -905,7 +1286,8 @@
     "n_fail": 4,
     "pass_mean": 0.9375,
     "fail_mean": 1,
-    "delta": 0.0625
+    "delta": 0.0625,
+    "cohen_d": 0.12324720450266415
    },
    {
     "h": 23,
@@ -913,7 +1295,8 @@
     "n_fail": 4,
     "pass_mean": 1,
     "fail_mean": 1,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": 0.0
    },
    {
     "h": 24,
@@ -921,7 +1304,8 @@
     "n_fail": 4,
     "pass_mean": 1.0625,
     "fail_mean": 1,
-    "delta": -0.0625
+    "delta": -0.0625,
+    "cohen_d": -0.12324720450266415
    },
    {
     "h": 25,
@@ -929,7 +1313,8 @@
     "n_fail": 4,
     "pass_mean": 1.125,
     "fail_mean": 1,
-    "delta": -0.125
+    "delta": -0.125,
+    "cohen_d": -0.282842712474619
    },
    {
     "h": 26,
@@ -937,7 +1322,8 @@
     "n_fail": 4,
     "pass_mean": 1.1875,
     "fail_mean": 1,
-    "delta": -0.1875
+    "delta": -0.1875,
+    "cohen_d": -0.39001625101569554
    },
    {
     "h": 27,
@@ -945,7 +1331,8 @@
     "n_fail": 4,
     "pass_mean": 1.1875,
     "fail_mean": 1,
-    "delta": -0.1875
+    "delta": -0.1875,
+    "cohen_d": -0.39001625101569554
    },
    {
     "h": 28,
@@ -953,7 +1340,8 @@
     "n_fail": 4,
     "pass_mean": 1.1875,
     "fail_mean": 1,
-    "delta": -0.1875
+    "delta": -0.1875,
+    "cohen_d": -0.39001625101569554
    },
    {
     "h": 29,
@@ -961,7 +1349,8 @@
     "n_fail": 4,
     "pass_mean": 1.1875,
     "fail_mean": 1,
-    "delta": -0.1875
+    "delta": -0.1875,
+    "cohen_d": -0.39001625101569554
    },
    {
     "h": 30,
@@ -969,7 +1358,98 @@
     "n_fail": 4,
     "pass_mean": 1.25,
     "fail_mean": 1,
-    "delta": -0.25
+    "delta": -0.25,
+    "cohen_d": -0.6324555320336759
+   },
+   {
+    "h": 31,
+    "n_pass": 16,
+    "n_fail": 4,
+    "pass_mean": 1.25,
+    "fail_mean": 1,
+    "delta": -0.25,
+    "cohen_d": -0.6324555320336759
+   },
+   {
+    "h": 32,
+    "n_pass": 13,
+    "n_fail": 3,
+    "pass_mean": 1.3076923076923077,
+    "fail_mean": 1,
+    "delta": -0.3076923076923077,
+    "cohen_d": -0.7200822998230956
+   },
+   {
+    "h": 33,
+    "n_pass": 13,
+    "n_fail": 3,
+    "pass_mean": 1.3846153846153846,
+    "fail_mean": 1,
+    "delta": -0.3846153846153846,
+    "cohen_d": -0.8539125638299664
+   },
+   {
+    "h": 34,
+    "n_pass": 12,
+    "n_fail": 3,
+    "pass_mean": 1.4166666666666667,
+    "fail_mean": 1,
+    "delta": -0.41666666666666674,
+    "cohen_d": -0.7076513378950495
+   },
+   {
+    "h": 35,
+    "n_pass": 11,
+    "n_fail": 3,
+    "pass_mean": 1.5454545454545454,
+    "fail_mean": 1,
+    "delta": -0.5454545454545454,
+    "cohen_d": -0.6708203932499368
+   },
+   {
+    "h": 36,
+    "n_pass": 10,
+    "n_fail": 3,
+    "pass_mean": 1.6,
+    "fail_mean": 1,
+    "delta": -0.6000000000000001,
+    "cohen_d": -0.723746864455746
+   },
+   {
+    "h": 37,
+    "n_pass": 10,
+    "n_fail": 2,
+    "pass_mean": 1.6,
+    "fail_mean": 1,
+    "delta": -0.6000000000000001,
+    "cohen_d": -0.6900655593423544
+   },
+   {
+    "h": 38,
+    "n_pass": 10,
+    "n_fail": 2,
+    "pass_mean": 1.6,
+    "fail_mean": 1,
+    "delta": -0.6000000000000001,
+    "cohen_d": -0.6900655593423544
+   },
+   {
+    "h": 39,
+    "n_pass": 10,
+    "n_fail": 2,
+    "pass_mean": 1.6,
+    "fail_mean": 1,
+    "delta": -0.6000000000000001,
+    "cohen_d": -0.6900655593423544
+   },
+   {
+    "h": 40,
+    "n_pass": 9,
+    "n_fail": 2,
+    "pass_mean": 1.6666666666666667,
+    "fail_mean": 1,
+    "delta": -0.6666666666666667,
+    "cohen_d": -0.7500000000000001
    }
   ],
   "cum_failing_tests": [
@@ -979,7 +1459,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 2,
@@ -987,7 +1468,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 3,
@@ -995,7 +1477,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 4,
@@ -1003,7 +1486,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 5,
@@ -1011,7 +1495,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 6,
@@ -1019,7 +1504,8 @@
     "n_fail": 4,
     "pass_mean": 0.5,
     "fail_mean": 0.5,
-    "delta": 0.0
+    "delta": 0.0,
+    "cohen_d": 0.0
    },
    {
     "h": 7,
@@ -1027,7 +1513,8 @@
     "n_fail": 4,
     "pass_mean": 0.5,
     "fail_mean": 0.5,
-    "delta": 0.0
+    "delta": 0.0,
+    "cohen_d": 0.0
    },
    {
     "h": 8,
@@ -1035,7 +1522,8 @@
     "n_fail": 4,
     "pass_mean": 1,
     "fail_mean": 1,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 9,
@@ -1043,7 +1531,8 @@
     "n_fail": 4,
     "pass_mean": 1,
     "fail_mean": 1,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 10,
@@ -1051,7 +1540,8 @@
     "n_fail": 4,
     "pass_mean": 1.375,
     "fail_mean": 1.5,
-    "delta": 0.125
+    "delta": 0.125,
+    "cohen_d": 0.25677629550654774
    },
    {
     "h": 11,
@@ -1059,7 +1549,8 @@
     "n_fail": 4,
     "pass_mean": 1.375,
     "fail_mean": 1.5,
-    "delta": 0.125
+    "delta": 0.125,
+    "cohen_d": 0.25677629550654774
    },
    {
     "h": 12,
@@ -1067,7 +1558,8 @@
     "n_fail": 4,
     "pass_mean": 1.375,
     "fail_mean": 1.5,
-    "delta": 0.125
+    "delta": 0.125,
+    "cohen_d": 0.25677629550654774
    },
    {
     "h": 13,
@@ -1075,7 +1567,8 @@
     "n_fail": 4,
     "pass_mean": 1.5,
     "fail_mean": 1.5,
-    "delta": 0.0
+    "delta": 0.0,
+    "cohen_d": 0.0
    },
    {
     "h": 14,
@@ -1083,7 +1576,8 @@
     "n_fail": 4,
     "pass_mean": 1.75,
     "fail_mean": 2,
-    "delta": 0.25
+    "delta": 0.25,
+    "cohen_d": 0.31362502409359005
    },
    {
     "h": 15,
@@ -1091,7 +1585,8 @@
     "n_fail": 4,
     "pass_mean": 1.75,
     "fail_mean": 2.25,
-    "delta": 0.5
+    "delta": 0.5,
+    "cohen_d": 0.6546536707079771
    },
    {
     "h": 16,
@@ -1099,7 +1594,8 @@
     "n_fail": 4,
     "pass_mean": 1.8125,
     "fail_mean": 2.5,
-    "delta": 0.6875
+    "delta": 0.6875,
+    "cohen_d": 0.8407813864642415
    },
    {
     "h": 17,
@@ -1107,7 +1603,8 @@
     "n_fail": 4,
     "pass_mean": 1.875,
     "fail_mean": 2.5,
-    "delta": 0.625
+    "delta": 0.625,
+    "cohen_d": 0.7280352571744352
    },
    {
     "h": 18,
@@ -1115,7 +1612,8 @@
     "n_fail": 4,
     "pass_mean": 2,
     "fail_mean": 2.75,
-    "delta": 0.75
+    "delta": 0.75,
+    "cohen_d": 1.0093898773656795
    },
    {
     "h": 19,
@@ -1123,7 +1621,8 @@
     "n_fail": 4,
     "pass_mean": 2.0625,
     "fail_mean": 2.75,
-    "delta": 0.6875
+    "delta": 0.6875,
+    "cohen_d": 0.9754523096430406
    },
    {
     "h": 20,
@@ -1131,7 +1630,8 @@
     "n_fail": 4,
     "pass_mean": 2.1875,
     "fail_mean": 2.75,
-    "delta": 0.5625
+    "delta": 0.5625,
+    "cohen_d": 0.6826152405526172
    },
    {
     "h": 21,
@@ -1139,7 +1639,8 @@
     "n_fail": 4,
     "pass_mean": 2.25,
     "fail_mean": 2.75,
-    "delta": 0.5
+    "delta": 0.5,
+    "cohen_d": 0.5547001962252291
    },
    {
     "h": 22,
@@ -1147,7 +1648,8 @@
     "n_fail": 4,
     "pass_mean": 2.25,
     "fail_mean": 2.75,
-    "delta": 0.5
+    "delta": 0.5,
+    "cohen_d": 0.5547001962252291
    },
    {
     "h": 23,
@@ -1155,7 +1657,8 @@
     "n_fail": 4,
     "pass_mean": 2.3125,
     "fail_mean": 3,
-    "delta": 0.6875
+    "delta": 0.6875,
+    "cohen_d": 0.6904279411760973
    },
    {
     "h": 24,
@@ -1163,7 +1666,8 @@
     "n_fail": 4,
     "pass_mean": 2.375,
     "fail_mean": 3,
-    "delta": 0.625
+    "delta": 0.625,
+    "cohen_d": 0.5926955847701997
    },
    {
     "h": 25,
@@ -1171,7 +1675,8 @@
     "n_fail": 4,
     "pass_mean": 2.375,
     "fail_mean": 3,
-    "delta": 0.625
+    "delta": 0.625,
+    "cohen_d": 0.5926955847701997
    },
    {
     "h": 26,
@@ -1179,7 +1684,8 @@
     "n_fail": 4,
     "pass_mean": 2.375,
     "fail_mean": 3,
-    "delta": 0.625
+    "delta": 0.625,
+    "cohen_d": 0.5926955847701997
    },
    {
     "h": 27,
@@ -1187,7 +1693,8 @@
     "n_fail": 4,
     "pass_mean": 2.375,
     "fail_mean": 3,
-    "delta": 0.625
+    "delta": 0.625,
+    "cohen_d": 0.5926955847701997
    },
    {
     "h": 28,
@@ -1195,7 +1702,8 @@
     "n_fail": 4,
     "pass_mean": 2.375,
     "fail_mean": 3.25,
-    "delta": 0.875
+    "delta": 0.875,
+    "cohen_d": 0.8499168914421706
    },
    {
     "h": 29,
@@ -1203,7 +1711,8 @@
     "n_fail": 4,
     "pass_mean": 2.5,
     "fail_mean": 3.25,
-    "delta": 0.75
+    "delta": 0.75,
+    "cohen_d": 0.8065992869067975
    },
    {
     "h": 30,
@@ -1211,7 +1720,98 @@
     "n_fail": 4,
     "pass_mean": 2.5625,
     "fail_mean": 3.25,
-    "delta": 0.6875
+    "delta": 0.6875,
+    "cohen_d": 0.7900934346174656
+   },
+   {
+    "h": 31,
+    "n_pass": 16,
+    "n_fail": 4,
+    "pass_mean": 2.625,
+    "fail_mean": 3.25,
+    "delta": 0.625,
+    "cohen_d": 0.7229440390678198
+   },
+   {
+    "h": 32,
+    "n_pass": 13,
+    "n_fail": 3,
+    "pass_mean": 2.5384615384615383,
+    "fail_mean": 3.3333333333333335,
+    "delta": 0.7948717948717952,
+    "cohen_d": 1.114683539917622
+   },
+   {
+    "h": 33,
+    "n_pass": 13,
+    "n_fail": 3,
+    "pass_mean": 2.5384615384615383,
+    "fail_mean": 3.3333333333333335,
+    "delta": 0.7948717948717952,
+    "cohen_d": 1.114683539917622
+   },
+   {
+    "h": 34,
+    "n_pass": 12,
+    "n_fail": 3,
+    "pass_mean": 2.5,
+    "fail_mean": 3.3333333333333335,
+    "delta": 0.8333333333333335,
+    "cohen_d": 1.147078669352809
+   },
+   {
+    "h": 35,
+    "n_pass": 11,
+    "n_fail": 3,
+    "pass_mean": 2.4545454545454546,
+    "fail_mean": 3.3333333333333335,
+    "delta": 0.8787878787878789,
+    "cohen_d": 1.1885512085576886
+   },
+   {
+    "h": 36,
+    "n_pass": 10,
+    "n_fail": 3,
+    "pass_mean": 2.5,
+    "fail_mean": 3.3333333333333335,
+    "delta": 0.8333333333333335,
+    "cohen_d": 1.1016316230980794
+   },
+   {
+    "h": 37,
+    "n_pass": 10,
+    "n_fail": 2,
+    "pass_mean": 2.7,
+    "fail_mean": 3,
+    "delta": 0.2999999999999998,
+    "cohen_d": 0.3146583877637761
+   },
+   {
+    "h": 38,
+    "n_pass": 10,
+    "n_fail": 2,
+    "pass_mean": 2.7,
+    "fail_mean": 3,
+    "delta": 0.2999999999999998,
+    "cohen_d": 0.3146583877637761
+   },
+   {
+    "h": 39,
+    "n_pass": 10,
+    "n_fail": 2,
+    "pass_mean": 2.7,
+    "fail_mean": 3,
+    "delta": 0.2999999999999998,
+    "cohen_d": 0.3146583877637761
+   },
+   {
+    "h": 40,
+    "n_pass": 9,
+    "n_fail": 2,
+    "pass_mean": 2.7777777777777777,
+    "fail_mean": 3,
+    "delta": 0.22222222222222232,
+    "cohen_d": 0.2287478554989071
    }
   ],
   "distinct_states": [
@@ -1221,7 +1821,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 2,
@@ -1229,7 +1830,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 3,
@@ -1237,7 +1839,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 4,
@@ -1245,7 +1848,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 5,
@@ -1253,7 +1857,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 6,
@@ -1261,7 +1866,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 7,
@@ -1269,7 +1875,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 8,
@@ -1277,7 +1884,8 @@
     "n_fail": 4,
     "pass_mean": 0.4375,
     "fail_mean": 0.5,
-    "delta": 0.0625
+    "delta": 0.0625,
+    "cohen_d": 0.1258218365970065
    },
    {
     "h": 9,
@@ -1285,7 +1893,8 @@
     "n_fail": 4,
     "pass_mean": 0.5,
     "fail_mean": 0.5,
-    "delta": 0.0
+    "delta": 0.0,
+    "cohen_d": 0.0
    },
    {
     "h": 10,
@@ -1293,7 +1902,8 @@
     "n_fail": 4,
     "pass_mean": 1,
     "fail_mean": 1,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 11,
@@ -1301,7 +1911,8 @@
     "n_fail": 4,
     "pass_mean": 1,
     "fail_mean": 1,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 12,
@@ -1309,7 +1920,8 @@
     "n_fail": 4,
     "pass_mean": 1,
     "fail_mean": 1,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 13,
@@ -1317,7 +1929,8 @@
     "n_fail": 4,
     "pass_mean": 1,
     "fail_mean": 1,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 14,
@@ -1325,7 +1938,8 @@
     "n_fail": 4,
     "pass_mean": 1.0625,
     "fail_mean": 1,
-    "delta": -0.0625
+    "delta": -0.0625,
+    "cohen_d": -0.282842712474619
    },
    {
     "h": 15,
@@ -1333,7 +1947,8 @@
     "n_fail": 4,
     "pass_mean": 1.0625,
     "fail_mean": 1,
-    "delta": -0.0625
+    "delta": -0.0625,
+    "cohen_d": -0.282842712474619
    },
    {
     "h": 16,
@@ -1341,7 +1956,8 @@
     "n_fail": 4,
     "pass_mean": 1.0625,
     "fail_mean": 1,
-    "delta": -0.0625
+    "delta": -0.0625,
+    "cohen_d": -0.282842712474619
    },
    {
     "h": 17,
@@ -1349,7 +1965,8 @@
     "n_fail": 4,
     "pass_mean": 1.0625,
     "fail_mean": 1,
-    "delta": -0.0625
+    "delta": -0.0625,
+    "cohen_d": -0.282842712474619
    },
    {
     "h": 18,
@@ -1357,7 +1974,8 @@
     "n_fail": 4,
     "pass_mean": 1.0625,
     "fail_mean": 1,
-    "delta": -0.0625
+    "delta": -0.0625,
+    "cohen_d": -0.282842712474619
    },
    {
     "h": 19,
@@ -1365,7 +1983,8 @@
     "n_fail": 4,
     "pass_mean": 1.1875,
     "fail_mean": 1,
-    "delta": -0.1875
+    "delta": -0.1875,
+    "cohen_d": -0.5262348115842176
    },
    {
     "h": 20,
@@ -1373,7 +1992,8 @@
     "n_fail": 4,
     "pass_mean": 1.1875,
     "fail_mean": 1,
-    "delta": -0.1875
+    "delta": -0.1875,
+    "cohen_d": -0.5262348115842176
    },
    {
     "h": 21,
@@ -1381,7 +2001,8 @@
     "n_fail": 4,
     "pass_mean": 1.3125,
     "fail_mean": 1.25,
-    "delta": -0.0625
+    "delta": -0.0625,
+    "cohen_d": -0.1362932551272764
    },
    {
     "h": 22,
@@ -1389,7 +2010,8 @@
     "n_fail": 4,
     "pass_mean": 1.375,
     "fail_mean": 1.5,
-    "delta": 0.125
+    "delta": 0.125,
+    "cohen_d": 0.25677629550654774
    },
    {
     "h": 23,
@@ -1397,7 +2019,8 @@
     "n_fail": 4,
     "pass_mean": 1.5,
     "fail_mean": 1.5,
-    "delta": 0.0
+    "delta": 0.0,
+    "cohen_d": 0.0
    },
    {
     "h": 24,
@@ -1405,7 +2028,8 @@
     "n_fail": 4,
     "pass_mean": 1.625,
     "fail_mean": 1.5,
-    "delta": -0.125
+    "delta": -0.125,
+    "cohen_d": -0.21401291250192653
    },
    {
     "h": 25,
@@ -1413,7 +2037,8 @@
     "n_fail": 4,
     "pass_mean": 1.6875,
     "fail_mean": 2,
-    "delta": 0.3125
+    "delta": 0.3125,
+    "cohen_d": 0.45548751867427695
    },
    {
     "h": 26,
@@ -1421,7 +2046,8 @@
     "n_fail": 4,
     "pass_mean": 1.875,
     "fail_mean": 2,
-    "delta": 0.125
+    "delta": 0.125,
+    "cohen_d": 0.13979976373859893
    },
    {
     "h": 27,
@@ -1429,7 +2055,8 @@
     "n_fail": 4,
     "pass_mean": 2.1875,
     "fail_mean": 2.25,
-    "delta": 0.0625
+    "delta": 0.0625,
+    "cohen_d": 0.07584613783917969
    },
    {
     "h": 28,
@@ -1437,7 +2064,8 @@
     "n_fail": 4,
     "pass_mean": 2.25,
     "fail_mean": 2.25,
-    "delta": 0.0
+    "delta": 0.0,
+    "cohen_d": 0.0
    },
    {
     "h": 29,
@@ -1445,7 +2073,8 @@
     "n_fail": 4,
     "pass_mean": 2.3125,
     "fail_mean": 2.25,
-    "delta": -0.0625
+    "delta": -0.0625,
+    "cohen_d": -0.0683852276509551
    },
    {
     "h": 30,
@@ -1453,7 +2082,98 @@
     "n_fail": 4,
     "pass_mean": 2.375,
     "fail_mean": 2.5,
-    "delta": 0.125
+    "delta": 0.125,
+    "cohen_d": 0.14359163172354764
+   },
+   {
+    "h": 31,
+    "n_pass": 16,
+    "n_fail": 4,
+    "pass_mean": 2.375,
+    "fail_mean": 2.5,
+    "delta": 0.125,
+    "cohen_d": 0.14359163172354764
+   },
+   {
+    "h": 32,
+    "n_pass": 13,
+    "n_fail": 3,
+    "pass_mean": 2.5384615384615383,
+    "fail_mean": 2.6666666666666665,
+    "delta": 0.1282051282051282,
+    "cohen_d": 0.11245592992700715
+   },
+   {
+    "h": 33,
+    "n_pass": 13,
+    "n_fail": 3,
+    "pass_mean": 2.6153846153846154,
+    "fail_mean": 3,
+    "delta": 0.3846153846153846,
+    "cohen_d": 0.31562714293709554
+   },
+   {
+    "h": 34,
+    "n_pass": 12,
+    "n_fail": 3,
+    "pass_mean": 2.6666666666666665,
+    "fail_mean": 3,
+    "delta": 0.3333333333333335,
+    "cohen_d": 0.22872228422215188
+   },
+   {
+    "h": 35,
+    "n_pass": 11,
+    "n_fail": 3,
+    "pass_mean": 2.909090909090909,
+    "fail_mean": 3,
+    "delta": 0.09090909090909083,
+    "cohen_d": 0.053317011610746125
+   },
+   {
+    "h": 36,
+    "n_pass": 10,
+    "n_fail": 3,
+    "pass_mean": 3,
+    "fail_mean": 3,
+    "delta": 0,
+    "cohen_d": 0.0
+   },
+   {
+    "h": 37,
+    "n_pass": 10,
+    "n_fail": 2,
+    "pass_mean": 3.1,
+    "fail_mean": 3,
+    "delta": -0.10000000000000009,
+    "cohen_d": -0.046220078573275994
+   },
+   {
+    "h": 38,
+    "n_pass": 10,
+    "n_fail": 2,
+    "pass_mean": 3.2,
+    "fail_mean": 3,
+    "delta": -0.20000000000000018,
+    "cohen_d": -0.09182430617242492
+   },
+   {
+    "h": 39,
+    "n_pass": 10,
+    "n_fail": 2,
+    "pass_mean": 3.4,
+    "fail_mean": 3,
+    "delta": -0.3999999999999999,
+    "cohen_d": -0.18227065414412227
+   },
+   {
+    "h": 40,
+    "n_pass": 9,
+    "n_fail": 2,
+    "pass_mean": 3.4444444444444446,
+    "fail_mean": 3,
+    "delta": -0.44444444444444464,
+    "cohen_d": -0.19362395749872854
    }
   ],
   "diff_bytes": [
@@ -1463,7 +2183,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 2,
@@ -1471,7 +2192,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 3,
@@ -1479,7 +2201,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 4,
@@ -1487,7 +2210,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 5,
@@ -1495,7 +2219,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 6,
@@ -1503,7 +2228,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 7,
@@ -1511,7 +2237,8 @@
     "n_fail": 4,
     "pass_mean": 0,
     "fail_mean": 0,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 8,
@@ -1519,7 +2246,8 @@
     "n_fail": 4,
     "pass_mean": 191.625,
     "fail_mean": 219,
-    "delta": 27.375
+    "delta": 27.375,
+    "cohen_d": 0.1258218365970065
    },
    {
     "h": 9,
@@ -1527,7 +2255,8 @@
     "n_fail": 4,
     "pass_mean": 219,
     "fail_mean": 219,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": 0.0
    },
    {
     "h": 10,
@@ -1535,7 +2264,8 @@
     "n_fail": 4,
     "pass_mean": 459.5,
     "fail_mean": 438,
-    "delta": -21.5
+    "delta": -21.5,
+    "cohen_d": -0.282842712474619
    },
    {
     "h": 11,
@@ -1543,7 +2273,8 @@
     "n_fail": 4,
     "pass_mean": 459.5,
     "fail_mean": 438,
-    "delta": -21.5
+    "delta": -21.5,
+    "cohen_d": -0.282842712474619
    },
    {
     "h": 12,
@@ -1551,7 +2282,8 @@
     "n_fail": 4,
     "pass_mean": 410.625,
     "fail_mean": 438,
-    "delta": 27.375
+    "delta": 27.375,
+    "cohen_d": 0.282842712474619
    },
    {
     "h": 13,
@@ -1559,7 +2291,8 @@
     "n_fail": 4,
     "pass_mean": 410.625,
     "fail_mean": 438,
-    "delta": 27.375
+    "delta": 27.375,
+    "cohen_d": 0.282842712474619
    },
    {
     "h": 14,
@@ -1567,7 +2300,8 @@
     "n_fail": 4,
     "pass_mean": 444.1875,
     "fail_mean": 438,
-    "delta": -6.1875
+    "delta": -6.1875,
+    "cohen_d": -0.282842712474619
    },
    {
     "h": 15,
@@ -1575,7 +2309,8 @@
     "n_fail": 4,
     "pass_mean": 444.1875,
     "fail_mean": 438,
-    "delta": -6.1875
+    "delta": -6.1875,
+    "cohen_d": -0.282842712474619
    },
    {
     "h": 16,
@@ -1583,7 +2318,8 @@
     "n_fail": 4,
     "pass_mean": 416.8125,
     "fail_mean": 328.5,
-    "delta": -88.3125
+    "delta": -88.3125,
+    "cohen_d": -0.6954952614350299
    },
    {
     "h": 17,
@@ -1591,7 +2327,8 @@
     "n_fail": 4,
     "pass_mean": 334.6875,
     "fail_mean": 219,
-    "delta": -115.6875
+    "delta": -115.6875,
+    "cohen_d": -0.5815211360889032
    },
    {
     "h": 18,
@@ -1599,7 +2336,8 @@
     "n_fail": 4,
     "pass_mean": 307.3125,
     "fail_mean": 219,
-    "delta": -88.3125
+    "delta": -88.3125,
+    "cohen_d": -0.41991411965808934
    },
    {
     "h": 19,
@@ -1607,7 +2345,8 @@
     "n_fail": 4,
     "pass_mean": 414.8125,
     "fail_mean": 109.5,
-    "delta": -305.3125
+    "delta": -305.3125,
+    "cohen_d": -1.001871722680723
    },
    {
     "h": 20,
@@ -1615,7 +2354,8 @@
     "n_fail": 4,
     "pass_mean": 387.4375,
     "fail_mean": 109.5,
-    "delta": -277.9375
+    "delta": -277.9375,
+    "cohen_d": -0.8737874598678012
    },
    {
     "h": 21,
@@ -1623,7 +2363,8 @@
     "n_fail": 4,
     "pass_mean": 365,
     "fail_mean": 262.5,
-    "delta": -102.5
+    "delta": -102.5,
+    "cohen_d": -0.3009819596978029
    },
    {
     "h": 22,
@@ -1631,7 +2372,8 @@
     "n_fail": 4,
     "pass_mean": 329.375,
     "fail_mean": 325.5,
-    "delta": -3.875
+    "delta": -3.875,
+    "cohen_d": -0.010201965157718398
    },
    {
     "h": 23,
@@ -1639,7 +2381,8 @@
     "n_fail": 4,
     "pass_mean": 376,
     "fail_mean": 325.5,
-    "delta": -50.5
+    "delta": -50.5,
+    "cohen_d": -0.13219301745962123
    },
    {
     "h": 24,
@@ -1647,7 +2390,8 @@
     "n_fail": 4,
     "pass_mean": 566.4375,
     "fail_mean": 325.5,
-    "delta": -240.9375
+    "delta": -240.9375,
+    "cohen_d": -0.39452258176575067
    },
    {
     "h": 25,
@@ -1655,7 +2399,8 @@
     "n_fail": 4,
     "pass_mean": 600.1875,
     "fail_mean": 505.5,
-    "delta": -94.6875
+    "delta": -94.6875,
+    "cohen_d": -0.15430400210435039
    },
    {
     "h": 26,
@@ -1663,7 +2408,8 @@
     "n_fail": 4,
     "pass_mean": 462.9375,
     "fail_mean": 505.5,
-    "delta": 42.5625
+    "delta": 42.5625,
+    "cohen_d": 0.09602583541969699
    },
    {
     "h": 27,
@@ -1671,7 +2417,8 @@
     "n_fail": 4,
     "pass_mean": 912.5625,
     "fail_mean": 672,
-    "delta": -240.5625
+    "delta": -240.5625,
+    "cohen_d": -0.37430537989651447
    },
    {
     "h": 28,
@@ -1679,7 +2426,8 @@
     "n_fail": 4,
     "pass_mean": 934.4375,
     "fail_mean": 672,
-    "delta": -262.4375
+    "delta": -262.4375,
+    "cohen_d": -0.40213395562102977
    },
    {
     "h": 29,
@@ -1687,7 +2435,8 @@
     "n_fail": 4,
     "pass_mean": 969.875,
     "fail_mean": 672,
-    "delta": -297.875
+    "delta": -297.875,
+    "cohen_d": -0.4791922941469764
    },
    {
     "h": 30,
@@ -1695,7 +2444,98 @@
     "n_fail": 4,
     "pass_mean": 949.5,
     "fail_mean": 662.5,
-    "delta": -287.0
+    "delta": -287.0,
+    "cohen_d": -0.4684659104277343
+   },
+   {
+    "h": 31,
+    "n_pass": 16,
+    "n_fail": 4,
+    "pass_mean": 949.5,
+    "fail_mean": 662.5,
+    "delta": -287.0,
+    "cohen_d": -0.4684659104277343
+   },
+   {
+    "h": 32,
+    "n_pass": 13,
+    "n_fail": 3,
+    "pass_mean": 1125,
+    "fail_mean": 653.3333333333334,
+    "delta": -471.66666666666663,
+    "cohen_d": -0.7825764277647603
+   },
+   {
+    "h": 33,
+    "n_pass": 13,
+    "n_fail": 3,
+    "pass_mean": 1022.8461538461538,
+    "fail_mean": 653.6666666666666,
+    "delta": -369.1794871794872,
+    "cohen_d": -0.5692832486644807
+   },
+   {
+    "h": 34,
+    "n_pass": 12,
+    "n_fail": 3,
+    "pass_mean": 1124.1666666666667,
+    "fail_mean": 653.6666666666666,
+    "delta": -470.5000000000001,
+    "cohen_d": -0.7084711551019862
+   },
+   {
+    "h": 35,
+    "n_pass": 11,
+    "n_fail": 3,
+    "pass_mean": 1200.909090909091,
+    "fail_mean": 653.6666666666666,
+    "delta": -547.2424242424244,
+    "cohen_d": -0.8524962949217969
+   },
+   {
+    "h": 36,
+    "n_pass": 10,
+    "n_fail": 3,
+    "pass_mean": 1227.7,
+    "fail_mean": 653.6666666666666,
+    "delta": -574.0333333333334,
+    "cohen_d": -0.8536685025068562
+   },
+   {
+    "h": 37,
+    "n_pass": 10,
+    "n_fail": 2,
+    "pass_mean": 1225.4,
+    "fail_mean": 626,
+    "delta": -599.4000000000001,
+    "cohen_d": -0.8536082629443987
+   },
+   {
+    "h": 38,
+    "n_pass": 10,
+    "n_fail": 2,
+    "pass_mean": 1226,
+    "fail_mean": 626,
+    "delta": -600,
+    "cohen_d": -0.8537988205010699
+   },
+   {
+    "h": 39,
+    "n_pass": 10,
+    "n_fail": 2,
+    "pass_mean": 1338.8,
+    "fail_mean": 626,
+    "delta": -712.8,
+    "cohen_d": -1.1944722238105425
+   },
+   {
+    "h": 40,
+    "n_pass": 9,
+    "n_fail": 2,
+    "pass_mean": 1336.3333333333333,
+    "fail_mean": 626,
+    "delta": -710.3333333333333,
+    "cohen_d": -1.136368998761307
    }
   ],
   "steps_since_source_change": [
@@ -1705,7 +2545,8 @@
     "n_fail": 4,
     "pass_mean": 1,
     "fail_mean": 1,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 2,
@@ -1713,7 +2554,8 @@
     "n_fail": 4,
     "pass_mean": 2,
     "fail_mean": 2,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 3,
@@ -1721,7 +2563,8 @@
     "n_fail": 4,
     "pass_mean": 3,
     "fail_mean": 3,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 4,
@@ -1729,7 +2572,8 @@
     "n_fail": 4,
     "pass_mean": 4,
     "fail_mean": 4,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 5,
@@ -1737,7 +2581,8 @@
     "n_fail": 4,
     "pass_mean": 5,
     "fail_mean": 5,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 6,
@@ -1745,7 +2590,8 @@
     "n_fail": 4,
     "pass_mean": 6,
     "fail_mean": 6,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 7,
@@ -1753,7 +2599,8 @@
     "n_fail": 4,
     "pass_mean": 7,
     "fail_mean": 7,
-    "delta": 0
+    "delta": 0,
+    "cohen_d": null
    },
    {
     "h": 8,
@@ -1761,7 +2608,8 @@
     "n_fail": 4,
     "pass_mean": 4.5,
     "fail_mean": 4,
-    "delta": -0.5
+    "delta": -0.5,
+    "cohen_d": -0.1258218365970065
    },
    {
     "h": 9,
@@ -1769,7 +2617,8 @@
     "n_fail": 4,
     "pass_mean": 4.9375,
     "fail_mean": 5,
-    "delta": 0.0625
+    "delta": 0.0625,
+    "cohen_d": 0.015402549897836518
    },
    {
     "h": 10,
@@ -1777,7 +2626,8 @@
     "n_fail": 4,
     "pass_mean": 0.9375,
     "fail_mean": 1,
-    "delta": 0.0625
+    "delta": 0.0625,
+    "cohen_d": 0.06430458191828739
    },
    {
     "h": 11,
@@ -1785,7 +2635,8 @@
     "n_fail": 4,
     "pass_mean": 1.9375,
     "fail_mean": 2,
-    "delta": 0.0625
+    "delta": 0.0625,
+    "cohen_d": 0.06430458191828739
    },
    {
     "h": 12,
@@ -1793,7 +2644,8 @@
     "n_fail": 4,
     "pass_mean": 2.8125,
     "fail_mean": 3,
-    "delta": 0.1875
+    "delta": 0.1875,
+    "cohen_d": 0.1622609632205956
    },
    {
     "h": 13,
@@ -1801,7 +2653,8 @@
     "n_fail": 4,
     "pass_mean": 3.8125,
     "fail_mean": 4,
-    "delta": 0.1875
+    "delta": 0.1875,
+    "cohen_d": 0.1622609632205956
    },
    {
     "h": 14,
@@ -1809,7 +2662,8 @@
     "n_fail": 4,
     "pass_mean": 4.6875,
     "fail_mean": 5,
-    "delta": 0.3125
+    "delta": 0.3125,
+    "cohen_d": 0.2148014183814088
    },
    {
     "h": 15,
@@ -1817,7 +2671,8 @@
     "n_fail": 4,
     "pass_mean": 5.6875,
     "fail_mean": 6,
-    "delta": 0.3125
+    "delta": 0.3125,
+    "cohen_d": 0.2148014183814088
    },
    {
     "h": 16,
@@ -1825,7 +2680,8 @@
     "n_fail": 4,
     "pass_mean": 6.1875,
     "fail_mean": 5,
-    "delta": -1.1875
+    "delta": -1.1875,
+    "cohen_d": -0.507223038546792
    },
    {
     "h": 17,
@@ -1833,7 +2689,8 @@
     "n_fail": 4,
     "pass_mean": 5.5,
     "fail_mean": 4.25,
-    "delta": -1.25
+    "delta": -1.25,
+    "cohen_d": -0.36678215330365077
    },
    {
     "h": 18,
@@ -1841,7 +2698,8 @@
     "n_fail": 4,
     "pass_mean": 5.875,
     "fail_mean": 5.25,
-    "delta": -0.625
+    "delta": -0.625,
+    "cohen_d": -0.17434201093860166
    },
    {
     "h": 19,
@@ -1849,7 +2707,8 @@
     "n_fail": 4,
     "pass_mean": 6.0625,
     "fail_mean": 4,
-    "delta": -2.0625
+    "delta": -2.0625,
+    "cohen_d": -0.522702253514348
    },
    {
     "h": 20,
@@ -1857,7 +2716,8 @@
     "n_fail": 4,
     "pass_mean": 6.4375,
     "fail_mean": 5,
-    "delta": -1.4375
+    "delta": -1.4375,
+    "cohen_d": -0.34468776812615337
    },
    {
     "h": 21,
@@ -1865,7 +2725,8 @@
     "n_fail": 4,
     "pass_mean": 4.75,
     "fail_mean": 4.75,
-    "delta": 0.0
+    "delta": 0.0,
+    "cohen_d": 0.0
    },
    {
     "h": 22,
@@ -1873,7 +2734,8 @@
     "n_fail": 4,
     "pass_mean": 2.625,
     "fail_mean": 1,
-    "delta": -1.625
+    "delta": -1.625,
+    "cohen_d": -0.44282456900790557
    },
    {
     "h": 23,
@@ -1881,7 +2743,8 @@
     "n_fail": 4,
     "pass_mean": 2.0625,
     "fail_mean": 2,
-    "delta": -0.0625
+    "delta": -0.0625,
+    "cohen_d": -0.022232288500023244
    },
    {
     "h": 24,
@@ -1889,7 +2752,8 @@
     "n_fail": 4,
     "pass_mean": 2.75,
     "fail_mean": 3,
-    "delta": 0.25
+    "delta": 0.25,
+    "cohen_d": 0.08406627034183972
    },
    {
     "h": 25,
@@ -1897,7 +2761,8 @@
     "n_fail": 4,
     "pass_mean": 2.625,
     "fail_mean": 1.5,
-    "delta": -1.125
+    "delta": -1.125,
+    "cohen_d": -0.6774389365454833
    },
    {
     "h": 26,
@@ -1905,7 +2770,8 @@
     "n_fail": 4,
     "pass_mean": 2.75,
     "fail_mean": 2.5,
-    "delta": -0.25
+    "delta": -0.25,
+    "cohen_d": -0.12549116102763172
    },
    {
     "h": 27,
@@ -1913,7 +2779,8 @@
     "n_fail": 4,
     "pass_mean": 2.625,
     "fail_mean": 2.25,
-    "delta": -0.375
+    "delta": -0.375,
+    "cohen_d": -0.1512979032637435
    },
    {
     "h": 28,
@@ -1921,7 +2788,8 @@
     "n_fail": 4,
     "pass_mean": 3.5,
     "fail_mean": 3.25,
-    "delta": -0.25
+    "delta": -0.25,
+    "cohen_d": -0.09674902797949239
    },
    {
     "h": 29,
@@ -1929,7 +2797,8 @@
     "n_fail": 4,
     "pass_mean": 4,
     "fail_mean": 4.25,
-    "delta": 0.25
+    "delta": 0.25,
+    "cohen_d": 0.09527410888855545
    },
    {
     "h": 30,
@@ -1937,7 +2806,98 @@
     "n_fail": 4,
     "pass_mean": 4.5625,
     "fail_mean": 4.5,
-    "delta": -0.0625
+    "delta": -0.0625,
+    "cohen_d": -0.02006228979767616
+   },
+   {
+    "h": 31,
+    "n_pass": 16,
+    "n_fail": 4,
+    "pass_mean": 5.5625,
+    "fail_mean": 5.5,
+    "delta": -0.0625,
+    "cohen_d": -0.02006228979767616
+   },
+   {
+    "h": 32,
+    "n_pass": 13,
+    "n_fail": 3,
+    "pass_mean": 5.461538461538462,
+    "fail_mean": 5.333333333333333,
+    "delta": -0.12820512820512864,
+    "cohen_d": -0.04425793933772165
+   },
+   {
+    "h": 33,
+    "n_pass": 13,
+    "n_fail": 3,
+    "pass_mean": 5.923076923076923,
+    "fail_mean": 5.333333333333333,
+    "delta": -0.5897435897435903,
+    "cohen_d": -0.1641613242573546
+   },
+   {
+    "h": 34,
+    "n_pass": 12,
+    "n_fail": 3,
+    "pass_mean": 5.666666666666667,
+    "fail_mean": 6.333333333333333,
+    "delta": 0.6666666666666661,
+    "cohen_d": 0.174204599497658
+   },
+   {
+    "h": 35,
+    "n_pass": 11,
+    "n_fail": 3,
+    "pass_mean": 5.636363636363637,
+    "fail_mean": 7.333333333333333,
+    "delta": 1.6969696969696964,
+    "cohen_d": 0.38101997807187954
+   },
+   {
+    "h": 36,
+    "n_pass": 10,
+    "n_fail": 3,
+    "pass_mean": 6,
+    "fail_mean": 8.333333333333334,
+    "delta": 2.333333333333334,
+    "cohen_d": 0.4895964717498188
+   },
+   {
+    "h": 37,
+    "n_pass": 10,
+    "n_fail": 2,
+    "pass_mean": 6.8,
+    "fail_mean": 8,
+    "delta": 1.2000000000000002,
+    "cohen_d": 0.2359572903522988
+   },
+   {
+    "h": 38,
+    "n_pass": 10,
+    "n_fail": 2,
+    "pass_mean": 7.5,
+    "fail_mean": 9,
+    "delta": 1.5,
+    "cohen_d": 0.2776587794525732
+   },
+   {
+    "h": 39,
+    "n_pass": 10,
+    "n_fail": 2,
+    "pass_mean": 6.3,
+    "fail_mean": 10,
+    "delta": 3.7,
+    "cohen_d": 0.7372185608617152
+   },
+   {
+    "h": 40,
+    "n_pass": 9,
+    "n_fail": 2,
+    "pass_mean": 6.555555555555555,
+    "fail_mean": 11,
+    "delta": 4.444444444444445,
+    "cohen_d": 0.9320546490018001
    }
   ]
  }

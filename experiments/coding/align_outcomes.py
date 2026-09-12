@@ -94,7 +94,23 @@ def gather(runs_dir: str, labels: list[dict], manifest: dict) -> list[dict]:
     return out
 
 
+def cohen_d(good: list[float], bad: list[float]) -> float | None:
+    if len(good) < 2 or len(bad) < 2:
+        return None
+    pooled = (((len(good) - 1) * statistics.pvariance(good)
+               + (len(bad) - 1) * statistics.pvariance(bad))
+              / (len(good) + len(bad) - 2)) ** 0.5
+    return None if pooled == 0 else (statistics.mean(bad) - statistics.mean(good)) / pooled
+
+
 def compare(runs: list[dict], key: str, horizons: range) -> list[dict]:
+    """Means, difference and standardised effect at each horizon.
+
+    Reporting the *sign* of the difference was the mistake this function now
+    exists to prevent. A column of minus signs reads as separation and can be
+    3.12 against 3.00 — which is what h=14 actually was, and a pre-registration
+    was nearly written around it.
+    """
     rows = []
     for h in horizons:
         good = [r["steps"][h - 1][key] for r in runs if r["correct"] and len(r["steps"]) >= h]
@@ -103,7 +119,8 @@ def compare(runs: list[dict], key: str, horizons: range) -> list[dict]:
             continue
         rows.append({"h": h, "n_pass": len(good), "n_fail": len(bad),
                      "pass_mean": statistics.mean(good), "fail_mean": statistics.mean(bad),
-                     "delta": statistics.mean(bad) - statistics.mean(good)})
+                     "delta": statistics.mean(bad) - statistics.mean(good),
+                     "cohen_d": cohen_d(good, bad)})
     return rows
 
 
@@ -145,15 +162,26 @@ def main() -> None:
                     else (r["run"],) for r in alive}
         print(f"    h={h:<3} runs at risk {len(alive):>2}   distinct histories {len(distinct):>2}")
 
-    print("\n── divergence by horizon (delta = FAIL mean − PASS mean) ──")
+    print("\n── effect size by horizon (Cohen's d, FAIL − PASS) ──")
+    print("  Magnitudes, not signs. |d| < 0.2 is nothing whatever the sign says.\n")
     results = {}
+    keys = ["cum_edits", "diff_bytes", "distinct_states", "cum_reverts", "cum_tests"]
+    print(f"  {'h':>3}{'n_P':>5}{'n_F':>4}  " + "".join(f"{k:>17}" for k in keys))
+    for h in range(8, 45, 2):
+        series = {k: compare(runs, k, range(h, h + 1)) for k in keys}
+        if not series["cum_edits"]:
+            break
+        first = series["cum_edits"][0]
+        cells = []
+        for k in keys:
+            row = series[k][0] if series[k] else None
+            d = row and row["cohen_d"]
+            cells.append(f"{row['pass_mean']:5.0f}/{row['fail_mean']:<5.0f}"
+                         + ("  —  " if d is None else f"{d:+5.2f}") if row else "")
+        print(f"  {h:>3}{first['n_pass']:>5}{first['n_fail']:>4}  "
+              + "".join(f"{c:>17}" for c in cells))
     for key in CUMULATIVE:
-        series = compare(runs, key, range(1, 31))
-        results[key] = series
-        marks = "".join("+" if s["delta"] > 0 else ("-" if s["delta"] < 0 else ".")
-                        for s in series)
-        print(f"  {key:<26}{marks}")
-    print(f"  {'':<26}{''.join(str(h % 10) for h in range(1, len(results['cum_edits']) + 1))}")
+        results[key] = compare(runs, key, range(1, 45))
 
     if args.out:
         Path(args.out).write_text(json.dumps(

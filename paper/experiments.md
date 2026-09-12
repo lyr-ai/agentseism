@@ -1645,49 +1645,69 @@ answer the early-horizon question**, whatever the plots suggest.
     cum_suite_tests                   4.6        4.5     -0.1
     cum_failing_tests                 3.1        3.2     +0.2
 
-### Candidate signals — all exploratory
+### Correction — the candidate at h = 14 was a misread
 
-The coherent reading is that **failing runs iterate less on the source while
-seeing the same evidence**: fewer edits, fewer reverts, fewer distinct states, a
-smaller final patch, and the same number of suite runs and observed test
-failures.
+The first version of this section reported the divergence table as a column of
+`+` and `-` signs and concluded that cumulative edits "separate and stay
+separated" from about step 14. **A sign is not a separation.** Checking the
+magnitudes before writing the confirmatory pre-registration:
 
-| candidate | direction | earliest persistent separation | caution |
-|---|---|---|---|
-| cumulative source edits | FAIL fewer | **h ≈ 14** | strongest and most persistent |
-| final patch size | FAIL smaller | h ≈ 13 | passes include 388 and 567 bytes |
-| cumulative reverts | FAIL fewer | h ≈ 16, unstable | flips sign twice |
-| distinct source states | FAIL fewer | no clean horizon | |
-| suite test runs | FAIL more | h ≈ 13 | equal by end of run |
-| observed test failures | FAIL more | h ≈ 10 | inside the pseudo-replicated zone |
+```text
+cum_edits@14        PASS 3.12    FAIL 3.00    d = 0.23
+diff_bytes@14       438 in 19 of 20 runs
+distinct_states@14  1   in 19 of 20 runs
+```
 
-The last row is the one to distrust most: its separation begins where the
-sample is still effectively seven trajectories.
+The `9.4 against 6.0` that motivated the candidate is the **end-of-run** total,
+not the value at step 14. At step 14 every run is still sitting on the same
+state — 438 bytes, the shared attractor `400ed404…` — with one edit behind it.
 
-### Candidate horizon
+Which is consistent with the fork result rather than in tension with it: **step
+14 is still inside the attractor.** There was nothing there to detect, and the
+analysis said so all along in a format that hid it.
 
-**h ≈ 14**, where cumulative edits separate and stay separated. Runs have a
-median length of 32–33 steps, so that is around 40% of the way through — inside
-the window where an intervention would still have somewhere to go.
+`experiments/coding/align_outcomes.py` now reports means and Cohen's *d* at each
+horizon instead of signs.
 
-That is the good case for the steering hypothesis, and it is a hypothesis. With
-four failures the horizon could move substantially on the next twenty runs.
+### Where separation actually begins
 
-### What this says about the next batch
+    h    n_P  n_F    cum_edits          diff_bytes
+    14    16    4    3.1 / 3.0  -0.23   444 / 438  -0.28
+    20    16    4    4.4 / 4.0  -0.40   387 / 110  -0.87
+    24    16    4    5.4 / 4.3  -0.58   566 / 326  -0.39
+    28    16    4    6.4 / 5.3  -0.89   934 / 672  -0.40
+    30    16    4    7.1 / 5.8  -0.92   950 / 662  -0.47
 
-Do **not** infer the sample size from the 20% failure rate alone. The design
-question is not "how many failures do we need to describe" but "how large is the
-effect we have pre-committed to detecting" — and that effect is now nameable:
+`cum_edits` reaches a medium effect around **h ≈ 24** and a large one around
+**h ≈ 28**. Median run length is 32–33 steps, so that is **73–85% of the way
+through**.
 
-> a difference in cumulative source edits at h = 14
+### What that does to the steering hypothesis
 
-Fix that one feature, its direction and its horizon in a pre-registration, then
-size the batch for it. Collecting a hundred runs first and searching them again
-would repeat the mistake this section exists to avoid.
+The steering window was defined as
 
-One further requirement the pseudo-replication makes explicit: the next batch
-needs **independent runs, not continuations of a shared prefix**, or the early
-horizons will be unanalysable again.
+```text
+predictable  ∩  still recoverable
+```
+
+On this task the predictable part arrives at roughly three-quarters of the run.
+Whether anything is still recoverable there is now an open question rather than
+an assumption, and it is the question that decides whether this line is worth
+pursuing on this task at all.
+
+**No confirmatory pre-registration was written.** The hypothesis it would have
+frozen — a difference in cumulative edits at h = 14 — is measured at d = 0.23 in
+the data that suggested it. Writing it would have committed GPU money to
+confirming nothing, and the error was caught one step before that.
+
+### What survives as a candidate
+
+Only the late separation, and weakly: four failures give d = −0.9 enormous
+uncertainty, and by h = 32 the denominators start shrinking to survivors.
+
+`diff_bytes` shows a large effect at h = 20 (−0.87) that then collapses at h = 22
+(−0.01) and returns later. On four failures that is noise, and it is exactly the
+shape a post-hoc search would have picked out and named.
 
 `paper/figures/outcome_alignment.svg` shows all twenty on absolute steps, with
 the pseudo-replicated zone shaded and the candidate horizon marked.
