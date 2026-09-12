@@ -124,6 +124,22 @@ def compare(runs: list[dict], key: str, horizons: range) -> list[dict]:
     return rows
 
 
+def independent_histories(runs: list[dict], h: int) -> int:
+    """How many genuinely distinct trajectories exist at this horizon.
+
+    Continuations in an arm are byte-identical before their fork step, so twenty
+    runs at h=8 are seven trajectories. Reported next to every effect size
+    because an effect computed over pseudo-replicates is not an effect, and the
+    first version of this analysis published one.
+    """
+    keys = set()
+    for r in runs:
+        if len(r["steps"]) < h:
+            continue
+        keys.add((r["arm"], "prefix") if r["arm"] and h <= r["fork"] else (r["run"],))
+    return len(keys)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--labels", required=True)
@@ -163,10 +179,12 @@ def main() -> None:
         print(f"    h={h:<3} runs at risk {len(alive):>2}   distinct histories {len(distinct):>2}")
 
     print("\n── effect size by horizon (Cohen's d, FAIL − PASS) ──")
-    print("  Magnitudes, not signs. |d| < 0.2 is nothing whatever the sign says.\n")
+    print("  Magnitudes, not signs. |d| < 0.2 is nothing whatever the sign says.")
+    print("  n_P / n_F are runs still alive at the horizon — late rows are survivors.")
+    print("  ind is distinct histories: an effect over pseudo-replicates is not an effect.\n")
     results = {}
     keys = ["cum_edits", "diff_bytes", "distinct_states", "cum_reverts", "cum_tests"]
-    print(f"  {'h':>3}{'n_P':>5}{'n_F':>4}  " + "".join(f"{k:>17}" for k in keys))
+    print(f"  {'h':>3}{'n_P':>5}{'n_F':>4}{'ind':>5}  " + "".join(f"{k:>17}" for k in keys))
     for h in range(8, 45, 2):
         series = {k: compare(runs, k, range(h, h + 1)) for k in keys}
         if not series["cum_edits"]:
@@ -178,7 +196,8 @@ def main() -> None:
             d = row and row["cohen_d"]
             cells.append(f"{row['pass_mean']:5.0f}/{row['fail_mean']:<5.0f}"
                          + ("  —  " if d is None else f"{d:+5.2f}") if row else "")
-        print(f"  {h:>3}{first['n_pass']:>5}{first['n_fail']:>4}  "
+        print(f"  {h:>3}{first['n_pass']:>5}{first['n_fail']:>4}"
+              f"{independent_histories(runs, h):>5}  "
               + "".join(f"{c:>17}" for c in cells))
     for key in CUMULATIVE:
         results[key] = compare(runs, key, range(1, 45))

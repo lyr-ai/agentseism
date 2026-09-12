@@ -21,6 +21,17 @@ trajectories cannot be regenerated. A rerun would be different runs.
     h2_phase_b/         16 continuations (8 arm A, 8 arm B; B_1 incomplete)
     *_aborted, *_hung   infrastructure-failed batches, kept as recorded
 
+## The second bite
+
+The same cleaner also gutted the mini-swe-agent checkout and its virtualenv that
+every script depended on — `src/minisweagent/` survives as empty directories,
+`config/benchmarks/swebench.yaml` is gone, and the venv's site-packages with it.
+
+The fix was not to rescue it again. `.venv-eval/` in this repository now holds
+`mini-swe-agent==2.4.6` and `swebench==5.0.2` installed from PyPI, so nothing
+the analysis needs lives in a temp directory any more. Scripts take paths to it
+rather than to a scratch checkout.
+
 ## What is in git
 
 `*.json` trajectories and `*.probe.jsonl` probe records — 14 MB, textual,
