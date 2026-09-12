@@ -1,0 +1,66 @@
+2026-09-12 13:39:05,976 - INFO - Creating container for pytest-dev__pytest-10051...
+2026-09-12 13:39:06,005 - INFO - Container for pytest-dev__pytest-10051 created: a19cd1990279323a7f048a451b8395151675dd1a73d1973481b60fe31b54d7ad
+2026-09-12 13:39:06,051 - INFO - Container for pytest-dev__pytest-10051 started: a19cd1990279323a7f048a451b8395151675dd1a73d1973481b60fe31b54d7ad
+2026-09-12 13:39:06,052 - INFO - Intermediate patch for pytest-dev__pytest-10051 written to logs/run_evaluation/h2_phase_b__B_3/agentseism/pytest-dev__pytest-10051/patch.diff, now applying to container...
+2026-09-12 13:39:06,120 - INFO - >>>>> Applied Patch:
+Checking patch src/_pytest/logging.py...
+Applied patch src/_pytest/logging.py cleanly.
+
+2026-09-12 13:39:06,198 - INFO - Git diff before:
+diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py
+index a4f4214b1..661a36026 100644
+--- a/src/_pytest/logging.py
++++ b/src/_pytest/logging.py
+@@ -440,7 +440,18 @@ class LogCaptureFixture:
+ 
+     def clear(self) -> None:
+         """Reset the list of log records and the captured log text."""
++        old_records = self.handler.records
+         self.handler.reset()
++        new_records = self.handler.records
++        # Update the stash to point to the new records list.
++        # The stash stores a reference to the records list for the current phase.
++        # When clear() is called, we need to update that reference to point to the
++        # new empty list, otherwise caplog.records and get_records(when) would return
++        # different lists.
++        caplog_records = self._item.stash[caplog_records_key]
++        for when in caplog_records:
++            if caplog_records[when] is old_records:
++                caplog_records[when] = new_records
+ 
+     def set_level(self, level: Union[int, str], logger: Optional[str] = None) -> None:
+         """Set the level of a logger for the duration of a test.
+2026-09-12 13:39:06,199 - INFO - Eval script for pytest-dev__pytest-10051 written to logs/run_evaluation/h2_phase_b__B_3/agentseism/pytest-dev__pytest-10051/eval.sh; copying to container...
+2026-09-12 13:39:10,529 - INFO - Test runtime: 4.30 seconds
+2026-09-12 13:39:10,529 - INFO - Test output for pytest-dev__pytest-10051 written to logs/run_evaluation/h2_phase_b__B_3/agentseism/pytest-dev__pytest-10051/test_output.txt
+2026-09-12 13:39:10,579 - INFO - Git diff after:
+diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py
+index a4f4214b1..661a36026 100644
+--- a/src/_pytest/logging.py
++++ b/src/_pytest/logging.py
+@@ -440,7 +440,18 @@ class LogCaptureFixture:
+ 
+     def clear(self) -> None:
+         """Reset the list of log records and the captured log text."""
++        old_records = self.handler.records
+         self.handler.reset()
++        new_records = self.handler.records
++        # Update the stash to point to the new records list.
++        # The stash stores a reference to the records list for the current phase.
++        # When clear() is called, we need to update that reference to point to the
++        # new empty list, otherwise caplog.records and get_records(when) would return
++        # different lists.
++        caplog_records = self._item.stash[caplog_records_key]
++        for when in caplog_records:
++            if caplog_records[when] is old_records:
++                caplog_records[when] = new_records
+ 
+     def set_level(self, level: Union[int, str], logger: Optional[str] = None) -> None:
+         """Set the level of a logger for the duration of a test.
+2026-09-12 13:39:10,579 - INFO - Grading answer for pytest-dev__pytest-10051...
+2026-09-12 13:39:10,581 - INFO - report: {'pytest-dev__pytest-10051': {'patch_is_None': False, 'patch_exists': True, 'patch_successfully_applied': True, 'resolved': True, 'infra_failure': False, 'tests_status': {'FAIL_TO_PASS': {'success': ['testing/logging/test_fixture.py::test_clear_for_call_stage'], 'failure': []}, 'PASS_TO_PASS': {'success': ['testing/logging/test_fixture.py::test_change_level', 'testing/logging/test_fixture.py::test_with_statement', 'testing/logging/test_fixture.py::test_log_access', 'testing/logging/test_fixture.py::test_messages', 'testing/logging/test_fixture.py::test_record_tuples', 'testing/logging/test_fixture.py::test_unicode', 'testing/logging/test_fixture.py::test_clear', 'testing/logging/test_fixture.py::test_caplog_captures_for_all_stages', 'testing/logging/test_fixture.py::test_fixture_help', 'testing/logging/test_fixture.py::test_change_level_undo', 'testing/logging/test_fixture.py::test_change_level_undos_handler_level', 'testing/logging/test_fixture.py::test_ini_controls_global_log_level', 'testing/logging/test_fixture.py::test_caplog_can_override_global_log_level', 'testing/logging/test_fixture.py::test_caplog_captures_despite_exception', 'testing/logging/test_fixture.py::test_log_report_captures_according_to_config_option_upon_failure'], 'failure': []}, 'FAIL_TO_FAIL': {'success': [], 'failure': []}, 'PASS_TO_FAIL': {'success': [], 'failure': []}}}}
+Result for pytest-dev__pytest-10051: resolved: True
+2026-09-12 13:39:10,582 - INFO - Attempting to stop container sweb.eval.pytest-dev__pytest-10051.h2_phase_b__B_3...
+2026-09-12 13:39:25,719 - INFO - Container sweb.eval.pytest-dev__pytest-10051.h2_phase_b__B_3 stopped successfully.
+2026-09-12 13:39:25,720 - INFO - Attempting to remove container sweb.eval.pytest-dev__pytest-10051.h2_phase_b__B_3...
+2026-09-12 13:39:25,769 - INFO - Container sweb.eval.pytest-dev__pytest-10051.h2_phase_b__B_3 removed successfully.

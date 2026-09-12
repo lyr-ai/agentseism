@@ -1,0 +1,82 @@
+2026-09-12 13:35:40,855 - INFO - Creating container for pytest-dev__pytest-10051...
+2026-09-12 13:35:40,885 - INFO - Container for pytest-dev__pytest-10051 created: 585ad17df814ea029630cddcbf34b51109dd30027f22453140f8e6d028bdf760
+2026-09-12 13:35:40,930 - INFO - Container for pytest-dev__pytest-10051 started: 585ad17df814ea029630cddcbf34b51109dd30027f22453140f8e6d028bdf760
+2026-09-12 13:35:40,931 - INFO - Intermediate patch for pytest-dev__pytest-10051 written to logs/run_evaluation/h2_phase_b__A_1/agentseism/pytest-dev__pytest-10051/patch.diff, now applying to container...
+2026-09-12 13:35:41,000 - INFO - >>>>> Applied Patch:
+Checking patch src/_pytest/logging.py...
+Applied patch src/_pytest/logging.py cleanly.
+
+2026-09-12 13:35:41,079 - INFO - Git diff before:
+diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py
+index a4f4214b1..2de169ba2 100644
+--- a/src/_pytest/logging.py
++++ b/src/_pytest/logging.py
+@@ -335,6 +335,7 @@ class LogCaptureHandler(logging_StreamHandler):
+         """Create a new log handler."""
+         super().__init__(StringIO())
+         self.records: List[logging.LogRecord] = []
++        self._when: Optional[str] = None
+ 
+     def emit(self, record: logging.LogRecord) -> None:
+         """Keep the log records in a list in addition to the log text."""
+@@ -440,7 +441,10 @@ class LogCaptureFixture:
+ 
+     def clear(self) -> None:
+         """Reset the list of log records and the captured log text."""
++        when = self.handler._when
+         self.handler.reset()
++        if when is not None:
++            self._item.stash[caplog_records_key][when] = self.handler.records
+ 
+     def set_level(self, level: Union[int, str], logger: Optional[str] = None) -> None:
+         """Set the level of a logger for the duration of a test.
+@@ -695,6 +699,7 @@ class LoggingPlugin:
+             level=self.log_level,
+         ) as report_handler:
+             caplog_handler.reset()
++            caplog_handler._when = when
+             report_handler.reset()
+             item.stash[caplog_records_key][when] = caplog_handler.records
+             item.stash[caplog_handler_key] = caplog_handler
+2026-09-12 13:35:41,080 - INFO - Eval script for pytest-dev__pytest-10051 written to logs/run_evaluation/h2_phase_b__A_1/agentseism/pytest-dev__pytest-10051/eval.sh; copying to container...
+2026-09-12 13:35:45,311 - INFO - Test runtime: 4.20 seconds
+2026-09-12 13:35:45,312 - INFO - Test output for pytest-dev__pytest-10051 written to logs/run_evaluation/h2_phase_b__A_1/agentseism/pytest-dev__pytest-10051/test_output.txt
+2026-09-12 13:35:45,362 - INFO - Git diff after:
+diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py
+index a4f4214b1..2de169ba2 100644
+--- a/src/_pytest/logging.py
++++ b/src/_pytest/logging.py
+@@ -335,6 +335,7 @@ class LogCaptureHandler(logging_StreamHandler):
+         """Create a new log handler."""
+         super().__init__(StringIO())
+         self.records: List[logging.LogRecord] = []
++        self._when: Optional[str] = None
+ 
+     def emit(self, record: logging.LogRecord) -> None:
+         """Keep the log records in a list in addition to the log text."""
+@@ -440,7 +441,10 @@ class LogCaptureFixture:
+ 
+     def clear(self) -> None:
+         """Reset the list of log records and the captured log text."""
++        when = self.handler._when
+         self.handler.reset()
++        if when is not None:
++            self._item.stash[caplog_records_key][when] = self.handler.records
+ 
+     def set_level(self, level: Union[int, str], logger: Optional[str] = None) -> None:
+         """Set the level of a logger for the duration of a test.
+@@ -695,6 +699,7 @@ class LoggingPlugin:
+             level=self.log_level,
+         ) as report_handler:
+             caplog_handler.reset()
++            caplog_handler._when = when
+             report_handler.reset()
+             item.stash[caplog_records_key][when] = caplog_handler.records
+             item.stash[caplog_handler_key] = caplog_handler
+2026-09-12 13:35:45,362 - INFO - Grading answer for pytest-dev__pytest-10051...
+2026-09-12 13:35:45,364 - INFO - report: {'pytest-dev__pytest-10051': {'patch_is_None': False, 'patch_exists': True, 'patch_successfully_applied': True, 'resolved': True, 'infra_failure': False, 'tests_status': {'FAIL_TO_PASS': {'success': ['testing/logging/test_fixture.py::test_clear_for_call_stage'], 'failure': []}, 'PASS_TO_PASS': {'success': ['testing/logging/test_fixture.py::test_change_level', 'testing/logging/test_fixture.py::test_with_statement', 'testing/logging/test_fixture.py::test_log_access', 'testing/logging/test_fixture.py::test_messages', 'testing/logging/test_fixture.py::test_record_tuples', 'testing/logging/test_fixture.py::test_unicode', 'testing/logging/test_fixture.py::test_clear', 'testing/logging/test_fixture.py::test_caplog_captures_for_all_stages', 'testing/logging/test_fixture.py::test_fixture_help', 'testing/logging/test_fixture.py::test_change_level_undo', 'testing/logging/test_fixture.py::test_change_level_undos_handler_level', 'testing/logging/test_fixture.py::test_ini_controls_global_log_level', 'testing/logging/test_fixture.py::test_caplog_can_override_global_log_level', 'testing/logging/test_fixture.py::test_caplog_captures_despite_exception', 'testing/logging/test_fixture.py::test_log_report_captures_according_to_config_option_upon_failure'], 'failure': []}, 'FAIL_TO_FAIL': {'success': [], 'failure': []}, 'PASS_TO_FAIL': {'success': [], 'failure': []}}}}
+Result for pytest-dev__pytest-10051: resolved: True
+2026-09-12 13:35:45,365 - INFO - Attempting to stop container sweb.eval.pytest-dev__pytest-10051.h2_phase_b__A_1...
+2026-09-12 13:36:00,511 - INFO - Container sweb.eval.pytest-dev__pytest-10051.h2_phase_b__A_1 stopped successfully.
+2026-09-12 13:36:00,511 - INFO - Attempting to remove container sweb.eval.pytest-dev__pytest-10051.h2_phase_b__A_1...
+2026-09-12 13:36:00,564 - INFO - Container sweb.eval.pytest-dev__pytest-10051.h2_phase_b__A_1 removed successfully.

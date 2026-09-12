@@ -1,0 +1,58 @@
+2026-09-12 13:33:04,900 - INFO - Creating container for pytest-dev__pytest-10051...
+2026-09-12 13:33:04,938 - INFO - Container for pytest-dev__pytest-10051 created: b57c5901cb661a0ce85dcb47caa7b4f3f6b8bffc7f01acd78e0041ddb5bd40d9
+2026-09-12 13:33:04,995 - INFO - Container for pytest-dev__pytest-10051 started: b57c5901cb661a0ce85dcb47caa7b4f3f6b8bffc7f01acd78e0041ddb5bd40d9
+2026-09-12 13:33:04,995 - INFO - Intermediate patch for pytest-dev__pytest-10051 written to logs/run_evaluation/smoke_a1_r0/agentseism/pytest-dev__pytest-10051/patch.diff, now applying to container...
+2026-09-12 13:33:05,083 - INFO - >>>>> Applied Patch:
+Checking patch src/_pytest/logging.py...
+Applied patch src/_pytest/logging.py cleanly.
+
+2026-09-12 13:33:05,201 - INFO - Git diff before:
+diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py
+index a4f4214b1..3c3a87791 100644
+--- a/src/_pytest/logging.py
++++ b/src/_pytest/logging.py
+@@ -440,7 +440,14 @@ class LogCaptureFixture:
+ 
+     def clear(self) -> None:
+         """Reset the list of log records and the captured log text."""
++        # Find the current phase's stash entry (it should point to the same list as handler.records)
++        current_records = self.handler.records
+         self.handler.reset()
++        stash = self._item.stash[caplog_records_key]
++        for when in stash:
++            if stash[when] is current_records:
++                stash[when] = self.handler.records
++                break
+ 
+     def set_level(self, level: Union[int, str], logger: Optional[str] = None) -> None:
+         """Set the level of a logger for the duration of a test.
+2026-09-12 13:33:05,202 - INFO - Eval script for pytest-dev__pytest-10051 written to logs/run_evaluation/smoke_a1_r0/agentseism/pytest-dev__pytest-10051/eval.sh; copying to container...
+2026-09-12 13:33:09,763 - INFO - Test runtime: 4.53 seconds
+2026-09-12 13:33:09,764 - INFO - Test output for pytest-dev__pytest-10051 written to logs/run_evaluation/smoke_a1_r0/agentseism/pytest-dev__pytest-10051/test_output.txt
+2026-09-12 13:33:09,814 - INFO - Git diff after:
+diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py
+index a4f4214b1..3c3a87791 100644
+--- a/src/_pytest/logging.py
++++ b/src/_pytest/logging.py
+@@ -440,7 +440,14 @@ class LogCaptureFixture:
+ 
+     def clear(self) -> None:
+         """Reset the list of log records and the captured log text."""
++        # Find the current phase's stash entry (it should point to the same list as handler.records)
++        current_records = self.handler.records
+         self.handler.reset()
++        stash = self._item.stash[caplog_records_key]
++        for when in stash:
++            if stash[when] is current_records:
++                stash[when] = self.handler.records
++                break
+ 
+     def set_level(self, level: Union[int, str], logger: Optional[str] = None) -> None:
+         """Set the level of a logger for the duration of a test.
+2026-09-12 13:33:09,814 - INFO - Grading answer for pytest-dev__pytest-10051...
+2026-09-12 13:33:09,815 - INFO - report: {'pytest-dev__pytest-10051': {'patch_is_None': False, 'patch_exists': True, 'patch_successfully_applied': True, 'resolved': True, 'infra_failure': False, 'tests_status': {'FAIL_TO_PASS': {'success': ['testing/logging/test_fixture.py::test_clear_for_call_stage'], 'failure': []}, 'PASS_TO_PASS': {'success': ['testing/logging/test_fixture.py::test_change_level', 'testing/logging/test_fixture.py::test_with_statement', 'testing/logging/test_fixture.py::test_log_access', 'testing/logging/test_fixture.py::test_messages', 'testing/logging/test_fixture.py::test_record_tuples', 'testing/logging/test_fixture.py::test_unicode', 'testing/logging/test_fixture.py::test_clear', 'testing/logging/test_fixture.py::test_caplog_captures_for_all_stages', 'testing/logging/test_fixture.py::test_fixture_help', 'testing/logging/test_fixture.py::test_change_level_undo', 'testing/logging/test_fixture.py::test_change_level_undos_handler_level', 'testing/logging/test_fixture.py::test_ini_controls_global_log_level', 'testing/logging/test_fixture.py::test_caplog_can_override_global_log_level', 'testing/logging/test_fixture.py::test_caplog_captures_despite_exception', 'testing/logging/test_fixture.py::test_log_report_captures_according_to_config_option_upon_failure'], 'failure': []}, 'FAIL_TO_FAIL': {'success': [], 'failure': []}, 'PASS_TO_FAIL': {'success': [], 'failure': []}}}}
+Result for pytest-dev__pytest-10051: resolved: True
+2026-09-12 13:33:09,816 - INFO - Attempting to stop container sweb.eval.pytest-dev__pytest-10051.smoke_a1_r0...
+2026-09-12 13:33:25,050 - INFO - Container sweb.eval.pytest-dev__pytest-10051.smoke_a1_r0 stopped successfully.
+2026-09-12 13:33:25,051 - INFO - Attempting to remove container sweb.eval.pytest-dev__pytest-10051.smoke_a1_r0...
+2026-09-12 13:33:25,099 - INFO - Container sweb.eval.pytest-dev__pytest-10051.smoke_a1_r0 removed successfully.

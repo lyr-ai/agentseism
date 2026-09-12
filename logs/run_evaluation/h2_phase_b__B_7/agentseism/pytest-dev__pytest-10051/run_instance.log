@@ -1,0 +1,84 @@
+2026-09-12 13:40:37,680 - INFO - Creating container for pytest-dev__pytest-10051...
+2026-09-12 13:40:37,710 - INFO - Container for pytest-dev__pytest-10051 created: 7a73422415e22f4c691087fd036cf7bd4d02003e04900cb49c08a6d39d97314e
+2026-09-12 13:40:37,757 - INFO - Container for pytest-dev__pytest-10051 started: 7a73422415e22f4c691087fd036cf7bd4d02003e04900cb49c08a6d39d97314e
+2026-09-12 13:40:37,757 - INFO - Intermediate patch for pytest-dev__pytest-10051 written to logs/run_evaluation/h2_phase_b__B_7/agentseism/pytest-dev__pytest-10051/patch.diff, now applying to container...
+2026-09-12 13:40:37,821 - INFO - Failed to apply patch to container: git apply --verbose
+2026-09-12 13:40:37,976 - INFO - Failed to apply patch to container: git apply --verbose --3way
+2026-09-12 13:40:38,116 - INFO - Failed to apply patch to container: git apply --verbose --reject
+2026-09-12 13:40:38,231 - INFO - >>>>> Applied Patch:
+patching file src/_pytest/logging.py
+
+2026-09-12 13:40:38,280 - INFO - Git diff before:
+diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py
+index a4f4214b1..45faa3349 100644
+--- a/src/_pytest/logging.py
++++ b/src/_pytest/logging.py
+@@ -46,6 +46,7 @@ DEFAULT_LOG_DATE_FORMAT = "%H:%M:%S"
+ _ANSI_ESCAPE_SEQ = re.compile(r"\x1b\[[\d;]+m")
+ caplog_handler_key = StashKey["LogCaptureHandler"]()
+ caplog_records_key = StashKey[Dict[str, List[logging.LogRecord]]]()
++caplog_records_current_when_key = StashKey[str]()
+ 
+ 
+ def _remove_ansi_escape_sequences(text: str) -> str:
+@@ -396,6 +397,11 @@ class LogCaptureFixture:
+ 
+         .. versionadded:: 3.4
+         """
++        current_when = self._item.stash.get(caplog_records_current_when_key, None)
++        # If we're querying the current phase, return the live records from the handler.
++        # This ensures that caplog.clear() and subsequent logging are reflected correctly.
++        if when == current_when:
++            return self.records
+         return self._item.stash[caplog_records_key].get(when, [])
+ 
+     @property
+@@ -698,6 +704,7 @@ class LoggingPlugin:
+             report_handler.reset()
+             item.stash[caplog_records_key][when] = caplog_handler.records
+             item.stash[caplog_handler_key] = caplog_handler
++            item.stash[caplog_records_current_when_key] = when
+ 
+             yield
+2026-09-12 13:40:38,281 - INFO - Eval script for pytest-dev__pytest-10051 written to logs/run_evaluation/h2_phase_b__B_7/agentseism/pytest-dev__pytest-10051/eval.sh; copying to container...
+2026-09-12 13:40:42,527 - INFO - Test runtime: 4.21 seconds
+2026-09-12 13:40:42,527 - INFO - Test output for pytest-dev__pytest-10051 written to logs/run_evaluation/h2_phase_b__B_7/agentseism/pytest-dev__pytest-10051/test_output.txt
+2026-09-12 13:40:42,578 - INFO - Git diff after:
+diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py
+index a4f4214b1..45faa3349 100644
+--- a/src/_pytest/logging.py
++++ b/src/_pytest/logging.py
+@@ -46,6 +46,7 @@ DEFAULT_LOG_DATE_FORMAT = "%H:%M:%S"
+ _ANSI_ESCAPE_SEQ = re.compile(r"\x1b\[[\d;]+m")
+ caplog_handler_key = StashKey["LogCaptureHandler"]()
+ caplog_records_key = StashKey[Dict[str, List[logging.LogRecord]]]()
++caplog_records_current_when_key = StashKey[str]()
+ 
+ 
+ def _remove_ansi_escape_sequences(text: str) -> str:
+@@ -396,6 +397,11 @@ class LogCaptureFixture:
+ 
+         .. versionadded:: 3.4
+         """
++        current_when = self._item.stash.get(caplog_records_current_when_key, None)
++        # If we're querying the current phase, return the live records from the handler.
++        # This ensures that caplog.clear() and subsequent logging are reflected correctly.
++        if when == current_when:
++            return self.records
+         return self._item.stash[caplog_records_key].get(when, [])
+ 
+     @property
+@@ -698,6 +704,7 @@ class LoggingPlugin:
+             report_handler.reset()
+             item.stash[caplog_records_key][when] = caplog_handler.records
+             item.stash[caplog_handler_key] = caplog_handler
++            item.stash[caplog_records_current_when_key] = when
+ 
+             yield
+2026-09-12 13:40:42,578 - INFO - Grading answer for pytest-dev__pytest-10051...
+2026-09-12 13:40:42,580 - INFO - report: {'pytest-dev__pytest-10051': {'patch_is_None': False, 'patch_exists': True, 'patch_successfully_applied': True, 'resolved': True, 'infra_failure': False, 'tests_status': {'FAIL_TO_PASS': {'success': ['testing/logging/test_fixture.py::test_clear_for_call_stage'], 'failure': []}, 'PASS_TO_PASS': {'success': ['testing/logging/test_fixture.py::test_change_level', 'testing/logging/test_fixture.py::test_with_statement', 'testing/logging/test_fixture.py::test_log_access', 'testing/logging/test_fixture.py::test_messages', 'testing/logging/test_fixture.py::test_record_tuples', 'testing/logging/test_fixture.py::test_unicode', 'testing/logging/test_fixture.py::test_clear', 'testing/logging/test_fixture.py::test_caplog_captures_for_all_stages', 'testing/logging/test_fixture.py::test_fixture_help', 'testing/logging/test_fixture.py::test_change_level_undo', 'testing/logging/test_fixture.py::test_change_level_undos_handler_level', 'testing/logging/test_fixture.py::test_ini_controls_global_log_level', 'testing/logging/test_fixture.py::test_caplog_can_override_global_log_level', 'testing/logging/test_fixture.py::test_caplog_captures_despite_exception', 'testing/logging/test_fixture.py::test_log_report_captures_according_to_config_option_upon_failure'], 'failure': []}, 'FAIL_TO_FAIL': {'success': [], 'failure': []}, 'PASS_TO_FAIL': {'success': [], 'failure': []}}}}
+Result for pytest-dev__pytest-10051: resolved: True
+2026-09-12 13:40:42,581 - INFO - Attempting to stop container sweb.eval.pytest-dev__pytest-10051.h2_phase_b__B_7...
+2026-09-12 13:40:57,734 - INFO - Container sweb.eval.pytest-dev__pytest-10051.h2_phase_b__B_7 stopped successfully.
+2026-09-12 13:40:57,735 - INFO - Attempting to remove container sweb.eval.pytest-dev__pytest-10051.h2_phase_b__B_7...
+2026-09-12 13:40:57,785 - INFO - Container sweb.eval.pytest-dev__pytest-10051.h2_phase_b__B_7 removed successfully.

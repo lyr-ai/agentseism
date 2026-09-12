@@ -1,0 +1,46 @@
+2026-09-12 13:37:57,586 - INFO - Creating container for pytest-dev__pytest-10051...
+2026-09-12 13:37:57,616 - INFO - Container for pytest-dev__pytest-10051 created: 410c3d32006fb3275f6a3cc379256977e9a85070a1ddd70d2d96774d25cd6e23
+2026-09-12 13:37:57,661 - INFO - Container for pytest-dev__pytest-10051 started: 410c3d32006fb3275f6a3cc379256977e9a85070a1ddd70d2d96774d25cd6e23
+2026-09-12 13:37:57,661 - INFO - Intermediate patch for pytest-dev__pytest-10051 written to logs/run_evaluation/h2_phase_b__A_7/agentseism/pytest-dev__pytest-10051/patch.diff, now applying to container...
+2026-09-12 13:37:57,729 - INFO - >>>>> Applied Patch:
+Checking patch src/_pytest/logging.py...
+Applied patch src/_pytest/logging.py cleanly.
+
+2026-09-12 13:37:57,809 - INFO - Git diff before:
+diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py
+index a4f4214b1..a2bd105b2 100644
+--- a/src/_pytest/logging.py
++++ b/src/_pytest/logging.py
+@@ -396,6 +396,8 @@ class LogCaptureFixture:
+ 
+         .. versionadded:: 3.4
+         """
++        if when == "call":
++            return self.records
+         return self._item.stash[caplog_records_key].get(when, [])
+ 
+     @property
+2026-09-12 13:37:57,809 - INFO - Eval script for pytest-dev__pytest-10051 written to logs/run_evaluation/h2_phase_b__A_7/agentseism/pytest-dev__pytest-10051/eval.sh; copying to container...
+2026-09-12 13:38:02,043 - INFO - Test runtime: 4.20 seconds
+2026-09-12 13:38:02,043 - INFO - Test output for pytest-dev__pytest-10051 written to logs/run_evaluation/h2_phase_b__A_7/agentseism/pytest-dev__pytest-10051/test_output.txt
+2026-09-12 13:38:02,094 - INFO - Git diff after:
+diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py
+index a4f4214b1..a2bd105b2 100644
+--- a/src/_pytest/logging.py
++++ b/src/_pytest/logging.py
+@@ -396,6 +396,8 @@ class LogCaptureFixture:
+ 
+         .. versionadded:: 3.4
+         """
++        if when == "call":
++            return self.records
+         return self._item.stash[caplog_records_key].get(when, [])
+ 
+     @property
+2026-09-12 13:38:02,094 - INFO - Grading answer for pytest-dev__pytest-10051...
+2026-09-12 13:38:02,095 - INFO - report: {'pytest-dev__pytest-10051': {'patch_is_None': False, 'patch_exists': True, 'patch_successfully_applied': True, 'resolved': True, 'infra_failure': False, 'tests_status': {'FAIL_TO_PASS': {'success': ['testing/logging/test_fixture.py::test_clear_for_call_stage'], 'failure': []}, 'PASS_TO_PASS': {'success': ['testing/logging/test_fixture.py::test_change_level', 'testing/logging/test_fixture.py::test_with_statement', 'testing/logging/test_fixture.py::test_log_access', 'testing/logging/test_fixture.py::test_messages', 'testing/logging/test_fixture.py::test_record_tuples', 'testing/logging/test_fixture.py::test_unicode', 'testing/logging/test_fixture.py::test_clear', 'testing/logging/test_fixture.py::test_caplog_captures_for_all_stages', 'testing/logging/test_fixture.py::test_fixture_help', 'testing/logging/test_fixture.py::test_change_level_undo', 'testing/logging/test_fixture.py::test_change_level_undos_handler_level', 'testing/logging/test_fixture.py::test_ini_controls_global_log_level', 'testing/logging/test_fixture.py::test_caplog_can_override_global_log_level', 'testing/logging/test_fixture.py::test_caplog_captures_despite_exception', 'testing/logging/test_fixture.py::test_log_report_captures_according_to_config_option_upon_failure'], 'failure': []}, 'FAIL_TO_FAIL': {'success': [], 'failure': []}, 'PASS_TO_FAIL': {'success': [], 'failure': []}}}}
+Result for pytest-dev__pytest-10051: resolved: True
+2026-09-12 13:38:02,096 - INFO - Attempting to stop container sweb.eval.pytest-dev__pytest-10051.h2_phase_b__A_7...
+2026-09-12 13:38:17,254 - INFO - Container sweb.eval.pytest-dev__pytest-10051.h2_phase_b__A_7 stopped successfully.
+2026-09-12 13:38:17,255 - INFO - Attempting to remove container sweb.eval.pytest-dev__pytest-10051.h2_phase_b__A_7...
+2026-09-12 13:38:17,308 - INFO - Container sweb.eval.pytest-dev__pytest-10051.h2_phase_b__A_7 removed successfully.

@@ -1503,3 +1503,96 @@ the diagnosis above is wrong** and the throughput problem was never the network
 Cost note, since the migration looks more expensive per hour: `A_7` alone spent
 4.3 hours waiting on failed transport attempts. Cheap GPU-hours are not cheap
 when they are spent on a broken link.
+
+---
+
+## 2026-09-12 — Correctness labels: the variation is consequential
+
+**Exploratory.** No pre-registration covers correctness — it was not part of the
+coding experiment, of H2 or of H3. Everything here is hypothesis-generating.
+
+Before the labels: a note on what is no longer available. A temp cleaner removed
+the primary 30-run experiment's trajectories and batch A0's while leaving their
+directories, so the cross-task correctness table this step was meant to produce
+cannot be built. What survives is twenty submitted runs of
+`pytest-dev__pytest-10051`, now in `data/runs/` rather than in scratch.
+
+Evaluated with the official SWE-bench harness (5.0.2,
+`SWE-bench/SWE-bench_Verified`), one evaluation per run because predictions are
+keyed by instance and these are twenty runs of one instance.
+
+    batch  run   role       steps         final  patch B  correct
+    a1     r0    donor A       31  ed135952e20c      843  PASS
+    a1     r1                  41  901cfacceed3     1229  PASS
+    a1     r2                  33  687e8628805f      978  PASS
+    a1     r3    donor B       47  5ece9b7438d7     1939  PASS
+    a1     r4                  31  5b38138161e5      690  FAIL
+    b      A_0   fork A        33  8d1db73994d7      567  PASS
+    b      A_1   fork A        31  74f7c2cc1bc7     1361  PASS
+    b      A_2   fork A        44  57d9a65e02a9     1920  PASS
+    b      A_3   fork A        28  31912371fe29      709  FAIL
+    b      A_4   fork A        23  8d1db73994d7      567  PASS
+    b      A_5   fork A        47  11ce8fce3df2     2456  PASS
+    b      A_6   fork A        32  2bb44b683d9c      629  FAIL
+    b      A_7   fork A        23  8c81d60d75ee      388  PASS
+    b      B_0   fork B        32  ad3317821606      623  FAIL
+    b      B_2   fork B        24  f828205d0ea2      900  PASS
+    b      B_3   fork B        35  4d6cea9d7d54     1125  PASS
+    b      B_4   fork B        25  7a9b3555f5a5      991  PASS
+    b      B_5   fork B        67  bacc5bb7e7d8     1674  PASS
+    b      B_6   fork B        30  b7c0b5eebc09      999  PASS
+    b      B_7   fork B        70  65a33bc84a69     1295  PASS
+
+    overall  16/20 correct · 19 distinct final states · MIXED CORRECTNESS
+
+### The variation is consequential
+
+Same task, same model, temperature 0, and the outcome differs. That is the
+question this project has been circling since the GAIA null, and it now has an
+answer on real data: **a different ending is sometimes a wrong ending.**
+
+### And the first quantitative answer about *where*
+
+```text
+A1, fresh runs                      4/5   = 80%
+continuations from a correct donor  12/15 = 80%
+    arm A  6/8   (donor r0 PASS, forked at step 8)
+    arm B  6/7   (donor r3 PASS, forked at step 10)
+```
+
+Both donors were correct. Continuations carry the donor's exact tracked source,
+its scratch files and its full transcript — and succeed at the rate of a run
+started from nothing.
+
+> **The first eight to ten steps carry no detectable information about whether
+> the run will be correct.**
+
+Which is a direct, negative answer to *where should a steering intervention go*:
+not there. Whatever makes a run fail happens later, and a fork point chosen
+because it is a convenient shared state is not chosen where the outcome is
+decided.
+
+**Stated with its power.** Twenty runs cannot separate 80% from 75%. The honest
+claim is that no *large* effect is detectable, not that the effect is zero. What
+the sample does support is the negative design implication: a steering point at
+step 8 would have nothing to act on.
+
+### Two observations not to over-read
+
+`A_0` and `A_4` reached the byte-identical final state `8d1db739…` (567 bytes),
+the first terminal reconvergence in this dataset. Both correct.
+
+Patch size looks like a predictor and is not: the four failures are 690, 709,
+629 and 623 bytes, but passes include 388 and two of 567. With four failures,
+any rule fitted here is noise.
+
+### What this unblocks and what it does not
+
+Unblocked: the project can now ask which variation matters rather than only
+where variation exists. Eligibility for the next stage changes from *interesting
+topology* to **outcome variance**, and this task has it.
+
+Not unblocked: one task, one model, and a base failure rate of 20% means a
+future intervention experiment needs a much larger sample to detect a change in
+it. Four failures is enough to establish that failures exist and not enough to
+characterise them.

@@ -1,0 +1,49 @@
+diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py
+index a4f4214b1..e5d421f93 100644
+--- a/src/_pytest/logging.py
++++ b/src/_pytest/logging.py
+@@ -46,6 +46,7 @@ DEFAULT_LOG_DATE_FORMAT = "%H:%M:%S"
+ _ANSI_ESCAPE_SEQ = re.compile(r"\x1b\[[\d;]+m")
+ caplog_handler_key = StashKey["LogCaptureHandler"]()
+ caplog_records_key = StashKey[Dict[str, List[logging.LogRecord]]]()
++caplog_current_phase_key = StashKey[Optional[str]]()
+ 
+ 
+ def _remove_ansi_escape_sequences(text: str) -> str:
+@@ -342,7 +343,7 @@ class LogCaptureHandler(logging_StreamHandler):
+         super().emit(record)
+ 
+     def reset(self) -> None:
+-        self.records = []
++        self.records.clear()
+         self.stream = StringIO()
+ 
+     def handleError(self, record: logging.LogRecord) -> None:
+@@ -396,6 +397,12 @@ class LogCaptureFixture:
+ 
+         .. versionadded:: 3.4
+         """
++        try:
++            current_phase = self._item.stash[caplog_current_phase_key]
++        except KeyError:
++            current_phase = None
++        if when == current_phase:
++            return self.handler.records
+         return self._item.stash[caplog_records_key].get(when, [])
+ 
+     @property
+@@ -694,10 +701,15 @@ class LoggingPlugin:
+             self.report_handler,
+             level=self.log_level,
+         ) as report_handler:
++            # Copy previous phase records to preserve them (not the current phase)
++            for phase in item.stash[caplog_records_key]:
++                item.stash[caplog_records_key][phase] = list(item.stash[caplog_records_key][phase])
+             caplog_handler.reset()
+             report_handler.reset()
+             item.stash[caplog_records_key][when] = caplog_handler.records
+             item.stash[caplog_handler_key] = caplog_handler
++            # Set current phase so get_records() can return live records
++            item.stash[caplog_current_phase_key] = when
+ 
+             yield

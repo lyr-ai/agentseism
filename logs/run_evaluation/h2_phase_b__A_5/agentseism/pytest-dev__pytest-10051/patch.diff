@@ -1,0 +1,62 @@
+diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py
+index a4f4214b1..6e07cb491 100644
+--- a/src/_pytest/logging.py
++++ b/src/_pytest/logging.py
+@@ -331,17 +331,20 @@ class catching_logs:
+ class LogCaptureHandler(logging_StreamHandler):
+     """A logging handler that stores log records and the log text."""
+ 
+-    def __init__(self) -> None:
++    def __init__(self, when: Optional[str] = None) -> None:
+         """Create a new log handler."""
+         super().__init__(StringIO())
+         self.records: List[logging.LogRecord] = []
++        self._when: Optional[str] = when
+ 
+     def emit(self, record: logging.LogRecord) -> None:
+         """Keep the log records in a list in addition to the log text."""
+         self.records.append(record)
+         super().emit(record)
+ 
+-    def reset(self) -> None:
++    def reset(self, when: Optional[str] = None) -> None:
++        if when is not None:
++            self._when = when
+         self.records = []
+         self.stream = StringIO()
+ 
+@@ -396,7 +399,12 @@ class LogCaptureFixture:
+ 
+         .. versionadded:: 3.4
+         """
+-        return self._item.stash[caplog_records_key].get(when, [])
++        all_records = self._item.stash[caplog_records_key]
++        # If this is the current phase, return the live records list
++        # so that clear() is properly reflected.
++        if when == self.handler._when:
++            return self.handler.records
++        return all_records.get(when, [])
+ 
+     @property
+     def text(self) -> str:
+@@ -440,7 +448,11 @@ class LogCaptureFixture:
+ 
+     def clear(self) -> None:
+         """Reset the list of log records and the captured log text."""
++        when = self.handler._when
+         self.handler.reset()
++        # Update the stash for the current phase to point to the new records list
++        if when is not None:
++            self._item.stash[caplog_records_key][when] = self.handler.records
+ 
+     def set_level(self, level: Union[int, str], logger: Optional[str] = None) -> None:
+         """Set the level of a logger for the duration of a test.
+@@ -694,7 +706,7 @@ class LoggingPlugin:
+             self.report_handler,
+             level=self.log_level,
+         ) as report_handler:
+-            caplog_handler.reset()
++            caplog_handler.reset(when)
+             report_handler.reset()
+             item.stash[caplog_records_key][when] = caplog_handler.records
+             item.stash[caplog_handler_key] = caplog_handler

@@ -1,0 +1,207 @@
+{
+ "exploratory": true,
+ "rows": [
+  {
+   "batch": "a1",
+   "run": "r0",
+   "role": "donor A",
+   "steps": 31,
+   "final": "ed135952e20c",
+   "patch_bytes": 843,
+   "resolved": true,
+   "has_report": true
+  },
+  {
+   "batch": "a1",
+   "run": "r1",
+   "role": "",
+   "steps": 41,
+   "final": "901cfacceed3",
+   "patch_bytes": 1229,
+   "resolved": true,
+   "has_report": true
+  },
+  {
+   "batch": "a1",
+   "run": "r2",
+   "role": "",
+   "steps": 33,
+   "final": "687e8628805f",
+   "patch_bytes": 978,
+   "resolved": true,
+   "has_report": true
+  },
+  {
+   "batch": "a1",
+   "run": "r3",
+   "role": "donor B",
+   "steps": 47,
+   "final": "5ece9b7438d7",
+   "patch_bytes": 1939,
+   "resolved": true,
+   "has_report": true
+  },
+  {
+   "batch": "a1",
+   "run": "r4",
+   "role": "",
+   "steps": 31,
+   "final": "5b38138161e5",
+   "patch_bytes": 690,
+   "resolved": false,
+   "has_report": true
+  },
+  {
+   "batch": "b",
+   "run": "A_0",
+   "role": "fork A",
+   "steps": 33,
+   "final": "8d1db73994d7",
+   "patch_bytes": 567,
+   "resolved": true,
+   "has_report": true
+  },
+  {
+   "batch": "b",
+   "run": "A_1",
+   "role": "fork A",
+   "steps": 31,
+   "final": "74f7c2cc1bc7",
+   "patch_bytes": 1361,
+   "resolved": true,
+   "has_report": true
+  },
+  {
+   "batch": "b",
+   "run": "A_2",
+   "role": "fork A",
+   "steps": 44,
+   "final": "57d9a65e02a9",
+   "patch_bytes": 1920,
+   "resolved": true,
+   "has_report": true
+  },
+  {
+   "batch": "b",
+   "run": "A_3",
+   "role": "fork A",
+   "steps": 28,
+   "final": "31912371fe29",
+   "patch_bytes": 709,
+   "resolved": false,
+   "has_report": true
+  },
+  {
+   "batch": "b",
+   "run": "A_4",
+   "role": "fork A",
+   "steps": 23,
+   "final": "8d1db73994d7",
+   "patch_bytes": 567,
+   "resolved": true,
+   "has_report": true
+  },
+  {
+   "batch": "b",
+   "run": "A_5",
+   "role": "fork A",
+   "steps": 47,
+   "final": "11ce8fce3df2",
+   "patch_bytes": 2456,
+   "resolved": true,
+   "has_report": true
+  },
+  {
+   "batch": "b",
+   "run": "A_6",
+   "role": "fork A",
+   "steps": 32,
+   "final": "2bb44b683d9c",
+   "patch_bytes": 629,
+   "resolved": false,
+   "has_report": true
+  },
+  {
+   "batch": "b",
+   "run": "A_7",
+   "role": "fork A",
+   "steps": 23,
+   "final": "8c81d60d75ee",
+   "patch_bytes": 388,
+   "resolved": true,
+   "has_report": true
+  },
+  {
+   "batch": "b",
+   "run": "B_0",
+   "role": "fork B",
+   "steps": 32,
+   "final": "ad3317821606",
+   "patch_bytes": 623,
+   "resolved": false,
+   "has_report": true
+  },
+  {
+   "batch": "b",
+   "run": "B_2",
+   "role": "fork B",
+   "steps": 24,
+   "final": "f828205d0ea2",
+   "patch_bytes": 900,
+   "resolved": true,
+   "has_report": true
+  },
+  {
+   "batch": "b",
+   "run": "B_3",
+   "role": "fork B",
+   "steps": 35,
+   "final": "4d6cea9d7d54",
+   "patch_bytes": 1125,
+   "resolved": true,
+   "has_report": true
+  },
+  {
+   "batch": "b",
+   "run": "B_4",
+   "role": "fork B",
+   "steps": 25,
+   "final": "7a9b3555f5a5",
+   "patch_bytes": 991,
+   "resolved": true,
+   "has_report": true
+  },
+  {
+   "batch": "b",
+   "run": "B_5",
+   "role": "fork B",
+   "steps": 67,
+   "final": "bacc5bb7e7d8",
+   "patch_bytes": 1674,
+   "resolved": true,
+   "has_report": true
+  },
+  {
+   "batch": "b",
+   "run": "B_6",
+   "role": "fork B",
+   "steps": 30,
+   "final": "b7c0b5eebc09",
+   "patch_bytes": 999,
+   "resolved": true,
+   "has_report": true
+  },
+  {
+   "batch": "b",
+   "run": "B_7",
+   "role": "fork B",
+   "steps": 70,
+   "final": "65a33bc84a69",
+   "patch_bytes": 1295,
+   "resolved": true,
+   "has_report": true
+  }
+ ],
+ "overall_correct": 16,
+ "n": 20
+}

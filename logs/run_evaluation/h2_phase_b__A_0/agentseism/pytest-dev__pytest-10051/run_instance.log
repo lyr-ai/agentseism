@@ -1,0 +1,48 @@
+2026-09-12 13:35:18,072 - INFO - Creating container for pytest-dev__pytest-10051...
+2026-09-12 13:35:18,103 - INFO - Container for pytest-dev__pytest-10051 created: f3c6507bf48c5137a4b314db782f06bef439282dbb6846f058b54ecb0387b587
+2026-09-12 13:35:18,146 - INFO - Container for pytest-dev__pytest-10051 started: f3c6507bf48c5137a4b314db782f06bef439282dbb6846f058b54ecb0387b587
+2026-09-12 13:35:18,147 - INFO - Intermediate patch for pytest-dev__pytest-10051 written to logs/run_evaluation/h2_phase_b__A_0/agentseism/pytest-dev__pytest-10051/patch.diff, now applying to container...
+2026-09-12 13:35:18,215 - INFO - >>>>> Applied Patch:
+Checking patch src/_pytest/logging.py...
+Applied patch src/_pytest/logging.py cleanly.
+
+2026-09-12 13:35:18,293 - INFO - Git diff before:
+diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py
+index a4f4214b1..63eb8c3aa 100644
+--- a/src/_pytest/logging.py
++++ b/src/_pytest/logging.py
+@@ -440,7 +440,8 @@ class LogCaptureFixture:
+ 
+     def clear(self) -> None:
+         """Reset the list of log records and the captured log text."""
+-        self.handler.reset()
++        self.handler.records.clear()
++        self.handler.stream = StringIO()
+ 
+     def set_level(self, level: Union[int, str], logger: Optional[str] = None) -> None:
+         """Set the level of a logger for the duration of a test.
+2026-09-12 13:35:18,295 - INFO - Eval script for pytest-dev__pytest-10051 written to logs/run_evaluation/h2_phase_b__A_0/agentseism/pytest-dev__pytest-10051/eval.sh; copying to container...
+2026-09-12 13:35:22,563 - INFO - Test runtime: 4.24 seconds
+2026-09-12 13:35:22,564 - INFO - Test output for pytest-dev__pytest-10051 written to logs/run_evaluation/h2_phase_b__A_0/agentseism/pytest-dev__pytest-10051/test_output.txt
+2026-09-12 13:35:22,615 - INFO - Git diff after:
+diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py
+index a4f4214b1..63eb8c3aa 100644
+--- a/src/_pytest/logging.py
++++ b/src/_pytest/logging.py
+@@ -440,7 +440,8 @@ class LogCaptureFixture:
+ 
+     def clear(self) -> None:
+         """Reset the list of log records and the captured log text."""
+-        self.handler.reset()
++        self.handler.records.clear()
++        self.handler.stream = StringIO()
+ 
+     def set_level(self, level: Union[int, str], logger: Optional[str] = None) -> None:
+         """Set the level of a logger for the duration of a test.
+2026-09-12 13:35:22,615 - INFO - Grading answer for pytest-dev__pytest-10051...
+2026-09-12 13:35:22,617 - INFO - report: {'pytest-dev__pytest-10051': {'patch_is_None': False, 'patch_exists': True, 'patch_successfully_applied': True, 'resolved': True, 'infra_failure': False, 'tests_status': {'FAIL_TO_PASS': {'success': ['testing/logging/test_fixture.py::test_clear_for_call_stage'], 'failure': []}, 'PASS_TO_PASS': {'success': ['testing/logging/test_fixture.py::test_change_level', 'testing/logging/test_fixture.py::test_with_statement', 'testing/logging/test_fixture.py::test_log_access', 'testing/logging/test_fixture.py::test_messages', 'testing/logging/test_fixture.py::test_record_tuples', 'testing/logging/test_fixture.py::test_unicode', 'testing/logging/test_fixture.py::test_clear', 'testing/logging/test_fixture.py::test_caplog_captures_for_all_stages', 'testing/logging/test_fixture.py::test_fixture_help', 'testing/logging/test_fixture.py::test_change_level_undo', 'testing/logging/test_fixture.py::test_change_level_undos_handler_level', 'testing/logging/test_fixture.py::test_ini_controls_global_log_level', 'testing/logging/test_fixture.py::test_caplog_can_override_global_log_level', 'testing/logging/test_fixture.py::test_caplog_captures_despite_exception', 'testing/logging/test_fixture.py::test_log_report_captures_according_to_config_option_upon_failure'], 'failure': []}, 'FAIL_TO_FAIL': {'success': [], 'failure': []}, 'PASS_TO_FAIL': {'success': [], 'failure': []}}}}
+Result for pytest-dev__pytest-10051: resolved: True
+2026-09-12 13:35:22,618 - INFO - Attempting to stop container sweb.eval.pytest-dev__pytest-10051.h2_phase_b__A_0...
+2026-09-12 13:35:37,772 - INFO - Container sweb.eval.pytest-dev__pytest-10051.h2_phase_b__A_0 stopped successfully.
+2026-09-12 13:35:37,772 - INFO - Attempting to remove container sweb.eval.pytest-dev__pytest-10051.h2_phase_b__A_0...
+2026-09-12 13:35:37,825 - INFO - Container sweb.eval.pytest-dev__pytest-10051.h2_phase_b__A_0 removed successfully.

@@ -1,0 +1,46 @@
+diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py
+index a4f4214b1..c2bf90202 100644
+--- a/src/_pytest/logging.py
++++ b/src/_pytest/logging.py
+@@ -46,6 +46,7 @@ DEFAULT_LOG_DATE_FORMAT = "%H:%M:%S"
+ _ANSI_ESCAPE_SEQ = re.compile(r"\x1b\[[\d;]+m")
+ caplog_handler_key = StashKey["LogCaptureHandler"]()
+ caplog_records_key = StashKey[Dict[str, List[logging.LogRecord]]]()
++caplog_current_phase_key = StashKey[str]()
+ 
+ 
+ def _remove_ansi_escape_sequences(text: str) -> str:
+@@ -385,6 +386,17 @@ class LogCaptureFixture:
+         """
+         return self._item.stash[caplog_handler_key]
+ 
++    @property
++    def _current_phase(self) -> Optional[str]:
++        return self._item.stash.get(caplog_current_phase_key, None)
++
++    @_current_phase.setter
++    def _current_phase(self, value: Optional[str]) -> None:
++        if value is not None:
++            self._item.stash[caplog_current_phase_key] = value
++        elif caplog_current_phase_key in self._item.stash:
++            del self._item.stash[caplog_current_phase_key]
++
+     def get_records(self, when: str) -> List[logging.LogRecord]:
+         """Get the logging records for one of the possible test phases.
+ 
+@@ -441,6 +453,8 @@ class LogCaptureFixture:
+     def clear(self) -> None:
+         """Reset the list of log records and the captured log text."""
+         self.handler.reset()
++        if self._current_phase is not None:
++            self._item.stash[caplog_records_key][self._current_phase] = self.handler.records
+ 
+     def set_level(self, level: Union[int, str], logger: Optional[str] = None) -> None:
+         """Set the level of a logger for the duration of a test.
+@@ -698,6 +712,7 @@ class LoggingPlugin:
+             report_handler.reset()
+             item.stash[caplog_records_key][when] = caplog_handler.records
+             item.stash[caplog_handler_key] = caplog_handler
++            item.stash[caplog_current_phase_key] = when
+ 
+             yield

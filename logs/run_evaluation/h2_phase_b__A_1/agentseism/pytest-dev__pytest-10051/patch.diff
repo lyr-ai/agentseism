@@ -1,0 +1,31 @@
+diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py
+index a4f4214b1..2de169ba2 100644
+--- a/src/_pytest/logging.py
++++ b/src/_pytest/logging.py
+@@ -335,6 +335,7 @@ class LogCaptureHandler(logging_StreamHandler):
+         """Create a new log handler."""
+         super().__init__(StringIO())
+         self.records: List[logging.LogRecord] = []
++        self._when: Optional[str] = None
+ 
+     def emit(self, record: logging.LogRecord) -> None:
+         """Keep the log records in a list in addition to the log text."""
+@@ -440,7 +441,10 @@ class LogCaptureFixture:
+ 
+     def clear(self) -> None:
+         """Reset the list of log records and the captured log text."""
++        when = self.handler._when
+         self.handler.reset()
++        if when is not None:
++            self._item.stash[caplog_records_key][when] = self.handler.records
+ 
+     def set_level(self, level: Union[int, str], logger: Optional[str] = None) -> None:
+         """Set the level of a logger for the duration of a test.
+@@ -695,6 +699,7 @@ class LoggingPlugin:
+             level=self.log_level,
+         ) as report_handler:
+             caplog_handler.reset()
++            caplog_handler._when = when
+             report_handler.reset()
+             item.stash[caplog_records_key][when] = caplog_handler.records
+             item.stash[caplog_handler_key] = caplog_handler

@@ -1,0 +1,94 @@
+2026-09-12 13:39:51,626 - INFO - Creating container for pytest-dev__pytest-10051...
+2026-09-12 13:39:51,656 - INFO - Container for pytest-dev__pytest-10051 created: 64f9211ea4d99cb91131dd4070509c3280c6b197fc3d176f78205f5954c44dc8
+2026-09-12 13:39:51,702 - INFO - Container for pytest-dev__pytest-10051 started: 64f9211ea4d99cb91131dd4070509c3280c6b197fc3d176f78205f5954c44dc8
+2026-09-12 13:39:51,702 - INFO - Intermediate patch for pytest-dev__pytest-10051 written to logs/run_evaluation/h2_phase_b__B_5/agentseism/pytest-dev__pytest-10051/patch.diff, now applying to container...
+2026-09-12 13:39:51,769 - INFO - >>>>> Applied Patch:
+Checking patch src/_pytest/logging.py...
+Applied patch src/_pytest/logging.py cleanly.
+
+2026-09-12 13:39:51,850 - INFO - Git diff before:
+diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py
+index a4f4214b1..a63789de5 100644
+--- a/src/_pytest/logging.py
++++ b/src/_pytest/logging.py
+@@ -335,6 +335,7 @@ class LogCaptureHandler(logging_StreamHandler):
+         """Create a new log handler."""
+         super().__init__(StringIO())
+         self.records: List[logging.LogRecord] = []
++        self._stash_entry: Optional[List[logging.LogRecord]] = None
+ 
+     def emit(self, record: logging.LogRecord) -> None:
+         """Keep the log records in a list in addition to the log text."""
+@@ -440,7 +441,16 @@ class LogCaptureFixture:
+ 
+     def clear(self) -> None:
+         """Reset the list of log records and the captured log text."""
++        old_records = self.handler.records
+         self.handler.reset()
++        # Update the stash entry that points to the old records list
++        # to point to the new records list instead
++        if self.handler._stash_entry is not None:
++            stash = self._item.stash[caplog_records_key]
++            for key in stash:
++                if stash[key] is old_records:
++                    stash[key] = self.handler.records
++                    break
+ 
+     def set_level(self, level: Union[int, str], logger: Optional[str] = None) -> None:
+         """Set the level of a logger for the duration of a test.
+@@ -697,6 +707,7 @@ class LoggingPlugin:
+             caplog_handler.reset()
+             report_handler.reset()
+             item.stash[caplog_records_key][when] = caplog_handler.records
++            caplog_handler._stash_entry = item.stash[caplog_records_key][when]
+             item.stash[caplog_handler_key] = caplog_handler
+ 
+             yield
+2026-09-12 13:39:51,851 - INFO - Eval script for pytest-dev__pytest-10051 written to logs/run_evaluation/h2_phase_b__B_5/agentseism/pytest-dev__pytest-10051/eval.sh; copying to container...
+2026-09-12 13:39:56,289 - INFO - Test runtime: 4.41 seconds
+2026-09-12 13:39:56,290 - INFO - Test output for pytest-dev__pytest-10051 written to logs/run_evaluation/h2_phase_b__B_5/agentseism/pytest-dev__pytest-10051/test_output.txt
+2026-09-12 13:39:56,345 - INFO - Git diff after:
+diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py
+index a4f4214b1..a63789de5 100644
+--- a/src/_pytest/logging.py
++++ b/src/_pytest/logging.py
+@@ -335,6 +335,7 @@ class LogCaptureHandler(logging_StreamHandler):
+         """Create a new log handler."""
+         super().__init__(StringIO())
+         self.records: List[logging.LogRecord] = []
++        self._stash_entry: Optional[List[logging.LogRecord]] = None
+ 
+     def emit(self, record: logging.LogRecord) -> None:
+         """Keep the log records in a list in addition to the log text."""
+@@ -440,7 +441,16 @@ class LogCaptureFixture:
+ 
+     def clear(self) -> None:
+         """Reset the list of log records and the captured log text."""
++        old_records = self.handler.records
+         self.handler.reset()
++        # Update the stash entry that points to the old records list
++        # to point to the new records list instead
++        if self.handler._stash_entry is not None:
++            stash = self._item.stash[caplog_records_key]
++            for key in stash:
++                if stash[key] is old_records:
++                    stash[key] = self.handler.records
++                    break
+ 
+     def set_level(self, level: Union[int, str], logger: Optional[str] = None) -> None:
+         """Set the level of a logger for the duration of a test.
+@@ -697,6 +707,7 @@ class LoggingPlugin:
+             caplog_handler.reset()
+             report_handler.reset()
+             item.stash[caplog_records_key][when] = caplog_handler.records
++            caplog_handler._stash_entry = item.stash[caplog_records_key][when]
+             item.stash[caplog_handler_key] = caplog_handler
+ 
+             yield
+2026-09-12 13:39:56,345 - INFO - Grading answer for pytest-dev__pytest-10051...
+2026-09-12 13:39:56,348 - INFO - report: {'pytest-dev__pytest-10051': {'patch_is_None': False, 'patch_exists': True, 'patch_successfully_applied': True, 'resolved': True, 'infra_failure': False, 'tests_status': {'FAIL_TO_PASS': {'success': ['testing/logging/test_fixture.py::test_clear_for_call_stage'], 'failure': []}, 'PASS_TO_PASS': {'success': ['testing/logging/test_fixture.py::test_change_level', 'testing/logging/test_fixture.py::test_with_statement', 'testing/logging/test_fixture.py::test_log_access', 'testing/logging/test_fixture.py::test_messages', 'testing/logging/test_fixture.py::test_record_tuples', 'testing/logging/test_fixture.py::test_unicode', 'testing/logging/test_fixture.py::test_clear', 'testing/logging/test_fixture.py::test_caplog_captures_for_all_stages', 'testing/logging/test_fixture.py::test_fixture_help', 'testing/logging/test_fixture.py::test_change_level_undo', 'testing/logging/test_fixture.py::test_change_level_undos_handler_level', 'testing/logging/test_fixture.py::test_ini_controls_global_log_level', 'testing/logging/test_fixture.py::test_caplog_can_override_global_log_level', 'testing/logging/test_fixture.py::test_caplog_captures_despite_exception', 'testing/logging/test_fixture.py::test_log_report_captures_according_to_config_option_upon_failure'], 'failure': []}, 'FAIL_TO_FAIL': {'success': [], 'failure': []}, 'PASS_TO_FAIL': {'success': [], 'failure': []}}}}
+Result for pytest-dev__pytest-10051: resolved: True
+2026-09-12 13:39:56,349 - INFO - Attempting to stop container sweb.eval.pytest-dev__pytest-10051.h2_phase_b__B_5...
+2026-09-12 13:40:11,492 - INFO - Container sweb.eval.pytest-dev__pytest-10051.h2_phase_b__B_5 stopped successfully.
+2026-09-12 13:40:11,492 - INFO - Attempting to remove container sweb.eval.pytest-dev__pytest-10051.h2_phase_b__B_5...
+2026-09-12 13:40:11,535 - INFO - Container sweb.eval.pytest-dev__pytest-10051.h2_phase_b__B_5 removed successfully.

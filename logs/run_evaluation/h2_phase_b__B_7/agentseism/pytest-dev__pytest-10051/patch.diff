@@ -1,0 +1,31 @@
+diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py
+index a4f4214b1..45faa3349 100644
+--- a/src/_pytest/logging.py
++++ b/src/_pytest/logging.py
+@@ -46,6 +46,7 @@ DEFAULT_LOG_DATE_FORMAT = "%H:%M:%S"
+ _ANSI_ESCAPE_SEQ = re.compile(r"\x1b\[[\d;]+m")
+ caplog_handler_key = StashKey["LogCaptureHandler"]()
+ caplog_records_key = StashKey[Dict[str, List[logging.LogRecord]]]()
++caplog_records_current_when_key = StashKey[str]()
+ 
+ 
+ def _remove_ansi_escape_sequences(text: str) -> str:
+@@ -396,6 +397,11 @@ class LogCaptureFixture:
+ 
+         .. versionadded:: 3.4
+         """
++        current_when = self._item.stash.get(caplog_records_current_when_key, None)
++        # If we're querying the current phase, return the live records from the handler.
++        # This ensures that caplog.clear() and subsequent logging are reflected correctly.
++        if when == current_when:
++            return self.records
+         return self._item.stash[caplog_records_key].get(when, [])
+ 
+     @property
+@@ -698,6 +704,7 @@ class LoggingPlugin:
+             report_handler.reset()
+             item.stash[caplog_records_key][when] = caplog_handler.records
+             item.stash[caplog_handler_key] = caplog_handler
++            item.stash[caplog_records_current_when_key] = when
+ 
+             yield

@@ -1,0 +1,13 @@
+diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py
+index a4f4214b1..a2bd105b2 100644
+--- a/src/_pytest/logging.py
++++ b/src/_pytest/logging.py
+@@ -396,6 +396,8 @@ class LogCaptureFixture:
+ 
+         .. versionadded:: 3.4
+         """
++        if when == "call":
++            return self.records
+         return self._item.stash[caplog_records_key].get(when, [])
+ 
+     @property

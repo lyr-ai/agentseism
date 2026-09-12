@@ -1,0 +1,162 @@
+[
+ {
+  "batch": "h2_phase_a1",
+  "run": "pytest-dev__pytest-10051__r0",
+  "instance_id": "pytest-dev__pytest-10051",
+  "run_key": "h2_phase_a1__pytest-dev__pytest-10051__r0",
+  "predictions": "data/eval/predictions/h2_phase_a1__pytest-dev__pytest-10051__r0.jsonl",
+  "patch_bytes": 843
+ },
+ {
+  "batch": "h2_phase_a1",
+  "run": "pytest-dev__pytest-10051__r1",
+  "instance_id": "pytest-dev__pytest-10051",
+  "run_key": "h2_phase_a1__pytest-dev__pytest-10051__r1",
+  "predictions": "data/eval/predictions/h2_phase_a1__pytest-dev__pytest-10051__r1.jsonl",
+  "patch_bytes": 1229
+ },
+ {
+  "batch": "h2_phase_a1",
+  "run": "pytest-dev__pytest-10051__r2",
+  "instance_id": "pytest-dev__pytest-10051",
+  "run_key": "h2_phase_a1__pytest-dev__pytest-10051__r2",
+  "predictions": "data/eval/predictions/h2_phase_a1__pytest-dev__pytest-10051__r2.jsonl",
+  "patch_bytes": 978
+ },
+ {
+  "batch": "h2_phase_a1",
+  "run": "pytest-dev__pytest-10051__r3",
+  "instance_id": "pytest-dev__pytest-10051",
+  "run_key": "h2_phase_a1__pytest-dev__pytest-10051__r3",
+  "predictions": "data/eval/predictions/h2_phase_a1__pytest-dev__pytest-10051__r3.jsonl",
+  "patch_bytes": 1939
+ },
+ {
+  "batch": "h2_phase_a1",
+  "run": "pytest-dev__pytest-10051__r4",
+  "instance_id": "pytest-dev__pytest-10051",
+  "run_key": "h2_phase_a1__pytest-dev__pytest-10051__r4",
+  "predictions": "data/eval/predictions/h2_phase_a1__pytest-dev__pytest-10051__r4.jsonl",
+  "patch_bytes": 690
+ },
+ {
+  "batch": "h2_phase_b",
+  "run": "A_0",
+  "instance_id": "pytest-dev__pytest-10051",
+  "run_key": "h2_phase_b__A_0",
+  "predictions": "data/eval/predictions/h2_phase_b__A_0.jsonl",
+  "patch_bytes": 567
+ },
+ {
+  "batch": "h2_phase_b",
+  "run": "A_1",
+  "instance_id": "pytest-dev__pytest-10051",
+  "run_key": "h2_phase_b__A_1",
+  "predictions": "data/eval/predictions/h2_phase_b__A_1.jsonl",
+  "patch_bytes": 1361
+ },
+ {
+  "batch": "h2_phase_b",
+  "run": "A_2",
+  "instance_id": "pytest-dev__pytest-10051",
+  "run_key": "h2_phase_b__A_2",
+  "predictions": "data/eval/predictions/h2_phase_b__A_2.jsonl",
+  "patch_bytes": 1920
+ },
+ {
+  "batch": "h2_phase_b",
+  "run": "A_3",
+  "instance_id": "pytest-dev__pytest-10051",
+  "run_key": "h2_phase_b__A_3",
+  "predictions": "data/eval/predictions/h2_phase_b__A_3.jsonl",
+  "patch_bytes": 709
+ },
+ {
+  "batch": "h2_phase_b",
+  "run": "A_4",
+  "instance_id": "pytest-dev__pytest-10051",
+  "run_key": "h2_phase_b__A_4",
+  "predictions": "data/eval/predictions/h2_phase_b__A_4.jsonl",
+  "patch_bytes": 567
+ },
+ {
+  "batch": "h2_phase_b",
+  "run": "A_5",
+  "instance_id": "pytest-dev__pytest-10051",
+  "run_key": "h2_phase_b__A_5",
+  "predictions": "data/eval/predictions/h2_phase_b__A_5.jsonl",
+  "patch_bytes": 2456
+ },
+ {
+  "batch": "h2_phase_b",
+  "run": "A_6",
+  "instance_id": "pytest-dev__pytest-10051",
+  "run_key": "h2_phase_b__A_6",
+  "predictions": "data/eval/predictions/h2_phase_b__A_6.jsonl",
+  "patch_bytes": 629
+ },
+ {
+  "batch": "h2_phase_b",
+  "run": "A_7",
+  "instance_id": "pytest-dev__pytest-10051",
+  "run_key": "h2_phase_b__A_7",
+  "predictions": "data/eval/predictions/h2_phase_b__A_7.jsonl",
+  "patch_bytes": 388
+ },
+ {
+  "batch": "h2_phase_b",
+  "run": "B_0",
+  "instance_id": "pytest-dev__pytest-10051",
+  "run_key": "h2_phase_b__B_0",
+  "predictions": "data/eval/predictions/h2_phase_b__B_0.jsonl",
+  "patch_bytes": 623
+ },
+ {
+  "batch": "h2_phase_b",
+  "run": "B_2",
+  "instance_id": "pytest-dev__pytest-10051",
+  "run_key": "h2_phase_b__B_2",
+  "predictions": "data/eval/predictions/h2_phase_b__B_2.jsonl",
+  "patch_bytes": 900
+ },
+ {
+  "batch": "h2_phase_b",
+  "run": "B_3",
+  "instance_id": "pytest-dev__pytest-10051",
+  "run_key": "h2_phase_b__B_3",
+  "predictions": "data/eval/predictions/h2_phase_b__B_3.jsonl",
+  "patch_bytes": 1125
+ },
+ {
+  "batch": "h2_phase_b",
+  "run": "B_4",
+  "instance_id": "pytest-dev__pytest-10051",
+  "run_key": "h2_phase_b__B_4",
+  "predictions": "data/eval/predictions/h2_phase_b__B_4.jsonl",
+  "patch_bytes": 991
+ },
+ {
+  "batch": "h2_phase_b",
+  "run": "B_5",
+  "instance_id": "pytest-dev__pytest-10051",
+  "run_key": "h2_phase_b__B_5",
+  "predictions": "data/eval/predictions/h2_phase_b__B_5.jsonl",
+  "patch_bytes": 1674
+ },
+ {
+  "batch": "h2_phase_b",
+  "run": "B_6",
+  "instance_id": "pytest-dev__pytest-10051",
+  "run_key": "h2_phase_b__B_6",
+  "predictions": "data/eval/predictions/h2_phase_b__B_6.jsonl",
+  "patch_bytes": 999
+ },
+ {
+  "batch": "h2_phase_b",
+  "run": "B_7",
+  "instance_id": "pytest-dev__pytest-10051",
+  "run_key": "h2_phase_b__B_7",
+  "predictions": "data/eval/predictions/h2_phase_b__B_7.jsonl",
+  "patch_bytes": 1295
+ }
+]
