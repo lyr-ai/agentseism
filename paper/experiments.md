@@ -1596,3 +1596,98 @@ Not unblocked: one task, one model, and a base failure rate of 20% means a
 future intervention experiment needs a much larger sample to detect a change in
 it. Four failures is enough to establish that failures exist and not enough to
 characterise them.
+
+---
+
+## 2026-09-12 — Exploratory C1: aligning passing and failing runs
+
+**Post-hoc on four failures.** Nothing below is a finding. The output is a list
+of candidate signals and a candidate horizon, to be fixed in advance and tested
+on runs that are not these.
+
+Features are mechanical — rules over the command string, the probe's state
+hashes and the observation text (`experiments/coding/step_features.py`). No step
+asks a model what a trajectory was trying to do, because with four failures a
+free-form comparison produces a persuasive story about noise.
+
+### A correction that changed the answer
+
+The first alignment put continuation step 1 next to fresh-run step 1. A
+continuation's first step is absolutely step 9 or 11 — it inherited everything
+before that from its donor — so that comparison put a run with two edits behind
+it next to one with none, for fifteen of the twenty runs. Donor prefixes are now
+prepended and the cumulative counters carry the inherited work.
+
+It moved the apparent separation from step 5 to step 13–14.
+
+### The sample is smaller than it looks
+
+```text
+h=5    20 runs at risk    7 distinct histories
+h=8    20                 7
+h=10   20                14
+h=12   20                20
+```
+
+Before step 10, fifteen of the twenty runs share one of **two** prefixes. Any
+early-horizon signal computed over twenty runs is pseudo-replication, and the
+first version of this analysis reported exactly that. **This dataset cannot
+answer the early-horizon question**, whatever the plots suggest.
+
+### Totals at end of run
+
+    feature                     PASS mean  FAIL mean    delta
+    cum_edits                         9.4        6.0     -3.4
+    cum_reverts                       2.0        1.0     -1.0
+    distinct_states                   3.7        2.8     -0.9
+    diff_bytes                     1202.0      662.8   -539.2
+    cum_tests                        11.8       10.8     -1.1
+    cum_suite_tests                   4.6        4.5     -0.1
+    cum_failing_tests                 3.1        3.2     +0.2
+
+### Candidate signals — all exploratory
+
+The coherent reading is that **failing runs iterate less on the source while
+seeing the same evidence**: fewer edits, fewer reverts, fewer distinct states, a
+smaller final patch, and the same number of suite runs and observed test
+failures.
+
+| candidate | direction | earliest persistent separation | caution |
+|---|---|---|---|
+| cumulative source edits | FAIL fewer | **h ≈ 14** | strongest and most persistent |
+| final patch size | FAIL smaller | h ≈ 13 | passes include 388 and 567 bytes |
+| cumulative reverts | FAIL fewer | h ≈ 16, unstable | flips sign twice |
+| distinct source states | FAIL fewer | no clean horizon | |
+| suite test runs | FAIL more | h ≈ 13 | equal by end of run |
+| observed test failures | FAIL more | h ≈ 10 | inside the pseudo-replicated zone |
+
+The last row is the one to distrust most: its separation begins where the
+sample is still effectively seven trajectories.
+
+### Candidate horizon
+
+**h ≈ 14**, where cumulative edits separate and stay separated. Runs have a
+median length of 32–33 steps, so that is around 40% of the way through — inside
+the window where an intervention would still have somewhere to go.
+
+That is the good case for the steering hypothesis, and it is a hypothesis. With
+four failures the horizon could move substantially on the next twenty runs.
+
+### What this says about the next batch
+
+Do **not** infer the sample size from the 20% failure rate alone. The design
+question is not "how many failures do we need to describe" but "how large is the
+effect we have pre-committed to detecting" — and that effect is now nameable:
+
+> a difference in cumulative source edits at h = 14
+
+Fix that one feature, its direction and its horizon in a pre-registration, then
+size the batch for it. Collecting a hundred runs first and searching them again
+would repeat the mistake this section exists to avoid.
+
+One further requirement the pseudo-replication makes explicit: the next batch
+needs **independent runs, not continuations of a shared prefix**, or the early
+horizons will be unanalysable again.
+
+`paper/figures/outcome_alignment.svg` shows all twenty on absolute steps, with
+the pseudo-replicated zone shaded and the candidate horizon marked.
