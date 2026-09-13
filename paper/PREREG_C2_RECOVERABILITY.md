@@ -140,3 +140,70 @@ answerable:
 That question needs both arms, which is why the control is being paid for now
 rather than added once the FAIL numbers are known. A control chosen after seeing
 the treatment is a control that has already lost most of its power to explain.
+
+---
+
+## Amendment C2.1, 2026-09-12 — stratify on whether the fork is already final
+
+**No continuation has been run and no outcome exists.** This follows from the
+archives alone, which were complete before the registration was written; it was
+missed then and is visible in the execution plan now.
+
+At the registered horizons, many forks land on a state the source trajectory
+never left again:
+
+```text
+arm   run   h=16        h=24        h=28
+FAIL  A_3   e3b0c442    2db5d1e2    = final
+FAIL  A_6   400ed404    e3b0c442    e6d78116
+FAIL  B_0   400ed404    e3b0c442    = final
+FAIL  r4    400ed404    = final     = final
+PASS  r0    400ed404    = final     = final
+PASS  r1    400ed404    32296bfc    = final
+PASS  r2    07dae37d    e3b0c442    = final
+PASS  r3    400ed404    e3b0c442    db04bbf1
+```
+
+Five of eight at h = 28; two at h = 24.
+
+### Why it matters
+
+Where the fork is already on the final state, the remaining steps of the source
+run were verification and submission, not editing. `Recoverability` there is not
+measuring *can this run still be saved* but **will re-sampling overturn a patch
+that is already written**.
+
+A gap between the arms at h = 28 is then partly mechanical: the passing sources
+have a correct answer in place and the failing ones an incorrect one, and
+re-sampling mostly submits what it finds. That gap would look like a strong
+result and would mostly be a restatement of the labels.
+
+### What changes, and what does not
+
+The plan does not change. Horizons, trajectories, replication and budgets stay
+exactly as registered — this is visible in the inputs, and redesigning around it
+after the fact would be worse than reporting it.
+
+What is added is a **stratification variable, declared now**:
+
+```text
+at_source_final  =  the fork state equals the source trajectory's final state
+```
+
+Recorded per spec in `plan.json`, and the analysis reports:
+
+1. `Recoverability(arm, h)` over all specs, as registered;
+2. the same **restricted to `at_source_final = False`** — forks taken while the
+   source was still editing, which is the question the experiment was meant to
+   ask;
+3. the count in each stratum at each horizon, since (2) is thin at h = 28.
+
+If (1) and (2) disagree, **(2) is the one that speaks to recoverability** and
+(1) is reported as what it is: a measurement dominated by whether the answer was
+already written.
+
+### The honest limit
+
+At h = 28, stratum (2) has three of eight trajectories. That is not enough to
+carry a conclusion on its own, and saying so now is cheaper than discovering it
+while looking at the result.
