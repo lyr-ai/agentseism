@@ -69,6 +69,40 @@ with httpx.Client(timeout=httpx.Timeout(connect=15.0, read=90.0, write=30.0, poo
 PY
 
 echo
+echo "──── 8. replay equivalence: is this host equivalent to the one that"
+echo "        produced the source trajectories? ────"
+# The sources were recorded under x86 emulation on arm64 macOS. Continuing them
+# natively means the prefix was observed under emulation and the continuation
+# runs on real hardware. Same binaries, same architecture, and emulation is
+# meant to be faithful -- but a test that behaves differently would make every
+# continuation diverge for an infrastructure reason. See prereg amendment C2.2.
+REPLAY_TRAJ="${REPLAY_TRAJ:-data/runs/h2_phase_a1/pytest-dev__pytest-10051__r4.json}"
+REPLAY_PROBE="${REPLAY_PROBE:-data/runs/h2_phase_a1/pytest-dev__pytest-10051__r4.probe.jsonl}"
+REPLAY_IMAGE="${REPLAY_IMAGE:-swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10051:latest}"
+REPLAY_UPTO="${REPLAY_UPTO:-31}"
+if [ ! -s "$REPLAY_TRAJ" ]; then
+  note "replay equivalence" "SKIP -- $REPLAY_TRAJ not present; copy data/runs here"; FAIL=1
+else
+  # Run once and keep the output: this replays a whole trajectory and is minutes,
+  # not seconds.
+  REPLAY_LOG=/tmp/c2_equivalence.log
+  PYTHONPATH=. python3 experiments/coding/replay.py \
+    --trajectory "$REPLAY_TRAJ" --probe "$REPLAY_PROBE" \
+    --image "$REPLAY_IMAGE" --archive /tmp/c2_equivalence \
+    --upto "$REPLAY_UPTO" --platform "" >"$REPLAY_LOG" 2>&1
+  tail -40 "$REPLAY_LOG"
+  # replay.py prints "tracked-state mismatches: none" when every step matched.
+  if grep -q "mismatches: none" "$REPLAY_LOG"; then
+    note "replay equivalence" "ok -- states reproduce exactly"
+  else
+    note "replay equivalence" "FAIL -- this host does not reproduce the recorded states"
+    echo "  Do not collect C2 here. The mismatch is a finding about emulation"
+    echo "  fidelity and should be recorded as one. There is no 'run a few and see'."
+    FAIL=1
+  fi
+fi
+
+echo
 if [ "$FAIL" -ne 0 ]; then
   echo "──── GATE FAILED — no flask data is collected ────"
   echo "If the 8000-token localhost run is what failed, the earlier diagnosis was"
@@ -77,4 +111,7 @@ if [ "$FAIL" -ne 0 ]; then
   echo "the confirmatory batch."
   exit 1
 fi
-echo "──── GATE PASSED — run only the frozen flask batch ────"
+echo "──── GATE PASSED ────"
+echo "Provenance: record this host, the gate output and /tmp/c2_equivalence.log"
+echo "alongside the batch, so the outcomes cannot be separated from the evidence"
+echo "that the host reproduced the recorded states (prereg amendment C2.2)."

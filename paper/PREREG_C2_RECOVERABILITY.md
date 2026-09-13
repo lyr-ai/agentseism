@@ -207,3 +207,63 @@ already written.
 At h = 28, stratum (2) has three of eight trajectories. That is not enough to
 carry a conclusion on its own, and saying so now is cheaper than discovering it
 while looking at the result.
+
+---
+
+## Amendment C2.2, 2026-09-12 — execution host migration, with a gate
+
+**Infrastructure only. No scientific hypothesis, outcome, arm, horizon,
+trajectory, replication count or analysis rule changes.** No continuation has
+been run.
+
+C2's continuations may execute on a **native x86 Linux VM** running the agent
+runner, the SWE-bench containers and vLLM on one host, rather than on the
+original arm64 macOS host calling a remote endpoint over the public internet.
+
+Every registered setting is unchanged: model and revision, `max_model_len`,
+streaming, temperature, `coding/1`, the fork machinery, SWE-bench 5.0.2, and the
+`250 − h` continuation budget.
+
+### Why
+
+The registration does not freeze the execution host, and the previous two Phase
+A1 attempts died on the wide-area link between the two — one batch spent 86% of
+its wall clock waiting on retries. C2 is 72 continuations across roughly eight
+unattended hours. On that duration the same failure mode does not waste money,
+it prevents the batch from completing.
+
+Colocating **removes** a variable that has already broken two batches. It does
+not add a research variable.
+
+### But it does change one thing, so it is gated
+
+The source trajectories were produced under **x86 emulation on arm64 macOS**.
+C2 continues them. Running the continuations natively means the prefix was
+observed under emulation while the continuation executes on real hardware.
+
+Same architecture and the same binaries, and emulation is meant to be
+semantically faithful — but *meant to be* is not *verified*. If a test behaves
+differently, the continuation diverges for an infrastructure reason and the
+result is uninterpretable.
+
+This is checkable before any outcome exists, with the replay bridge that already
+exists:
+
+> **Gate 8 — replay equivalence.** On the new host, re-execute a source
+> trajectory's recorded commands in a clean container and compare the
+> `tracked_diff_hash` at every step against what was recorded on the original
+> host.
+>
+> **Zero mismatches** → the two environments are equivalent for this workload,
+> and C2 proceeds.
+>
+> **Any mismatch** → the batch is **not collected on this host**. The mismatch
+> is itself a finding about emulation fidelity and is recorded as one. There is
+> no "run a few and see".
+
+`r4` is the trajectory used, because it is one of C2's own FAIL sources: if the
+host cannot reproduce it, the forks taken from it are not trustworthy either.
+
+Gate 8 is part of `inference/vm_gate.sh` and its result is written into the
+batch's provenance alongside the protocol hash, so a set of outcomes can never
+be separated from the evidence that its host was equivalent.
