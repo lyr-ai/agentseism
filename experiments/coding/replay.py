@@ -31,23 +31,37 @@ def probe_rows(path: str | Path) -> list[dict]:
     return [json.loads(line) for line in Path(path).read_text().splitlines() if line.strip()]
 
 
+def acting_indices(messages: list[dict], start: int = 0) -> list[int]:
+    """Positions of the messages that actually advanced the environment.
+
+    The k-th entry is the message for environment step k+1. Found by walking,
+    never by arithmetic: a format error, a retry or any system turn adds
+    messages without advancing the step counter, so `2 * k + 1` silently lands
+    on the wrong turn as soon as one occurs. Silently is the problem — the
+    version of this that crashed was the lucky case.
+    """
+    return [i for i, m in enumerate(messages[start:], start=start)
+            if m.get("role") == "assistant" and (m.get("extra", {}).get("actions"))]
+
+
 def message_prefix(messages: list[dict], step: int) -> list[dict]:
     """The message log as it stood just after environment step `step`.
 
-    The layout is fixed by the agent loop: system, instance, then one assistant
-    message and one observation per action. Every message in the primary
-    experiment carried exactly one action, which is asserted rather than assumed
-    -- a message with two would break the arithmetic silently, and the resulting
-    prefix would end mid-turn.
+    Ends on the observation that followed the step's action, so an agent
+    resumed from it is not asked to speak twice in a row.
     """
-    assistants = [i for i, m in enumerate(messages) if m.get("role") == "assistant"]
-    for index in assistants:
+    acting = acting_indices(messages)
+    for index in acting:
         actions = messages[index].get("extra", {}).get("actions", [])
         if len(actions) != 1:
             raise ValueError(f"message {index} carries {len(actions)} actions, not 1")
-    if step < 1 or 2 + 2 * step > len(messages):
-        raise ValueError(f"step {step} outside trajectory of {len(messages)} messages")
-    return messages[: 2 + 2 * step]
+    if step < 1 or step > len(acting):
+        raise ValueError(f"step {step} outside trajectory of {len(acting)} acting messages")
+    end = acting[step - 1] + 1
+    # include the observation that followed, if there is one
+    while end < len(messages) and messages[end].get("role") != "assistant":
+        end += 1
+    return messages[:end]
 
 
 def replay(

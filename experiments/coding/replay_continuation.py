@@ -22,7 +22,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from agents.coding.fork import materialize
-from experiments.coding.replay import probe_rows
+from experiments.coding.replay import acting_indices, probe_rows
 
 
 def main() -> None:
@@ -65,8 +65,7 @@ def main() -> None:
     # inserts messages without advancing the environment's step counter, so
     # `prefix + 2*(step-1)` lands on the wrong turn the moment one occurs -- and
     # one does, at step 12 of A_3.
-    acting = [i for i, m in enumerate(messages[prefix:], start=prefix)
-              if m.get("role") == "assistant" and (m.get("extra", {}).get("actions"))]
+    acting = acting_indices(messages, start=prefix)
 
     mismatches = []
     try:
