@@ -61,15 +61,21 @@ def main() -> None:
     messages = trajectory["messages"]
     prefix = donor["prefix_messages"]
 
+    # Message positions are found by walking, not by arithmetic. A format error
+    # inserts messages without advancing the environment's step counter, so
+    # `prefix + 2*(step-1)` lands on the wrong turn the moment one occurs -- and
+    # one does, at step 12 of A_3.
+    acting = [i for i, m in enumerate(messages[prefix:], start=prefix)
+              if m.get("role") == "assistant" and (m.get("extra", {}).get("actions"))]
+
     mismatches = []
     try:
         for row in original:
             step = row["step"]
             command = row["command"]
-            # Alignment check: the assistant turn for this step must carry the
-            # same command, or the message prefix written below belongs to a
-            # different point in the run.
-            index = prefix + 2 * (step - 1)
+            if step > len(acting):
+                raise ValueError(f"step {step}: no acting message for it")
+            index = acting[step - 1]
             recorded = messages[index]["extra"]["actions"][0]["command"]
             if recorded != command:
                 raise ValueError(f"step {step}: probe and message disagree")
