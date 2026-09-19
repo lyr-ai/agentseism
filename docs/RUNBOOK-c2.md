@@ -40,6 +40,53 @@ Colocation deletes the path instead of hardening it.
 will do; 80 GB is preferred only because it avoids the `max_model_len` fallback
 below.
 
+### The chosen host — GCE `a2-ultragpu-1g`
+
+1 × A100 80 GB, 12 vCPU, 170 GB RAM. A full x86_64 VM running Docker natively,
+and 80 GB very likely keeps the frozen `max_model_len: 131072`, which removes a
+fallback and an explanation from the write-up.
+
+```
+machine type    a2-ultragpu-1g          GPU comes with the machine type; no --accelerator
+provisioning    STANDARD, not Spot      a preemption mid-batch is a wasted A100 hour
+image           ubuntu-2204-lts, x86_64
+boot disk       >= 200 GB pd-ssd        results live here
+local SSD       model cache only        does not survive a stop; never the only copy of a result
+network         SSH only                vLLM binds localhost; no ingress rule for 8000
+maintenance     TERMINATE, no restart   a maintenance event must fail the run visibly
+```
+
+`--maintenance-policy=TERMINATE` is mandatory for GPUs and is also what we want.
+`--no-restart-on-failure` matters for the same reason: results from an
+auto-restarted run must never be mixed into the original batch.
+
+**Check quota before creating anything.** A new project ships
+`NVIDIA_A100_80GB_GPUS = 0`, and raising it is a request with a turnaround — it
+blocks harder than any step below. Need `A2_CPUS ≥ 12` and
+`NVIDIA_A100_80GB_GPUS ≥ 1` in the chosen region, and a region that actually has
+A2 Ultra capacity.
+
+```sh
+bash inference/gcp_provision.sh      # checks quota, then creates the VM
+```
+
+`inference/vm_setup.sh` runs on first boot: driver, Docker, NVIDIA Container
+Toolkit, repo at the frozen commit `34ba1fc`. After it reports ready:
+
+```sh
+uname -m
+nvidia-smi
+docker run --rm hello-world
+docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi
+```
+
+A driver installed at boot usually needs one reboot before `nvidia-smi` works.
+
+**GCP avoids the corporate-VPN and proxy failures that killed the RunPod paths,
+but that is not something to assume.** `curl google.com` proves nothing about
+this experiment. The gate's checks 3–7 make real model requests, including an
+8000-token completion and three 5000-token streams; that is what has to pass.
+
 ---
 
 ## 1. Get the data onto the host
@@ -115,6 +162,34 @@ recorded states.
 export PYTHONPATH=.
 python experiments/coding/run_c2.py --dry-run               # 72 specs, every archive resolved
 python experiments/coding/run_c2.py --validate --platform ''  # rebuild one container per arm × horizon
+```
+
+### Then stop, and price the batch
+
+**Do not start the full run until the budget is known.** An A100 80 GB bills for
+every hour the instance exists, idle included, and 72 continuations of unknown
+duration is not a number anyone should commit to blind.
+
+Time exactly one continuation, then compute the ceiling:
+
+```sh
+time python experiments/coding/run_c2.py --platform '' --out data/runs/c2_timing
+# stop it after the first spec completes
+```
+
+```
+worst case hours  =  72 x (slowest observed continuation, hours)  +  setup +  download
+worst case cost   =  worst case hours  x  (a2-ultragpu-1g hourly rate)
+```
+
+Use the **slowest** observed continuation, not the mean: the H2 data contains
+single attempts that ran 1157 s, 3463 s and 3559 s. Record the figure alongside
+the gate logs. If the ceiling is unacceptable, the decision is which arm to run
+first — not which specs to drop, and not a threshold change.
+
+### Only then, the full batch
+
+```sh
 python experiments/coding/run_c2.py --platform '' --out data/runs/c2
 ```
 
@@ -147,6 +222,8 @@ In this order, and each before the next exists:
 4. Verify integrity before computing anything: 72 specs present, each with an
    `exit_status`, no spec short of its replicates.
 5. Only then run the analysis.
+6. **Delete the instance.** Verify the raw results and their hashes are off the
+   VM first — local SSD does not survive a stop, and an A100 bills while idle.
 
 This is the same discipline Phase 2 used in the other project, and it is what
 makes the chain *frozen configuration → raw results → analysis* auditable.
