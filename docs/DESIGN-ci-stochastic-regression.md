@@ -405,6 +405,44 @@ The same core work remains valuable if the standalone product path is slow: it c
 
 ## 13. Immediate next steps
 
+### Phase 0 — resolve the C2 dependency
+
+> **Dependency on C2 recoverability:** Complete the preregistered C2 experiment
+> before freezing the CI regression-localization experiment. C2 determines
+> whether the observed divergence horizon still leaves a practically useful
+> intervention window. If recovery remains effective near the localization
+> horizon, §9 proceeds unchanged. If recovery has already collapsed, §9 must
+> either localize earlier predictive signals or revise its product claim from
+> actionable prevention to post-failure diagnosis.
+
+C2 is already pre-registered (`paper/PREREG_C2_RECOVERABILITY.md`, amendments
+C2.1 and C2.2) and frozen as 72 continuation specs in
+`experiments/coding/c2_protocol.py`. It is not new work; it awaits a native x86
+Linux VM with Docker and an A100.
+
+The three C2 outcomes and what each does to this document:
+
+| C2 outcome | Product reading | Effect on §9 |
+|---|---|---|
+| **Localizable and recoverable** | Strongest story: detect the regression, localize it, and still have time to intervene before merge. | §9 proceeds unchanged. |
+| **Localizable but not recoverable** | Still real debugging value, but it may not be advertised as actionable pre-merge intervention. | §9 must find an earlier *predictive* signal, or restate its claim. |
+| **Neither predictable nor recoverable** | The trajectory-localization path is weak as a product. | Shift the centre of gravity to outcome regression detection, failure clustering, or another diagnostic layer. |
+
+The dependency is not merely scheduling. C2's outcome rewrites §9.5 acceptance
+condition 4 — *the localized divergence is useful to a developer*. A divergence
+point localized after the run has become unrecoverable is not useless, but it is
+a different product than the one §1 claims, and the difference has to be settled
+before §9 is frozen rather than after it reports.
+
+**Correct order:**
+
+1. Complete C2 — already pre-registered, awaiting only a VM.
+2. Freeze §9's acceptance gate *against* the C2 result.
+3. Run the planted-regression CI experiment.
+4. Implement the GitHub Action.
+
+Phases A–D below are gated on step 1.
+
 ### Phase A — freeze the proof
 
 - Choose the baseline/candidate regression scenario.
@@ -442,6 +480,7 @@ The same core work remains valuable if the standalone product path is slow: it c
 | 2026-09-19 | Use adaptive trials, cached baselines, paired tasks, and effective independent histories. |
 | 2026-09-19 | Validate one differentiated regression case before investing in broader CI infrastructure. |
 | 2026-09-19 | Preserve “localization, not causality” unless an intervention establishes causal evidence. |
+| 2026-09-19 | Gate the §9 validation experiment on the preregistered C2 recoverability result; C2's outcome determines whether the product claim is actionable prevention or post-failure diagnosis. |
 
 ## 15. Open questions
 
