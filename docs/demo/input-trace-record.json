@@ -1,0 +1,33 @@
+{
+  "_comment": "One normalized event. Field values are taken verbatim from data/runs/h2_phase_a1/pytest-dev__pytest-10051__r4.probe.jsonl step 1; the schema fields AgentSeism adds are marked below.",
+
+  "run_id": "pytest-dev__pytest-10051__r4",
+  "independent_history_id": "pytest-dev__pytest-10051__r4",
+  "task_id": "pytest-dev__pytest-10051",
+  "version": "baseline@h2_phase_a1",
+
+  "event_id": "step-1",
+  "parent_event_ids": ["step-0"],
+  "logical_position": 1,
+
+  "event_type": "tool_call",
+  "component": "shell",
+  "tool_name": "bash",
+  "input_digest": "find /testbed -type f -name \"*.py\" | grep -E \"(logging|caplog)\"",
+  "returncode": 0,
+
+  "state_before_digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "state_after_digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "source_changed": false,
+  "workspace_changed": false,
+  "tracked_diff_bytes": 0,
+
+  "timestamp": 1788915098.986,
+
+  "_notes": {
+    "independent_history_id": "Equal to run_id for an independently initiated run. A shared-prefix fork inherits the DONOR's id, so forks are never counted as independent reliability samples (DESIGN §4.4).",
+    "state_before_digest": "e3b0c442… is sha256 of the empty string: the tree is clean. Reconvergence analysis must exclude this value — every run holds it before it edits anything, and counting it as a shared state made 17 of 25 pairs look anomalous (experiments/coding/divergence.py).",
+    "logical_position": "Not a raw step index. Alignment walks the event graph; arithmetic on step numbers broke on format errors in the real data.",
+    "missing_here": "environment_digest, model_config_digest, latency, token_usage, monetary_cost and outcome_labels are part of the normalized schema but are not present in the current probe, which predates it."
+  }
+}

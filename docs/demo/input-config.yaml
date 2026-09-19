@@ -1,0 +1,28 @@
+# .agentseism.yml — committed to the user's repository.
+#
+# Thresholds are hypotheses until the validation experiment establishes
+# defaults; see DESIGN-ci-stochastic-regression.md §7.4.
+
+suite: agent-regression
+baseline: main
+candidate: pull-request
+
+budget:
+  initial_trials_per_task: 2
+  max_trials_per_task: 8
+  max_total_cost_usd: 20
+
+gates:
+  # Outcome-level only. There is deliberately no "trajectory must match" gate.
+  max_success_rate_drop: 0.10
+  max_cost_increase: 0.25
+  prohibited_behaviors:
+    - unauthorized_tool_call        # itself a task outcome; may gate immediately
+
+diagnostics:
+  detect_new_failure_modes: true
+  localize_first_meaningful_divergence: true
+
+evidence:
+  # An exhausted budget is never reported as "safe".
+  insufficient_evidence_action: neutral
