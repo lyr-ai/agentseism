@@ -184,6 +184,25 @@ Exact schema and thresholds remain provisional until the validation experiment e
 - Caches immutable baseline traces and derived features.
 - Versions task, environment, evaluator, adapter, and model configuration.
 - Prevents accidental comparison of incompatible experimental conditions.
+- **Records a serving fingerprint with every baseline**, and treats a changed
+  one as *incomparable* rather than as a behavioural difference. Established by
+  measurement, not assumed — see §13 Phase 0: a host matching model, revision,
+  vLLM and CUDA, differing in GPU, driver and some dependency versions,
+  reproduced **none** of 23 recorded turns. The fingerprint must therefore cover
+  at least:
+
+  ```text
+  model id + revision        GPU model        driver version
+  inference runtime + version                 CUDA version
+  resolved dependency set (lockfile digest)
+  serving flags that change decoding (parsers, max_model_len, quantisation)
+  scaffold/prompt version
+  ```
+
+  Default behaviour on a fingerprint change is to **mark the comparison
+  incomparable and say so in the report** — never to compute a trajectory
+  difference and present it as an agent regression. Re-baselining is the
+  user's decision, and its cost is visible.
 
 **PR reporter**
 
