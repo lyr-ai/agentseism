@@ -1,12 +1,16 @@
 [project]
 name = "agentseism"
 version = "0.1.0"
-description = "AgentSeism — behavioral weak-point discovery for LLM agents"
+description = "AgentSeism — turn stochastic agent runs into trustworthy CI decisions"
 requires-python = ">=3.11"
 authors = [{ name = "Ruxi Zhang", email = "ruxiz2018@gmail.com" }]
 license = "Apache-2.0"
 readme = "README.md"
-dependencies = []
+dependencies = ["pyyaml>=6"]
+
+[project.scripts]
+seism = "agentseism.cli:main"
+agentseism = "agentseism.cli:main"   # alias, kept so existing scripts do not break
 
 [project.urls]
 Homepage = "https://github.com/lyr-ai/agentseism"

@@ -21,8 +21,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 import sys; sys.path.insert(0, str(ROOT))
 
-from experiments.coding.contract import Measurement, decide, load  # noqa: E402
-from experiments.coding.report import Row, render  # noqa: E402
+from agentseism.contract import Measurement, decide, load  # noqa: E402
+from agentseism.pr_report import Row, render  # noqa: E402
 
 RUNS = ROOT / "data/runs"
 OUT = ROOT / "docs/demo"

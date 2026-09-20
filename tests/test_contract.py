@@ -374,7 +374,7 @@ def test_the_demo_reports_are_reproducible_from_frozen_data():
     r = subprocess.run([".venv-eval/bin/python",
                         "experiments/coding/make_demo_reports.py"],
                        capture_output=True, text=True,
-                       env={"PYTHONPATH": ".", "PATH": "/usr/bin:/bin"})
+                       env={"PYTHONPATH": "src:.", "PATH": "/usr/bin:/bin"})
     assert r.returncode == 0, r.stderr
     for p, text in before.items():
         assert p.read_text() == text
