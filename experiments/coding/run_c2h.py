@@ -48,8 +48,9 @@ def bind_session(log: RunLog, fp: dict) -> None:
         log.append("session", fingerprint=fp, protocol_hash=P.protocol_hash())
         return
     old = prior[0]["fingerprint"]
-    differing = [k for k in ("hostname", "boot_id", "machine", "gpu", "vllm_pid")
-                 if old.get(k) != fp.get(k)]
+    # Every field either side recorded, so a new key cannot silently escape the
+    # comparison by being absent from the hard-coded list.
+    differing = sorted(k for k in set(old) | set(fp) if old.get(k) != fp.get(k))
     if differing:
         raise FailClosed(
             "refusing to resume: this is not the session that produced the "
@@ -321,7 +322,7 @@ def verdict_for(completed: list[dict], specs: list[dict]) -> dict:
     return {"verdict": None, "classification": "budget-censored feasibility run"}
 
 
-def execute(out: Path, generate, backend, fingerprint=None) -> dict:
+def execute(out: Path, generate, backend, fingerprint=None, preflight=None) -> dict:
     """The whole pipeline: setup check, donors, freeze, blocks, classify.
 
     `generate(seed, run_id) -> "FAIL" | "PASS" | other` is the donor producer
@@ -332,9 +333,13 @@ def execute(out: Path, generate, backend, fingerprint=None) -> dict:
     log = RunLog(out / "run.jsonl")
     pl = None
     try:
-        bind_session(log, fingerprint or session_fingerprint())
+        # Preflight first: the digest, the lock and the client are resolved
+        # while stopping is still free, and the session is bound to all of it.
+        fp = fingerprint or (preflight() if preflight else session_fingerprint())
+        bind_session(log, fp)
         budget = Budget(log)
-        budget.check("after_setup")
+        budget.check("after_setup")     # a manual reading is required here,
+                                        # before donor 0
         donors = acquire_donors(log, budget, generate)
         budget.check("after_donors")
         pl = freeze_manifest(log, out, donors)
@@ -403,8 +408,8 @@ def main(argv=None) -> int:
             "This runs the registered experiment against a live serving stack "
             "and spends money; it is not something to trigger by shell history.")
     backend = build_backend(args, out)
-    return 0 if execute(out, backend.run_donor, backend.run_continuation
-                        )["verdict_allowed"] else 1
+    return 0 if execute(out, backend.run_donor, backend.run_continuation,
+                        preflight=backend.preflight)["verdict_allowed"] else 1
 
 
 if __name__ == "__main__":

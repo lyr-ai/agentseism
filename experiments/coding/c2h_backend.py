@@ -77,6 +77,35 @@ class RealBackend:
         self._model = None
         self._identity: dict | None = None
         self._image_digest: str | None = None
+        self._lock_sha256: str | None = None
+
+    def preflight(self) -> dict:
+        """Resolve and freeze everything identity depends on, before donor 0.
+
+        Called once, before the first donor. Lazy resolution was a defect: the
+        digest used to appear only when the first container was built, so the
+        session was bound with `image_digest: None` and a tag that had moved
+        would have been discovered mid-experiment rather than before it.
+
+        Verifies the tag is the registered one, resolves its digest, hashes the
+        dependency lock, and builds the client so `num_retries` is checked
+        while stopping is still free.
+        """
+        import hashlib
+
+        if self.image != P.IMAGE or self.task != P.TASK:
+            raise IntegrityStop(
+                "registered_target",
+                f"task/image differ from the registration: "
+                f"{self.task}/{self.image} vs {P.TASK}/{P.IMAGE}")
+        lock = Path(__file__).resolve().parents[2] / P.DEP_LOCK
+        if not lock.exists():
+            raise IntegrityStop("dependency_lock", f"missing {P.DEP_LOCK}")
+        self._lock_sha256 = hashlib.sha256(lock.read_bytes()).hexdigest()[:16]
+        self.image_digest()          # resolves, or stops
+        self.model()                 # builds the client, checks num_retries
+        self._identity = self.identity()
+        return self._identity
 
     def image_digest(self) -> str:
         """The resolved digest of the registered tag, read once.
@@ -145,8 +174,11 @@ class RealBackend:
         return {"endpoint": self.endpoint, "model_id": P.MODEL["id"],
                 "revision": P.MODEL["revision"], "vllm_pid": fp["vllm_pid"],
                 "gpu": fp["gpu"], "hostname": fp["hostname"],
+                "boot_id": fp["boot_id"], "machine": fp["machine"],
                 "task": self.task, "image": self.image,
-                "image_digest": self._image_digest}
+                "image_digest": self._image_digest,
+                "dependency_lock_sha256": getattr(self, "_lock_sha256", None),
+                "protocol_hash": P.protocol_hash()}
 
     def assert_same_serving_process(self) -> None:
         """Donors and continuations must come from one serving process."""
@@ -154,8 +186,9 @@ class RealBackend:
             return
         now = self.identity()
         drift = [k for k in ("endpoint", "vllm_pid", "gpu", "hostname",
-                             "model_id", "revision", "task", "image",
-                             "image_digest")
+                             "boot_id", "machine", "model_id", "revision",
+                             "task", "image", "image_digest",
+                             "dependency_lock_sha256", "protocol_hash")
                  if self._identity.get(k) != now.get(k)]
         if drift:
             raise IntegrityStop(
@@ -269,6 +302,11 @@ class RealBackend:
         from agents.coding.fork import ForkMismatch, forking, load_step, materialize
 
         ForkedAgent = forking(archiving(InteractiveAgent))
+        if self._identity is None:
+            raise IntegrityStop("preflight",
+                                "preflight() has not run; the image digest, "
+                                "dependency lock and client must be resolved "
+                                "before the first donor, not during it")
         digest = self.image_digest()
         model = self.model()
 

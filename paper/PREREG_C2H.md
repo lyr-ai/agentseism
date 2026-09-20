@@ -102,7 +102,9 @@ design and §6.3 is its stop.
 ## 4a. Terminology — `acquisition_index` is not a sampling seed
 
 Clarification of an existing term, committed **before execution**. No design
-value changes and `protocol_hash` is unmoved at `30e43200e97e148b`.
+value changes; `protocol_hash` was unmoved at `30e43200e97e148b` when this was
+written, and later moved to `1fda86fedc297132` for the separate reason recorded
+in §4b. **The current registered hash is `1fda86fedc297132`.**
 
 > **`acquisition_index`** denotes the donor's position in the pre-registered
 > acquisition order of §4. **It is not an inference sampling seed.** Sampling

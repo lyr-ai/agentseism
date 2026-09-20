@@ -407,6 +407,14 @@ class _Env:
     def cleanup(self): pass
 
 
+def _preflighted(tmp_path, **kw):
+    """A backend as it exists after preflight(): identity resolved."""
+    b = be(tmp_path, **kw)
+    b._identity = {"endpoint": "e", "image_digest": "sha256:1"}
+    b._lock_sha256 = "abc123"
+    return b
+
+
 def _wire(monkeypatch, tmp_path, prefix_seen, messages=None):
     """Patch materialize / ForkedAgent / yaml so _execute runs with no Docker."""
     import agents.coding.fork as fork_mod
@@ -434,7 +442,7 @@ def _wire(monkeypatch, tmp_path, prefix_seen, messages=None):
 
 def test_donor_injects_no_prefix_and_continuation_does(tmp_path, monkeypatch):
     seen = []
-    b = be(tmp_path)
+    b = _preflighted(tmp_path)
     monkeypatch.setattr(RealBackend, "image_digest", lambda self: "sha256:dead")
     monkeypatch.setattr(RealBackend, "model", lambda self: object())
     _wire(monkeypatch, tmp_path, seen)
@@ -456,7 +464,7 @@ def test_donor_injects_no_prefix_and_continuation_does(tmp_path, monkeypatch):
 
 
 def test_execute_records_container_digest_hashes_commands_and_status(tmp_path, monkeypatch):
-    b = be(tmp_path)
+    b = _preflighted(tmp_path)
     monkeypatch.setattr(RealBackend, "image_digest", lambda self: "sha256:beef")
     monkeypatch.setattr(RealBackend, "model", lambda self: object())
     _wire(monkeypatch, tmp_path, [])
@@ -476,7 +484,7 @@ def test_every_transport_attempt_is_summed_into_the_record(tmp_path, monkeypatch
             {"role": "assistant", "extra": {"actions": [{"command": "b"}],
              "transport_attempts": 1,
              "transport_events": [{"attempt": 1, "outcome": "ok"}]}}]
-    b = be(tmp_path)
+    b = _preflighted(tmp_path)
     monkeypatch.setattr(RealBackend, "image_digest", lambda self: "sha256:1")
     monkeypatch.setattr(RealBackend, "model", lambda self: object())
     _wire(monkeypatch, tmp_path, [], messages=msgs)
@@ -486,7 +494,7 @@ def test_every_transport_attempt_is_summed_into_the_record(tmp_path, monkeypatch
 
 
 def test_the_same_client_is_reused_for_donor_and_continuation(tmp_path, monkeypatch):
-    b = be(tmp_path)
+    b = _preflighted(tmp_path)
     client = _compliant_client()
     calls = {"n": 0}
     def one_client(self):
@@ -551,3 +559,64 @@ def test_task_and_image_cannot_drift(tmp_path, field):
         with pytest.raises(IntegrityStop) as e:
             b.assert_same_serving_process()
     assert e.value.stage == "serving_identity"
+
+
+# ── 15. preflight runs before donor 0, or nothing runs ──
+def test_execute_refuses_before_preflight(tmp_path):
+    b = be(tmp_path)
+    assert b._identity is None
+    with pytest.raises(IntegrityStop) as e:
+        b._execute("donor_00", prefix=None, step_limit=None)
+    assert e.value.stage == "preflight"
+
+
+def test_preflight_resolves_digest_lock_and_client(tmp_path, monkeypatch):
+    b = be(tmp_path)
+    monkeypatch.setattr(RealBackend, "image_digest",
+                        lambda self: setattr(self, "_image_digest", "sha256:aa")
+                        or "sha256:aa")
+    monkeypatch.setattr(RealBackend, "model", lambda self: _compliant_client())
+    ident = b.preflight()
+    assert ident["image_digest"] == "sha256:aa"
+    assert ident["dependency_lock_sha256"] and len(ident["dependency_lock_sha256"]) == 16
+    assert ident["protocol_hash"] == P.protocol_hash()
+    assert ident["task"] == P.TASK and ident["image"] == P.IMAGE
+
+
+def test_preflight_stops_if_the_dependency_lock_is_missing(tmp_path, monkeypatch):
+    from experiments.coding import c2h_protocol as CP
+    monkeypatch.setattr(CP, "DEP_LOCK", "inference/does-not-exist.txt")
+    b = be(tmp_path)
+    with pytest.raises(IntegrityStop) as e:
+        b.preflight()
+    assert e.value.stage == "dependency_lock"
+
+
+def test_preflight_stops_if_the_target_is_not_the_registered_one(tmp_path):
+    b = be(tmp_path)
+    b.image = "somethingelse:latest"
+    with pytest.raises(IntegrityStop) as e:
+        b.preflight()
+    assert e.value.stage == "registered_target"
+
+
+def test_the_fingerprint_covers_everything_the_audit_requires(tmp_path, monkeypatch):
+    monkeypatch.setattr(RealBackend, "image_digest",
+                        lambda self: setattr(self, "_image_digest", "d") or "d")
+    monkeypatch.setattr(RealBackend, "model", lambda self: _compliant_client())
+    ident = be(tmp_path).preflight()
+    for field in ("hostname", "boot_id", "machine", "gpu", "vllm_pid", "endpoint",
+                  "model_id", "revision", "task", "image", "image_digest",
+                  "dependency_lock_sha256", "protocol_hash"):
+        assert field in ident, f"{field} missing from the session fingerprint"
+
+
+def test_session_binding_compares_every_recorded_field(tmp_path):
+    """A new fingerprint field must not escape the comparison by being absent
+    from a hard-coded list."""
+    from experiments.coding.c2h_budget import RunLog as RL
+    from experiments.coding.run_c2h import FailClosed, bind_session
+    log = RL(tmp_path / "l.jsonl")
+    bind_session(log, {"a": 1, "b": 2})
+    with pytest.raises(FailClosed):
+        bind_session(log, {"a": 1, "b": 2, "c": 3})      # extra field differs
