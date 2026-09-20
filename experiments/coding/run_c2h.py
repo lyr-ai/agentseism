@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -32,7 +33,7 @@ os.environ.setdefault("MSWEA_COST_TRACKING", "ignore_errors")
 
 from experiments.coding import c2h_protocol as P  # noqa: E402
 from experiments.coding.c2h_budget import (  # noqa: E402
-    Budget, BudgetStop, RunLog, session_fingerprint,
+    Budget, BudgetStop, RunLog, session_fingerprint, write_atomic,
 )
 
 
@@ -82,6 +83,115 @@ def acquire_donors(log: RunLog, budget: Budget, generate) -> list[dict]:
                          "continuations run, and this is not a recoverability "
                          "verdict", {"short": short})
     return held["FAIL"] + held["PASS"]
+
+
+def freeze_manifest(log: RunLog, out: Path, donors: list[dict]) -> dict:
+    """Materialise and pin the manifest once donors are bound (§3, §4.6).
+
+    After this, the plan is the plan. A later run whose donors, arrival order
+    or specs differ produces a different manifest hash and is refused, rather
+    than quietly executing a second experiment into the first one's directory.
+    """
+    pl = plan(donors)
+    prior = [r for r in log.read() if r["kind"] == "manifest_frozen"]
+    if prior:
+        old = prior[0]
+        if (old["manifest_hash"], old["order_hash"]) != (pl["manifest_hash"],
+                                                         pl["order_hash"]):
+            raise FailClosed(
+                "refusing to continue: the manifest changed after it was frozen "
+                f"(manifest {old['manifest_hash']} -> {pl['manifest_hash']}, "
+                f"order {old['order_hash']} -> {pl['order_hash']})")
+        return pl
+    digest = write_atomic(out / "manifest.json", json.dumps(
+        {k: pl[k] for k in ("protocol_hash", "manifest_hash", "order_hash")}
+        | {"donors": donors, "specs": pl["specs"], "blocks": pl["blocks"]},
+        indent=2, sort_keys=True))
+    log.append("manifest_frozen", protocol_hash=pl["protocol_hash"],
+               manifest_hash=pl["manifest_hash"], order_hash=pl["order_hash"],
+               file_sha256=digest, n_specs=len(pl["specs"]),
+               n_blocks=len(pl["blocks"]))
+    return pl
+
+
+def completed_specs(log: RunLog) -> set[str]:
+    """Only specs inside a block that both started and ended.
+
+    A block interrupted mid-flight has a `block_start` and no `block_end`; its
+    specs are not completed, however many of them happen to have written a
+    result. Counting those would let a killed process contribute to a verdict.
+    """
+    started, done = {}, set()
+    for r in log.read():
+        if r["kind"] == "block_start":
+            started[r["block_index"]] = r
+        elif r["kind"] == "block_end":
+            done.update(r["specs"])
+    return done
+
+
+def incomplete_blocks(log: RunLog) -> list[int]:
+    started = [r["block_index"] for r in log.read() if r["kind"] == "block_start"]
+    ended = {r["block_index"] for r in log.read() if r["kind"] == "block_end"}
+    return sorted(set(started) - ended)
+
+
+def run_blocks(log: RunLog, budget: Budget, out: Path, pl: dict, backend) -> None:
+    """The 24 blocks, in the frozen order (§6.1).
+
+    The budget is consulted *before* a block and never inside one. Once
+    `block_start` is written the block runs to completion or is left visibly
+    incomplete; there is no partial credit.
+    """
+    by_id = {s["run_id"]: s for s in pl["specs"]}
+    done = completed_specs(log)
+    for b in pl["blocks"]:
+        if set(b["specs"]) <= done:
+            continue
+        budget.check("before_block", b["index"])       # may raise; nothing started
+        log.append("block_start", block_index=b["index"], arm=b["arm"],
+                   donor_id=b["donor_id"], horizon=b["horizon"],
+                   specs=b["specs"])
+        results = []
+        for run_id in b["specs"]:
+            spec = by_id[run_id]
+            t0 = time.time()
+            r = backend(spec)
+            results.append({"run_id": run_id, "seconds": round(time.time() - t0, 1),
+                            **r})
+            log.append("continuation", block_index=b["index"], run_id=run_id, **r)
+        digest = write_atomic(out / f"block_{b['index']:02d}.json",
+                              json.dumps({"block": b, "results": results},
+                                         indent=2, sort_keys=True))
+        log.append("block_end", block_index=b["index"], specs=b["specs"],
+                   file_sha256=digest)
+
+
+def classify(log: RunLog, pl: dict | None) -> dict:
+    """The four terminal states (§6.3, §6.4, §6.5, §3).
+
+    Only `complete_72` may proceed to a recoverability verdict.
+    """
+    kinds = [r["kind"] for r in log.read()]
+    if "donor_yield_stop" in kinds:
+        return {"state": "donor_yield_feasibility_stop", "verdict_allowed": False,
+                "reason": "the donor cap was reached without the registered FAIL "
+                          "count; no continuations were run"}
+    if "integrity_stop" in kinds:
+        return {"state": "integrity_stop", "verdict_allowed": False,
+                "reason": "an environment or serving integrity check failed"}
+    if pl is None:
+        return {"state": "integrity_stop", "verdict_allowed": False,
+                "reason": "no manifest was frozen"}
+    done = completed_specs(log)
+    want = {s["run_id"] for s in pl["specs"]}
+    if done == want:
+        return {"state": "complete_72", "verdict_allowed": True,
+                "reason": f"all {len(want)} specs completed"}
+    v = verdict_for([s for s in pl["specs"] if s["run_id"] in done], pl["specs"])
+    return {"state": "budget_censored_feasibility_run", "verdict_allowed": False,
+            "reason": v["classification"], "completed": len(done),
+            "of": len(want), "incomplete_blocks": incomplete_blocks(log)}
 
 
 def plan(donors: list[dict]) -> dict:
@@ -210,6 +320,48 @@ def verdict_for(completed: list[dict], specs: list[dict]) -> dict:
     return {"verdict": None, "classification": "budget-censored feasibility run"}
 
 
+def execute(out: Path, generate, backend, fingerprint=None) -> dict:
+    """The whole pipeline: setup check, donors, freeze, blocks, classify.
+
+    `generate(seed, run_id) -> "FAIL" | "PASS" | other` is the donor producer
+    plus the frozen checker; `backend(spec) -> dict` runs one continuation.
+    Both are injected so the control flow can be exercised end to end with no
+    model, which is how every stop below is tested.
+    """
+    log = RunLog(out / "run.jsonl")
+    pl = None
+    try:
+        bind_session(log, fingerprint or session_fingerprint())
+        budget = Budget(log)
+        budget.check("after_setup")
+        donors = acquire_donors(log, budget, generate)
+        budget.check("after_donors")
+        pl = freeze_manifest(log, out, donors)
+        run_blocks(log, budget, out, pl, backend)
+    except BudgetStop as e:
+        log.append("stopped", stop_kind=e.kind, detail=e.detail)
+    except FailClosed:
+        raise
+    if pl is None:
+        prior = [r for r in log.read() if r["kind"] == "manifest_frozen"]
+        if prior and (out / "manifest.json").exists():
+            m = json.loads((out / "manifest.json").read_text())
+            pl = {"specs": m["specs"], "blocks": m["blocks"],
+                  "manifest_hash": m["manifest_hash"],
+                  "order_hash": m["order_hash"]}
+    report = classify(log, pl)
+    if pl:
+        report |= {"manifest_hash": pl["manifest_hash"],
+                   "order_hash": pl["order_hash"]}
+    report["protocol_hash"] = P.protocol_hash()
+    report["incomplete_blocks"] = incomplete_blocks(log)
+    digest = write_atomic(out / "report.json", json.dumps(report, indent=2,
+                                                          sort_keys=True))
+    log.append("report", file_sha256=digest, **{k: report[k]
+                                                for k in ("state", "verdict_allowed")})
+    return report
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--out", default=str(ROOT / "data/runs/c2h"))
@@ -220,13 +372,11 @@ def main(argv=None) -> int:
     if args.resolve_only:
         return resolve_only(out)
 
-    log = RunLog(out / "run.jsonl")
-    bind_session(log, session_fingerprint())
-    budget = Budget(log)
-    budget.check("after_setup")
     raise SystemExit(
-        "execution path is deliberately not wired: donor generation and the "
-        "continuation loop are the next commit, and no machine is rented yet")
+        "the live donor generator and continuation backend are not wired: "
+        "they are the next commit, and no machine is rented yet. The control "
+        "flow is complete and exercised end to end by tests/test_c2h_e2e.py "
+        "through injected backends.")
 
 
 if __name__ == "__main__":

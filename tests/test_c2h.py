@@ -140,10 +140,27 @@ def test_forecast_only_at_registered_checkpoints(tmp_path):
         b.check("mid_block")
 
 
-def test_an_estimate_is_flagged_and_never_passed_off_as_a_bill(tmp_path):
+def test_an_estimate_warns_but_never_authorises(tmp_path):
+    """It is logged, and it is refused as authority — for any checkpoint."""
     log = RunLog(tmp_path / "l.jsonl"); b = Budget(log)
     b.record_reading(5.0, source="estimate")
-    assert b.check("after_setup")["estimate_only"] is True
+    for cp in P.CHECKPOINTS:
+        with pytest.raises(BudgetStop) as e:
+            b.check(cp, 0)
+        assert e.value.kind == "estimate_only"
+    refusals = [r for r in log.read() if r["kind"] == "budget_refused"]
+    assert refusals and all(r["reason"] == "estimate_only" for r in refusals)
+
+
+def test_one_reading_authorises_one_block(tmp_path):
+    log = RunLog(tmp_path / "l.jsonl"); b = Budget(log)
+    b.record_reading(5.0)
+    assert b.check("before_block", 0)["usd"] == 5.0
+    with pytest.raises(BudgetStop) as e:
+        b.check("before_block", 1)
+    assert e.value.kind == "stale_reading"
+    b.record_reading(6.0)
+    assert b.check("before_block", 1)["usd"] == 6.0
 
 
 def test_log_is_append_only(tmp_path):

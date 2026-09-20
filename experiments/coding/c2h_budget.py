@@ -11,6 +11,15 @@ reading, never instead of one.
 **It does not re-estimate continuously.** §6.1 fixes exactly three moments:
 after setup, after donor acquisition, and before each block. A block that has
 started runs to completion, so no threshold can fire inside one.
+
+Two rules follow from those and are enforced here rather than remembered:
+
+*Each block needs its own reading.* A reading is consumed by the check that
+authorises a block, so the next block cannot reuse it. Otherwise one early
+reading would authorise twenty-four blocks and the ceiling would be decorative.
+
+*An estimate never authorises anything.* It is logged, and it warns, and it is
+refused as authority for a checkpoint or a block start.
 """
 
 from __future__ import annotations
@@ -113,12 +122,20 @@ class Budget:
                        note: str = "") -> dict:
         """Enter a cumulative spend read from the billing page.
 
-        `source` is recorded verbatim. Anything other than "manual" is treated
-        as an estimate by `check`, never as a bill.
+        `source` is recorded verbatim. Anything other than "manual" is an
+        estimate: it is logged and it warns, and `check` refuses to be
+        authorised by it.
         """
-        return self.log.append("billing_reading", usd=float(usd), source=source,
-                               operator=getpass.getuser(), note=note,
+        seq = 1 + max([r.get("seq", 0) for r in self.log.read()
+                       if r["kind"] == "billing_reading"] or [0])
+        return self.log.append("billing_reading", seq=seq, usd=float(usd),
+                               source=source, operator=getpass.getuser(),
+                               note=note,
                                entered_by_env=os.environ.get("C2H_OPERATOR", ""))
+
+    def _consumed_seq(self) -> int:
+        return max([r.get("consumed_seq", 0) for r in self.log.read()
+                    if r["kind"] == "budget_ok"] or [0])
 
     def check(self, checkpoint: str, block_index: int | None = None) -> dict:
         """Evaluate the registered thresholds. Only at a registered checkpoint."""
@@ -133,7 +150,26 @@ class Budget:
                              {"checkpoint": checkpoint})
         usd, stale = last["usd"], last["source"] != "manual"
         state = {"checkpoint": checkpoint, "block_index": block_index,
-                 "usd": usd, "reading_ts": last["ts"], "estimate_only": stale}
+                 "usd": usd, "reading_ts": last["ts"], "estimate_only": stale,
+                 "reading_seq": last.get("seq", 0)}
+
+        # An estimate is information, never authority.
+        if stale:
+            self.log.append("budget_refused", reason="estimate_only", **state)
+            raise BudgetStop("estimate_only",
+                             f"the latest reading (${usd:.2f}) has source "
+                             f"{last['source']!r}; only a manual billing-page "
+                             "reading authorises a checkpoint or a block",
+                             state)
+
+        # One reading authorises one block. Reusing it would make 24 blocks run
+        # on a single early number.
+        if checkpoint == "before_block" and last.get("seq", 0) <= self._consumed_seq():
+            self.log.append("budget_refused", reason="stale_reading", **state)
+            raise BudgetStop("stale_reading",
+                             f"reading #{last.get('seq', 0)} already authorised a "
+                             "block; enter a fresh cumulative spend before the next",
+                             state)
 
         if usd >= P.BUDGET["absolute"]:
             self.log.append("budget_stop", reason="absolute", **state)
@@ -148,5 +184,26 @@ class Budget:
             raise BudgetStop("no_new_block",
                              f"${usd:.2f} >= ${P.BUDGET['no_new_block']}: start no "
                              "new block", state)
-        self.log.append("budget_ok", **state)
+        self.log.append("budget_ok", consumed_seq=state["reading_seq"], **state)
         return state
+
+
+def write_atomic(path: Path, data: str) -> str:
+    """Write, fsync, rename. Returns the SHA-256 of what landed.
+
+    An interrupted write must not leave a file that looks complete. A partial
+    JSON that happens to parse is worse than no file, because the next reader
+    treats it as an artifact.
+    """
+    import hashlib
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    with tmp.open("w") as f:
+        f.write(data)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, path)
+    digest = hashlib.sha256(data.encode()).hexdigest()
+    Path(str(path) + ".sha256").write_text(f"{digest}  {path.name}\n")
+    return digest
