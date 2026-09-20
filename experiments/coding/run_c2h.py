@@ -362,21 +362,50 @@ def execute(out: Path, generate, backend, fingerprint=None) -> dict:
     return report
 
 
+def build_backend(args, out: Path):
+    """Construct the selected backend. Construction is inert either way."""
+    if args.backend == "fake":
+        raise FailClosed(
+            "--backend fake has no built-in implementation: the fake path "
+            "exists for tests, which inject their own. Use --backend real "
+            "with --execute-registered-c2h to run the registered experiment.")
+    from experiments.coding.c2h_backend import RealBackend
+    return RealBackend(out=out, endpoint=args.endpoint, image=args.image,
+                       platform=args.platform)
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--out", default=str(ROOT / "data/runs/c2h"))
     ap.add_argument("--resolve-only", action="store_true")
+    # Default fake, so a mistyped command cannot start the registered
+    # experiment. `real` additionally needs the confirmation flag below.
+    ap.add_argument("--backend", choices=("fake", "real"), default="fake")
+    ap.add_argument("--execute-registered-c2h", action="store_true",
+                    help="required with --backend real; without it the real "
+                         "backend refuses to run")
+    ap.add_argument("--endpoint", default="http://127.0.0.1:8000/v1")
+    ap.add_argument("--image", default="")
+    ap.add_argument("--platform", default="")
     args = ap.parse_args(argv)
     out = Path(args.out)
 
+    # Checked first, and unconditionally: --resolve-only is side-effect free
+    # whatever backend is configured, because nothing is constructed before it.
     if args.resolve_only:
         return resolve_only(out)
 
-    raise SystemExit(
-        "the live donor generator and continuation backend are not wired: "
-        "they are the next commit, and no machine is rented yet. The control "
-        "flow is complete and exercised end to end by tests/test_c2h_e2e.py "
-        "through injected backends.")
+    if args.backend == "real" and not args.execute_registered_c2h:
+        raise SystemExit(
+            "refusing to run: --backend real requires --execute-registered-c2h. "
+            "This runs the registered experiment against a live serving stack "
+            "and spends money; it is not something to trigger by shell history.")
+    if args.backend == "real" and not args.image:
+        raise SystemExit("--backend real requires --image")
+
+    backend = build_backend(args, out)
+    return 0 if execute(out, backend.run_donor, backend.run_continuation
+                        )["verdict_allowed"] else 1
 
 
 if __name__ == "__main__":
