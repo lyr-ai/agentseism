@@ -43,6 +43,26 @@ no model calls:
 the pilot, and inventing them would demonstrate the report rather than the
 method.
 
+## Quick start
+
+Three lines per capability. You name the threshold; the tool names the
+statistics and prints every one of them in the report.
+
+```yaml
+# .agentseism/contract.yaml
+runner:
+  command: "python run_agent.py --task {task_file}"
+features:
+  task_success:     {gate: true,    regression_threshold: 0.10}
+  recovery_success: {gate: true,    regression_threshold: 0.15}
+  cost_per_success: {gate: warning, regression_threshold: 0.25}
+```
+
+That resolves to a complete, auditable contract —
+[`contracts/example-resolved.md`](contracts/example-resolved.md) — which is
+what gets hashed and reported. Defaults are versioned, so upgrading the tool
+cannot make a differently-resolved contract look like the same one.
+
 **Direction:** see [`docs/CONVERGENCE.md`](docs/CONVERGENCE.md) for why this is
 narrower than the repository's earlier framing, and what the earlier
 experiments contributed to it.
