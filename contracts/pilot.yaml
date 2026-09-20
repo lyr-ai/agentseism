@@ -1,0 +1,40 @@
+# Phase 6 pilot: three tasks cannot satisfy the default's evidence minimums,
+# so this contract says so in the file rather than in a caveat afterwards.
+protocol_version: 1
+contract_version: "pilot-1"
+study_mode: feasibility
+verdict_authority: descriptive_only
+
+comparability:
+  require_same:
+    - model_revision
+    - serving_runtime
+    - dependency_lock
+    - prompt_version
+    - scaffold_version
+  mismatch_verdict: INCOMPARABLE
+
+decision:
+  aggregation: any
+
+features:
+  task_success:
+    role: outcome
+    evaluator: swebench_resolved
+    independent_unit: scenario
+    effect: risk_difference
+    regression_direction: decrease
+    practical_threshold: 0.10
+    uncertainty: paired_bootstrap
+    minimum_evidence:
+      scenarios: 3
+      trials_per_condition: 3
+    invalid_policy: insufficient
+    gate: true
+
+diagnostics:
+  trace_divergence:
+    verdict_authority: none
+
+rca:
+  run_only_when: REGRESSION

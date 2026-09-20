@@ -1,0 +1,68 @@
+# The built-in default contract. A team overrides it; the semantics stay.
+protocol_version: 1
+contract_version: "default-1"
+study_mode: confirmatory
+verdict_authority: release
+
+comparability:
+  require_same:
+    - model_revision
+    - serving_runtime
+    - dependency_lock
+    - prompt_version
+    - scaffold_version
+  mismatch_verdict: INCOMPARABLE
+
+decision:
+  aggregation: any          # declared in advance, not when the numbers arrive
+
+features:
+  task_success:
+    role: outcome
+    evaluator: swebench_resolved
+    independent_unit: scenario
+    effect: risk_difference
+    regression_direction: decrease
+    practical_threshold: 0.10
+    uncertainty: paired_bootstrap
+    minimum_evidence:
+      scenarios: 5
+      trials_per_condition: 3
+    invalid_policy: stop
+    gate: true
+
+  recovery_success:
+    role: outcome
+    condition: predefined_recovery_event
+    evaluator: deterministic_recovery_check
+    independent_unit: scenario
+    effect: risk_difference
+    regression_direction: decrease
+    practical_threshold: 0.15
+    uncertainty: paired_bootstrap
+    minimum_evidence:
+      eligible_scenarios: 3
+    invalid_policy: insufficient
+    gate: true
+
+  cost_per_success:
+    role: efficiency
+    evaluator: tokens_per_resolved
+    independent_unit: scenario
+    effect: median_ratio
+    regression_direction: increase
+    practical_threshold: 0.25
+    uncertainty: bootstrap
+    minimum_evidence:
+      scenarios: 3
+    invalid_policy: insufficient
+    gate: warning
+
+diagnostics:
+  trace_divergence:
+    verdict_authority: none
+  tool_error_profile:
+    verdict_authority: none
+
+rca:
+  run_only_when: REGRESSION
