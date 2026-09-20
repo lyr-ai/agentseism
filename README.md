@@ -2,10 +2,11 @@
 
 # AgentSeism
 
-**Behavioral weak-point discovery for LLM agents.**
+**Did this PR make the agent worse — and if so, where?**
 
-> **Boundary.** AgentSeism measures where behavior varies and what that variation
-> is associated with. It does not decide whether an outcome is correct.
+> **What it decides.** Outcomes gate a merge. Traces explain a regression after
+> one is confirmed. When the execution environment changed, the two sides are
+> not compared at all.
 
 ![status: research prototype](https://img.shields.io/badge/status-research%20prototype-orange)
 
@@ -17,18 +18,34 @@
 > [AgentLab](https://github.com/canis-minor/agentlab) ·
 > **AgentSeism**
 
-AgentSeism projects heterogeneous agent executions into comparable **execution
-features**, then measures which feature variations are most strongly associated
-with downstream behavioral variation.
+Agents are stochastic. The same agent, unchanged, produces a different
+trajectory almost every run — so "the behaviour changed" is the baseline
+condition, not a finding. AgentSeism decides which changes matter:
 
-The question is not *did my agent fail?* and not *are two outputs different?*
-It is:
+| Observation | Verdict |
+|---|---|
+| outcome dropped, environments comparable | `REGRESSION` — and only now, RCA |
+| trace moved, outcome held | `PASS_WITH_CHANGE` — do not block |
+| serving fingerprint changed | `INCOMPARABLE` — zero trials spent |
+| evidence too thin to say | `INSUFFICIENT_EVIDENCE` — not a pass |
 
-```text
-Where did behavioral variation emerge inside the execution,
-how did it propagate,
-and which execution points actually matter to the outcome?
-```
+Two of those verdicts are demonstrated on frozen data in this repository, with
+no model calls:
+
+- [`docs/demo/pr-report-pass-with-change.md`](docs/demo/pr-report-pass-with-change.md)
+  — four independent runs of one task, **all four resolved the issue**, and a
+  composite trace detector still fires on **6 of 6** pairs.
+- [`docs/demo/pr-report-incomparable.md`](docs/demo/pr-report-incomparable.md)
+  — the agent held completely fixed, only the GPU and driver changed, and
+  **23 of 23** structured actions differ.
+
+`REGRESSION` and `INSUFFICIENT_EVIDENCE` are not demonstrated yet; they need
+the pilot, and inventing them would demonstrate the report rather than the
+method.
+
+**Direction:** see [`docs/CONVERGENCE.md`](docs/CONVERGENCE.md) for why this is
+narrower than the repository's earlier framing, and what the earlier
+experiments contributed to it.
 
 ## The problem
 
