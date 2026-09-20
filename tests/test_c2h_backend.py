@@ -53,9 +53,15 @@ def test_resolve_only_is_side_effect_free_with_a_real_backend(tmp_path, capsys):
 
 
 # ── 2. one serving process for the whole experiment ──
+def _compliant_client():
+    c = mock.MagicMock()
+    c.config.model_kwargs = {"num_retries": 0}
+    return c
+
+
 def test_client_is_built_once_and_shared(tmp_path):
     b = be(tmp_path)
-    sentinel = object()
+    sentinel = _compliant_client()
     with mock.patch("agents.coding.instrumented_model.InstrumentedLitellmModel",
                     return_value=sentinel) as M, \
          mock.patch.object(RealBackend, "identity", return_value={"vllm_pid": "1"}):
@@ -66,7 +72,8 @@ def test_client_is_built_once_and_shared(tmp_path):
 
 def test_the_registered_transport_policy_is_used_verbatim(tmp_path):
     b = be(tmp_path)
-    with mock.patch("agents.coding.instrumented_model.InstrumentedLitellmModel") as M, \
+    with mock.patch("agents.coding.instrumented_model.InstrumentedLitellmModel",
+                    return_value=_compliant_client()) as M, \
          mock.patch.object(RealBackend, "identity", return_value={}):
         b.model()
     kw = M.call_args.kwargs
@@ -160,7 +167,8 @@ def test_continuation_uses_the_spec_and_never_reselects_a_donor(tmp_path):
     seen = {}
     def fake_exec(self, run_id, prefix, step_limit, **extra):
         seen.update(run_id=run_id, prefix=prefix, step_limit=step_limit, **extra)
-        return {"exit_status": "Submitted"}
+        return {"exit_status": "Submitted", "transport_attempts": 1,
+                "transport_events": [{"attempt": 1, "outcome": "ok"}]}
     b = be(tmp_path)
     with mock.patch.object(RealBackend, "identity", return_value={}), \
          mock.patch.object(RealBackend, "_execute", fake_exec):
@@ -263,3 +271,107 @@ def test_the_default_backend_is_not_real():
     src = Path(run_c2h.__file__).read_text()
     assert 'choices=("fake", "real"), default="fake"' in src
     del argparse
+
+
+# ── 9. no hidden retries: behaviour, not grep ──
+def test_one_logical_request_enters_the_transport_once(tmp_path):
+    """The behavioural half of the claim. grep cannot see litellm's own retry;
+    this drives a request and counts entries into the layer below."""
+    from agents.coding.instrumented_model import InstrumentedLitellmModel
+    calls = {"n": 0}
+
+    def fake_query(self, messages, **kw):
+        calls["n"] += 1
+        return mock.MagicMock(choices=[mock.MagicMock(
+            message=mock.MagicMock(content="ok", tool_calls=[]))])
+
+    with mock.patch.object(InstrumentedLitellmModel, "__init__",
+                           lambda self, **kw: None):
+        m = InstrumentedLitellmModel()
+    m._stream = False
+    m._max_attempts, m._retry_backoff, m._attempt_timeout = 6, 0, 180
+    m._timeout, m._events = None, []
+    m.abort_exceptions = ()
+    with mock.patch("minisweagent.models.litellm_model.LitellmModel._query", fake_query):
+        m._query([{"role": "user", "content": "x"}])
+    assert calls["n"] == 1, "one logical request entered the transport more than once"
+    assert len(m._events) == 1 and m._events[0]["outcome"] == "ok"
+
+
+def test_num_retries_must_be_zero_underneath(tmp_path):
+    good = mock.MagicMock(); good.config.model_kwargs = {"num_retries": 0}
+    RealBackend.assert_no_hidden_retries(good)          # no raise
+    for bad_value in (1, 5, None, "2"):
+        bad = mock.MagicMock(); bad.config.model_kwargs = {"num_retries": bad_value}
+        with pytest.raises(IntegrityStop) as e:
+            RealBackend.assert_no_hidden_retries(bad)
+        assert e.value.stage == "transport_policy"
+
+
+def test_the_guard_runs_when_the_client_is_built(tmp_path):
+    b = be(tmp_path)
+    bad = mock.MagicMock(); bad.config.model_kwargs = {"num_retries": 3}
+    with mock.patch("agents.coding.instrumented_model.InstrumentedLitellmModel",
+                    return_value=bad), \
+         mock.patch.object(RealBackend, "identity", return_value={}):
+        with pytest.raises(IntegrityStop) as e:
+            b.model()
+    assert e.value.stage == "transport_policy"
+
+
+def test_a_record_without_an_attempt_count_is_an_integrity_stop(tmp_path):
+    spec = {"run_id": "r", "arm": "FAIL", "donor_run_id": "d", "horizon": 16,
+            "step_limit": 234}
+    b = be(tmp_path)
+    with mock.patch.object(RealBackend, "identity", return_value={}), \
+         mock.patch.object(RealBackend, "_execute",
+                           return_value={"exit_status": "Submitted"}):
+        with pytest.raises(IntegrityStop) as e:
+            b.run_continuation(spec)
+    assert e.value.stage == "attempt_record"
+
+
+def test_attempts_are_carried_into_the_artifact(tmp_path):
+    spec = {"run_id": "r", "arm": "FAIL", "donor_run_id": "d", "horizon": 16,
+            "step_limit": 234}
+    b = be(tmp_path)
+    result = {"exit_status": "Submitted", "transport_attempts": 3,
+              "transport_events": [{"attempt": i} for i in (1, 2, 3)]}
+    with mock.patch.object(RealBackend, "identity", return_value={}), \
+         mock.patch.object(RealBackend, "_execute", return_value=result):
+        b.run_continuation(spec)
+    rec = json.loads((tmp_path / "raw" / "r.json").read_text())
+    assert rec["transport_attempts"] == 3 and len(rec["transport_events"]) == 3
+
+
+# ── 10. the frozen checker, verified offline against all twenty donors ──
+def test_checker_reproduces_every_frozen_label():
+    from experiments.coding.c2h_checker import verify_against_frozen_labels
+    r = verify_against_frozen_labels()
+    assert r["n"] == 20
+    assert (r["frozen_fail"], r["frozen_pass"]) == (4, 16)
+    assert r["mismatches"] == [] and r["unlabelled"] == []
+    assert r["identical"] is True
+
+
+@pytest.mark.parametrize("body,expect", [
+    ({"resolved": True, "patch_exists": True, "patch_successfully_applied": True}, "PASS"),
+    ({"resolved": False, "patch_exists": True, "patch_successfully_applied": True}, "FAIL"),
+])
+def test_checker_rule_is_resolved_only(body, expect):
+    from experiments.coding.c2h_checker import INSTANCE, label_from_report
+    assert label_from_report({INSTANCE: body}) == expect
+
+
+@pytest.mark.parametrize("body", [
+    {"infra_failure": True, "resolved": False, "patch_exists": True,
+     "patch_successfully_applied": True},
+    {"patch_exists": False, "resolved": False},
+    {"patch_exists": True, "patch_successfully_applied": False, "resolved": False},
+    {"patch_exists": True, "patch_successfully_applied": True},
+])
+def test_non_verdicts_refuse_rather_than_becoming_FAIL(body):
+    """Infra noise must not be recorded in the arm the experiment is about."""
+    from experiments.coding.c2h_checker import INSTANCE, label_from_report
+    with pytest.raises(UnlabelledDonor):
+        label_from_report({INSTANCE: body})

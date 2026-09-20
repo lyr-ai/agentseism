@@ -11,12 +11,20 @@ fingerprint, because C2-H is defined as one session on one host
 (`PREREG_C2H.md` §1). The model client is built once, lazily, on first use, and
 its identity is recorded.
 
-**No invisible retries.** The registered transport policy is the one
-`run_c2.py` uses -- `stream=True`, `attempt_timeout=180`, `max_attempts=6`,
-`num_retries: 0` underneath -- and nothing is layered on top of it. Every
-attempt the client makes is already counted in `transport_events` and is
-carried into the artifact, so a retried step is visible rather than smoothed
-over.
+**No invisible retries, and the claim is checked rather than asserted.** The
+registered transport policy is the one `run_c2.py` uses -- `stream=True`,
+`attempt_timeout=180`, `max_attempts=6` -- with `num_retries: 0` underneath, so
+the only retry layer is the instrumented one. Three things enforce that, since
+grepping this file for a retry loop proves nothing about litellm, the HTTP
+client or the SDK:
+
+* `assert_no_hidden_retries()` reads the constructed client and raises if
+  `num_retries` is anything but 0, at construction and before each use;
+* a behavioural test drives one logical request and asserts the transport is
+  entered exactly once;
+* every record carries `transport_attempts` and `transport_events`, so a step
+  that did retry is visible in the artifact rather than smoothed over, and a
+  record arriving without that field is an integrity stop, not a silent gap.
 
 **Nothing is skipped.** A container failure, a timeout, a parse failure or a
 serving anomaly raises `IntegrityStop`. There is no path that drops a spec and
@@ -82,8 +90,25 @@ class RealBackend:
                 model_name=f"openai/{P.MODEL['id']}",
                 model_kwargs={"drop_params": True},
                 stream=True, attempt_timeout=180, max_attempts=6)
+            self.assert_no_hidden_retries(self._model)
             self._identity = self.identity()
         return self._model
+
+    @staticmethod
+    def assert_no_hidden_retries(model) -> None:
+        """The layer beneath the instrumented one must contribute nothing.
+
+        `InstrumentedLitellmModel` sets `num_retries: 0` so that every attempt
+        is its own and is counted. If something re-enables it, attempts stop
+        being observable and `max_attempts=6` silently becomes 6xN.
+        """
+        got = dict(getattr(model.config, "model_kwargs", {})).get("num_retries")
+        if got != 0:
+            raise IntegrityStop(
+                "transport_policy",
+                f"num_retries is {got!r}, not 0: the layer beneath the "
+                "instrumented retry would add uncounted attempts",
+                {"model_kwargs": dict(getattr(model.config, "model_kwargs", {}))})
 
     def identity(self) -> dict:
         """Endpoint, PID and serving fingerprint, recorded with every record."""
@@ -181,6 +206,7 @@ class RealBackend:
                                 f"{type(exc).__name__}: {exc}",
                                 {"run_id": spec["run_id"]}) from None
         rec |= {"finished": _now(), **result}
+        self._require_attempt_record(rec, spec["run_id"])
         rec["artifact_sha256"] = self._freeze(spec["run_id"], rec)
         return {k: rec[k] for k in ("run_id", "exit_status", "artifact_sha256")
                 if k in rec}
@@ -200,6 +226,17 @@ class RealBackend:
             "the container and agent loop are not connected yet; this backend "
             "is statically wired and mock-tested only, and no machine has been "
             "rented", {"run_id": run_id})
+
+    @staticmethod
+    def _require_attempt_record(rec: dict, run_id: str) -> None:
+        """A record without its attempt count is a gap, not a clean run."""
+        if "transport_attempts" not in rec:
+            raise IntegrityStop(
+                "attempt_record",
+                "the record carries no transport_attempts; retries must be "
+                "visible in the artifact, and an absent count is "
+                "indistinguishable from an unobserved one",
+                {"run_id": run_id})
 
     def _freeze(self, name: str, record: dict) -> str:
         """Write the raw artifact atomically with its SHA-256, immediately.
