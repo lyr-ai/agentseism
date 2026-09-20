@@ -267,3 +267,82 @@ host cannot reproduce it, the forks taken from it are not trustworthy either.
 Gate 8 is part of `inference/vm_gate.sh` and its result is written into the
 batch's provenance alongside the protocol hash, so a set of outcomes can never
 be separated from the evidence that its host was equivalent.
+
+---
+
+## Amendment C2.3, 2026-09-20 — serving-stack change, with a gate
+
+**Infrastructure only. No scientific hypothesis, outcome, arm, horizon,
+trajectory, replication count or analysis rule changes.** Written and committed
+**before any Gate 9 result exists**, and before any continuation has been run on
+this host. `c2_protocol.py` hashes to `0fafa0a2534272a6`, unchanged.
+
+### What changed, and why it is not a free substitution
+
+C2.2 moved execution to a colocated native x86 Linux host and gated the
+**container/filesystem** side with replay equivalence (Gate 8). It said nothing
+about the serving stack, because the implicit assumption was that the same GPU
+would serve.
+
+It will not. The donor trajectories were served on:
+
+```
+gpu=NVIDIA A100-SXM4-80GB   driver=580.126.16   cuda=13.0   vllm=0.28.0
+model=Qwen/Qwen3.6-27B-FP8 @ e89b16eb   max_model_len=131072
+                                    — data/runs/h2_phase_a1/stack.txt
+```
+
+The available host is a single **NVIDIA H100 PCIe 80 GB**, driver 580.105.08,
+serving the same model and revision under vLLM 0.28.0 with CUDA 13.0.
+
+`vllm`, `cuda`, the model and the revision match. The card does not, and for
+these weights that is not cosmetic: **A100 has no native FP8 tensor cores and
+H100 does.** vLLM reaches FP8 weights through different kernels on the two, so
+the same prompt can take a different arithmetic path and, at temperature 0,
+yield a different token.
+
+A single A100 80 GB is not offered on the available provider. An 8×A100 host
+would introduce a multi-GPU execution path and a cost profile of its own, which
+is a different substitution rather than a clean reversal. Running without a gate
+would make "the same agent continuing its own trajectory" a claim this
+experiment could not defend.
+
+### Gate 9 — serving-stack behavioural compatibility
+
+**Named for what it measures.** It asks whether this stack reproduces the
+donors' *observable behaviour* at the frozen fork points. It is **not** a test
+of hardware equivalence, numerical equivalence, or kernel equivalence, and no
+result of it may be reported as any of those. A pass licenses one sentence:
+*the batch passed a pre-registered behavioural compatibility check.*
+
+**Coverage is every distinct fork root, deduplicated — not a sample, and not
+one step.** The 72 specs reduce to **24** distinct `(arm, source, horizon)` fork
+roots: 8 source trajectories × 3 horizons. All 24 are tested. One hit proves
+nothing and is not treated as evidence of anything.
+
+**Procedure, per fork root.** Reconstruct the frozen message prefix exactly as
+`run_c2.py` would, submit it to this stack at `temperature 0` with the same
+model revision, vLLM 0.28.0, `max_model_len` and generation parameters the
+continuation would use, and compare against what the donor recorded at that
+step:
+
+1. the **raw response text**, byte for byte;
+2. where parseable, the **structured action / tool call** extracted from it.
+
+### Decision rules, fixed here, before any result
+
+| Outcome | Consequence |
+|---|---|
+| **Raw response identical at all 24 roots** | C2 may execute. The paper may say only that it *passed a pre-registered behavioural compatibility check* — never that the hosts are equivalent, numerically or otherwise. |
+| **Raw text differs somewhere, but the structured action matches at all 24** | The verbatim-continuation claim is **not** supported. A deliberately downgraded C2 may execute, with its claim restricted to **policy-level recoverability**, and this restriction recorded as a new protocol interpretation rather than as the original one. |
+| **Any key action or tool call differs** | **Stop. The 72 specs are not run.** This host does not meet donor compatibility, and that is the finding. |
+
+There is no fourth branch and no "mostly matched" branch. A partial match on the
+structured action is the second row only if it is *every* root; otherwise it is
+the third.
+
+### Provenance
+
+Gate 9's per-root results, this host's stack record, the Gate 8 replay log and
+the protocol hash are committed together, so a set of C2 outcomes can never be
+separated from the evidence about the stack that produced them.
