@@ -90,7 +90,23 @@ A100 data as though the stack were held constant.
 ### 4.1 How many donors — the binding constraint
 
 Observed failure rate is **4 of 20** labelled runs (`paper/experiments.md`
-line 1546); the independent batch `r0`–`r4` was 1 of 5. Taking `p = 0.20`:
+line 1546); the independent batch `r0`–`r4` was 1 of 5.
+
+**`p` is not known.** Four events out of twenty give a Wilson 95% interval of
+**[0.081, 0.416]**. Every probability below is a *plug-in* estimate computed as
+though `p = 0.20` were the truth, and none of them is a guarantee. How much that
+matters:
+
+| donors N | P(≥4 FAIL) at p=0.081 | at p=0.20 | at p=0.416 |
+|---:|---:|---:|---:|
+| 20 | 0.07 | 0.59 | 0.99 |
+| 25 | 0.14 | 0.77 | 1.00 |
+| 30 | **0.22** | 0.88 | 1.00 |
+
+At the low end of the interval even 30 donors yield four failures only ~22% of
+the time. **Donor yield, not wall clock, is the dominant risk in this design.**
+
+With that caveat attached, the plug-in table:
 
 | donors N | P(≥4 FAIL) | P(≥3) | P(≥2) | E[FAIL] |
 |---:|---:|---:|---:|---:|
@@ -100,8 +116,9 @@ line 1546); the independent batch `r0`–`r4` was 1 of 5. Taking `p = 0.20`:
 | 30 | **0.88** | 0.96 | 0.99 | 6.0 |
 | 40 | 0.97 | 0.99 | 1.00 | 8.0 |
 
-**20 donors is a coin flip**, not a plan: it yields four FAIL donors 59% of the
-time. Matching C2's four-FAIL arm with reasonable confidence needs ~30.
+**20 donors is a coin flip under the plug-in**, and worse than that if the true
+rate sits below 0.20. Matching C2's four-FAIL arm needs ~30 at `p = 0.20` — and
+no fixed N is safe across the interval.
 
 ### 4.2 Wall clock, from observed donor runs
 
@@ -119,23 +136,58 @@ Continuations carry a donor prefix, so these are optimistic: context is larger
 from step one. Prefix caching pulls the other way — every continuation in an arm
 shares its donor prefix, so after the first it is a cache hit.
 
-### 4.3 The verdict on budget
+### 4.3 Budget — conditionally feasible, not yet budget-safe
 
-With hourly rate `R` and ~1 h of setup and model download:
+At the observed Lambda rate `R = $3.29/h`, plus ~1 h of setup and download:
 
-```
-30 donors + 72 continuations   mean  ≈ 21.8 h · R     worst ≈ 39.1 h · R
-30 donors + 36 continuations   mean  ≈ 14.5 h · R     worst ≈ 25.7 h · R
-20 donors + 36 continuations   mean  ≈ 12.5 h · R     worst ≈ 22.0 h · R
-```
+| design | mean | worst |
+|---|---:|---:|
+| 30 donors + 72 continuations | 21.9 h = **$71.99** | 39.1 h = **$128.64** |
+| 30 donors + 36 continuations | 14.5 h = $47.74 | — |
+| sequential donors + 72 continuations | 19.8 h = $65.26 | bounded by the cap |
+| sequential donors + 36 continuations | 12.5 h = $41.01 | bounded by the cap |
 
-**The original 72-spec shape does not fit $50–100 at adequate donor power.** At
-any plausible H100 rate, 30 donors plus 72 continuations consumes the whole
-budget at the mean and overruns it badly at the worst case, with no margin for a
-restart.
+**The mean fits $50–100. The worst case does not.** That is a budget-safety
+problem, not an infeasibility: the correct description is **conditionally
+feasible, not yet budget-safe**. Reading a worst-case overrun as "cannot be
+done" would be the wrong inference, and the earlier revision of this document
+made it.
 
-A reduced shape fits. It must be **registered as its own design**, with its
-power stated — not inherited from C2 by dropping rows.
+What is *not* yet resolved is the interaction between the two risks: the
+donor-yield uncertainty of §4.1 and the wall-clock spread. A full cost model has
+to price the continuation stage and the failure-stop rule together before a
+machine is booked again.
+
+### 4.3.1 Sequential donor acquisition
+
+A fixed batch of 30 is not the most efficient way to reach four FAIL donors.
+Pre-registered sequential acquisition:
+
+1. generate donors in a fixed seed order;
+2. label each immediately with the frozen checker;
+3. stop once 4 FAIL and the required PASS count are in hand;
+4. hard cap of 30 donors;
+5. if 30 are reached without 4 FAIL, **the experiment stops and reports that**;
+   no continuations run;
+6. use the **earliest** 4 FAIL and the earliest qualifying PASS — never selected
+   by trajectory length, error type, or how recoverable they look.
+
+The rule is fixed before any label exists, so adaptive stopping here is not
+post-hoc selection: nothing about *which* trajectories are used depends on
+anything but arrival order.
+
+Expected donors, and the risk of hitting the cap:
+
+| | E[donors] | P(cap 30 hit without 4 FAIL) |
+|---|---:|---:|
+| p = 0.081 (CI low) | 28.4 | **0.78** |
+| p = 0.20 (plug-in) | 19.1 | 0.12 |
+| p = 0.416 (CI high) | 9.6 | 0.00 |
+
+At the plug-in rate this saves ~2 h against a fixed 30 (~$6.60) and, more
+usefully, stops generating trajectories that will never be used. At the low end
+of the interval it mostly buys an early, honest stop instead of a full-price
+null.
 
 ### 4.4 The levers, and what each costs
 
@@ -152,33 +204,52 @@ is the one that most needs to be fixed in advance rather than adjusted mid-run.
 
 ---
 
-## 5. What a C2-H pre-registration must settle first
+## 5. Recommended answers for a C2-H pre-registration
 
-Open questions. None is answered here, and answering them is the next
-deliverable if this proceeds.
+Recommendations, not registrations. They become binding only when written into a
+dated pre-registration before any donor is generated.
 
-1. **Donor selection without seeing outcomes.** Arms are defined by correctness,
-   which is an outcome, so the rule cannot avoid labelling. It can avoid
-   *choosing*: generate N donors, label all N by the frozen checker, then apply a
-   mechanical selection fixed in advance (for example, every FAIL donor up to k,
-   and PASS donors by ascending run index). The rule is written before the labels
-   exist; the selection is then arithmetic.
-2. **N.** §4.1 says ~30 for a four-FAIL arm at 88%. Fewer FAIL donors is a
-   different experiment and must say so.
-3. **Arm formation** when FAIL donors exceed or fall short of k.
-4. **Horizons.** Keep 16/24/28, or drop 16 and state why before running.
-5. **Total calls, H100 hours, hard budget**, and the point at which the run stops
-   regardless of progress.
-6. **The stop rule for too few failures.** If the donor batch yields fewer than
-   the registered minimum FAIL trajectories, the experiment stops and reports
-   that, rather than lowering the arm size or generating donors until enough fail
-   — which would be optional stopping on the quantity the experiment is about.
+**1. Estimand.** The probability of recovery from a given horizon **within one
+frozen serving stack**. This is explicitly *stack-relative recoverability*: it
+does not extrapolate to another GPU, another serving stack, or the original A100
+data. Gate 9 is the reason that qualifier has to be in the estimand rather than
+in the limitations.
 
----
+**2. Donor generation.** Fixed seed order, sequential; stop once the registered
+FAIL and PASS counts are reached; hard cap 30. See §4.3.1.
+
+**3. Donor selection.** The frozen checker labels first; a mechanical
+"earliest qualifying" rule then selects. **Never** by trajectory length, error
+type, or how recoverable a trajectory looks — those are the quantity under
+study.
+
+**4. Horizons.** Keep 16 / 24 / 28, to stay commensurable with the original
+question. A donor that does not reach a horizon is **ineligible at that horizon
+by a pre-registered rule** — never substituted with a nearby checkpoint.
+
+**5. Concurrency.** `concurrency = 1` for the first C2-H. Batched decoding
+changes vLLM's continuous-batching behaviour and the numerical execution path,
+which makes it a **serving condition**, not a speed knob. Gate 9 is the standing
+evidence that execution-path changes are not free. Do not adopt it to save wall
+clock.
+
+**6. Budget and stopping.** Hard ceiling of **$100 or 30 instance-hours,
+whichever comes first**. If the donor stage reaches its cap without the
+registered FAIL count, the experiment stops and reports that; continuations do
+not run. The budget is not raised mid-run to finish — doing so would price the
+experiment on how it happens to be going.
 
 ## 6. Recommendation
 
-Do not rent anything yet. Answer §5 first, at zero compute cost. The budget
-question is already answered: **the C2 shape as frozen does not fit, and a
-shape that does fit is a different experiment that has to be registered as
-one.**
+**Conditionally feasible, not yet budget-safe.** Not "cannot be done".
+
+- The mean case fits: 30 donors + 72 continuations is ~$72 at $3.29/h;
+  sequential acquisition brings it to ~$65.
+- The worst case does not: ~$129, with no margin for a restart.
+- The dominant risk is **donor yield**, not wall clock. `p` is 4/20 with a 95%
+  interval of [0.081, 0.416], and at the low end even 30 donors reach four
+  failures ~22% of the time.
+
+Before renting again, complete a full cost model covering the continuation stage
+and the failure-stop rule together, and set the hard stop in advance. Nothing in
+§5 costs compute to answer.
