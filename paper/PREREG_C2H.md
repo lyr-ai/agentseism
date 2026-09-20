@@ -99,6 +99,24 @@ design and §6.3 is its stop.
 
 ---
 
+## 4a. Terminology — `acquisition_index` is not a sampling seed
+
+Clarification of an existing term, committed **before execution**. No design
+value changes and `protocol_hash` is unmoved at `30e43200e97e148b`.
+
+> **`acquisition_index`** denotes the donor's position in the pre-registered
+> acquisition order of §4. **It is not an inference sampling seed.** Sampling
+> remains frozen at `temperature = 0, seed = None`; stochastic variation is the
+> object being measured, not something this experiment pins down.
+
+The field was originally written `donor_seed`, which invited exactly the wrong
+reading — that donors are reproducible draws. They are not, and an artifact
+that says `seed` would carry the ambiguity for as long as the artifact exists.
+It is renamed rather than annotated. The rename is free: field names are not
+inputs to `protocol_hash`, and no manifest had been frozen.
+
+---
+
 ## 5. Held fixed from C2
 
 Horizons **16 / 24 / 28**, to stay commensurable with the original question. A

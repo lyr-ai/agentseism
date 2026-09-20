@@ -17,9 +17,9 @@ from experiments.coding.run_c2h import (
 
 
 def donors(n_fail=4, n_pass=4):
-    d = [{"arm": "FAIL", "donor_id": f"f{i}", "seed": i, "run_id": f"f{i}"}
+    d = [{"arm": "FAIL", "donor_id": f"f{i}", "acquisition_index": i, "run_id": f"f{i}"}
          for i in range(n_fail)]
-    d += [{"arm": "PASS", "donor_id": f"p{i}", "seed": 50 + i, "run_id": f"p{i}"}
+    d += [{"arm": "PASS", "donor_id": f"p{i}", "acquisition_index": 50 + i, "run_id": f"p{i}"}
           for i in range(n_pass)]
     return d
 
@@ -87,8 +87,8 @@ def test_stops_at_the_registered_counts_and_takes_the_earliest(tmp_path):
            "FAIL", "FAIL", "PASS"]          # a 5th FAIL that must not be taken
     got = acquire_donors(log, Budget(log), lambda s, r: seq[s])
     assert len(got) == 8
-    assert [d["seed"] for d in got if d["arm"] == "FAIL"] == [1, 4, 7, 8]
-    assert [d["seed"] for d in got if d["arm"] == "PASS"] == [0, 2, 3, 5]
+    assert [d["acquisition_index"] for d in got if d["arm"] == "FAIL"] == [1, 4, 7, 8]
+    assert [d["acquisition_index"] for d in got if d["arm"] == "PASS"] == [0, 2, 3, 5]
 
 
 def test_donor_yield_stop_when_the_cap_is_reached(tmp_path):

@@ -109,32 +109,38 @@ class RealBackend:
                 {"was": self._identity, "now": now})
 
     # ── the two operations ──
-    def run_donor(self, seed: int, run_id: str) -> str:
+    def run_donor(self, acquisition_index: int, run_id: str) -> str:
         """Generate one donor, label it with the frozen checker.
+
+        `acquisition_index` is the donor's position in the pre-registered
+        acquisition order (§4), **not** an inference seed. Sampling is frozen
+        at `temperature=0, seed=None`.
 
         Returns "FAIL", "PASS" or "invalid". A donor the checker cannot label
         is `invalid`: it counts towards the cap and towards neither arm, and it
         is never adjudicated by hand.
         """
         self.assert_same_serving_process()
-        rec = {"kind": "donor_run", "seed": seed, "run_id": run_id,
-               "started": _now(), "identity": self.identity()}
+        rec = {"kind": "donor_run", "acquisition_index": acquisition_index,
+               "run_id": run_id, "started": _now(), "identity": self.identity()}
         try:
-            result = self._execute(run_id, prefix=None, step_limit=None, seed=seed)
+            result = self._execute(run_id, prefix=None, step_limit=None,
+                                   acquisition_index=acquisition_index)
         except IntegrityStop:
             raise
         except Exception as exc:  # noqa: BLE001
             raise IntegrityStop("donor_execution", f"{type(exc).__name__}: {exc}",
-                                {"seed": seed, "run_id": run_id}) from None
+                                {"acquisition_index": acquisition_index,
+                                 "run_id": run_id}) from None
         rec |= {"finished": _now(), **result}
         try:
             label = self.label(result)
         except UnlabelledDonor as exc:
             rec |= {"label": "invalid", "label_error": str(exc)}
-            self._freeze(f"donor_{seed:02d}", rec)
+            self._freeze(f"donor_{acquisition_index:02d}", rec)
             return "invalid"
         rec |= {"label": label}
-        self._freeze(f"donor_{seed:02d}", rec)
+        self._freeze(f"donor_{acquisition_index:02d}", rec)
         return label
 
     def label(self, result: dict) -> str:
@@ -162,7 +168,8 @@ class RealBackend:
                "identity": self.identity(),
                **{k: spec[k] for k in ("run_id", "arm", "donor_id",
                                        "donor_run_id", "horizon", "replicate",
-                                       "step_limit") if k in spec}}
+                                       "step_limit", "acquisition_index")
+                  if k in spec}}
         try:
             result = self._execute(spec["run_id"], prefix=spec["donor_run_id"],
                                    step_limit=spec["step_limit"],

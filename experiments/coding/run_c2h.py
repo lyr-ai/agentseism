@@ -65,19 +65,19 @@ def acquire_donors(log: RunLog, budget: Budget, generate) -> list[dict]:
     """§4. Fixed seed order, label immediately, earliest qualifying, cap 30."""
     need = {a: P.ARMS[a]["donors"] for a in P.ARMS}
     held: dict[str, list[dict]] = {"FAIL": [], "PASS": []}
-    for seed in range(P.DONOR_CAP):
+    for idx in range(P.DONOR_CAP):
         if all(len(held[a]) >= need[a] for a in need):
             break
-        run_id = f"c2h_donor_{seed:02d}"
-        label = generate(seed, run_id)          # frozen checker's verdict
-        log.append("donor", seed=seed, run_id=run_id, label=label,
+        run_id = f"c2h_donor_{idx:02d}"
+        label = generate(idx, run_id)           # frozen checker's verdict
+        log.append("donor", acquisition_index=idx, run_id=run_id, label=label,
                    held={a: len(held[a]) for a in held})
         if label in held and len(held[label]) < need[label]:
             held[label].append({"arm": label, "donor_id": run_id,
-                                "seed": seed, "run_id": run_id})
+                                "acquisition_index": idx, "run_id": run_id})
     short = {a: need[a] - len(held[a]) for a in need if len(held[a]) < need[a]}
     if short:
-        log.append("donor_yield_stop", short=short, generated=seed + 1)
+        log.append("donor_yield_stop", short=short, generated=idx + 1)
         raise BudgetStop("donor_yield_feasibility_stop",
                          f"cap {P.DONOR_CAP} reached without {short}; no "
                          "continuations run, and this is not a recoverability "
@@ -205,10 +205,11 @@ def plan(donors: list[dict]) -> dict:
 
 def _fake_donors() -> list[dict]:
     """Placeholders for --resolve-only. Shape only; no donor exists yet."""
-    d = [{"arm": "FAIL", "donor_id": f"resolve_fail_{i}", "seed": i,
+    d = [{"arm": "FAIL", "donor_id": f"resolve_fail_{i}", "acquisition_index": i,
           "run_id": f"resolve_fail_{i}"} for i in range(P.ARMS["FAIL"]["donors"])]
-    d += [{"arm": "PASS", "donor_id": f"resolve_pass_{i}", "seed": 100 + i,
-           "run_id": f"resolve_pass_{i}"} for i in range(P.ARMS["PASS"]["donors"])]
+    d += [{"arm": "PASS", "donor_id": f"resolve_pass_{i}",
+           "acquisition_index": 100 + i, "run_id": f"resolve_pass_{i}"}
+          for i in range(P.ARMS["PASS"]["donors"])]
     return d
 
 

@@ -52,6 +52,9 @@ MODEL = {"id": "Qwen/Qwen3.6-27B-FP8",
          "revision": "e89b16ebf1988b3d6befa7de50abc2d76f26eb09",
          "max_model_len": 131072}
 SAMPLING = {"temperature": 0, "seed": None}
+"""Frozen. `seed: None` is deliberate -- run-to-run variation is the object of
+study. Nothing in C2-H fixes an inference seed, and `acquisition_index` is not
+one; see `expand`."""
 SERVING_CONFIG = "inference/configs/model_h2.yaml"
 DEP_LOCK = "inference/requirements-vllm.lock.txt"
 
@@ -60,9 +63,14 @@ def expand(donors: list[dict]) -> list[dict]:
     """The 72 specs, from donors bound by the §4 rule.
 
     `donors` is the ordered, already-selected set: exactly `ARMS[arm]["donors"]`
-    entries per arm, each `{"arm", "donor_id", "seed", "run_id"}`, in the seed
-    order they arrived. Order is part of the manifest, so a different arrival
-    order is a different manifest and says so.
+    entries per arm, each `{"arm", "donor_id", "acquisition_index", "run_id"}`,
+    in the order they arrived. Order is part of the manifest, so a different
+    arrival order is a different manifest and says so.
+
+    **`acquisition_index` is a position, not an inference seed.** It is where a
+    donor fell in the pre-registered acquisition order (§4). Sampling stays
+    frozen at `temperature=0, seed=None`: stochastic variation is the object
+    being measured, not something this experiment pins down.
     """
     for arm, spec in ARMS.items():
         got = [d for d in donors if d["arm"] == arm]
@@ -77,7 +85,7 @@ def expand(donors: list[dict]) -> list[dict]:
                     out.append({
                         "run_id": f"c2h__{arm}__{d['donor_id']}__h{h}__k{k}",
                         "arm": arm, "donor_id": d["donor_id"],
-                        "donor_seed": d["seed"], "donor_run_id": d["run_id"],
+                        "acquisition_index": d["acquisition_index"], "donor_run_id": d["run_id"],
                         "horizon": h, "replicate": k,
                         "step_limit": STEP_LIMIT(h),
                         "in_subset_36": k in SUBSET_36[arm],
@@ -137,8 +145,9 @@ def protocol_hash() -> str:
 
 def manifest_hash(specs: list[dict]) -> str:
     """What was actually materialised, donors included."""
-    return _h([{k: s[k] for k in ("run_id", "arm", "donor_id", "donor_seed",
-                                  "horizon", "replicate", "step_limit")}
+    return _h([{k: s[k] for k in ("run_id", "arm", "donor_id",
+                                  "acquisition_index", "horizon", "replicate",
+                                  "step_limit")}
                for s in specs])
 
 

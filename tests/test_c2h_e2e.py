@@ -190,9 +190,9 @@ def test_a_restarted_serving_process_is_a_different_session(tmp_path):
 def test_manifest_change_after_freezing_fails_closed(tmp_path):
     run(tmp_path)
     log = RunLog(tmp_path / "run.jsonl")
-    other = [{"arm": "FAIL", "donor_id": f"x{i}", "seed": i, "run_id": f"x{i}"}
+    other = [{"arm": "FAIL", "donor_id": f"x{i}", "acquisition_index": i, "run_id": f"x{i}"}
              for i in range(4)]
-    other += [{"arm": "PASS", "donor_id": f"y{i}", "seed": 9 + i, "run_id": f"y{i}"}
+    other += [{"arm": "PASS", "donor_id": f"y{i}", "acquisition_index": 9 + i, "run_id": f"y{i}"}
               for i in range(4)]
     with pytest.raises(FailClosed, match="manifest changed"):
         freeze_manifest(log, tmp_path, other)

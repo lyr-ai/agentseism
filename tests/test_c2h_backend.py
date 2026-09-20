@@ -123,7 +123,7 @@ def test_the_artifact_keeps_the_whole_turn(tmp_path):
     rec = json.loads((tmp_path / "raw" / "donor_03.json").read_text())
     for key in full:
         assert key in rec, f"{key} was dropped from the artifact"
-    assert rec["started"] and rec["finished"] and rec["seed"] == 3
+    assert rec["started"] and rec["finished"] and rec["acquisition_index"] == 3
 
 
 # ── 4. labelling is frozen, never manual ──
