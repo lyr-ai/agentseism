@@ -117,6 +117,29 @@ inputs to `protocol_hash`, and no manifest had been frozen.
 
 ---
 
+## 4b. Task and image, registered
+
+```
+task   pytest-dev__pytest-10051
+image  swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10051:latest
+```
+
+The same task C2's donors used. Changing it would invalidate the 4-of-20 donor
+yield, the cost model and the whole feasibility analysis — it would be a
+different experiment, not a cheaper one — so the image is pinned in
+`c2h_protocol.py` and is **not a command-line option**.
+
+A tag can move. The resolved **digest** is read at first deployment and enters
+the session fingerprint, so a silently re-pushed image cannot pass as the same
+one.
+
+**`protocol_hash` moved from `30e43200e97e148b` to `1fda86fedc297132`** when
+task and image were added to its inputs. They are registered values and belong
+there. The change was made before any donor existed and before any manifest was
+frozen, so nothing already recorded is disturbed.
+
+---
+
 ## 5. Held fixed from C2
 
 Horizons **16 / 24 / 28**, to stay commensurable with the original question. A

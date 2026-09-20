@@ -56,6 +56,15 @@ SAMPLING = {"temperature": 0, "seed": None}
 study. Nothing in C2-H fixes an inference seed, and `acquisition_index` is not
 one; see `expand`."""
 SERVING_CONFIG = "inference/configs/model_h2.yaml"
+
+TASK = "pytest-dev__pytest-10051"
+IMAGE = "swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10051:latest"
+"""Registered, and not a command-line option.
+
+Changing the task would invalidate the 4-of-20 donor yield, the cost model and
+the whole feasibility analysis -- it would be a different experiment, not a
+cheaper one. The tag is pinned here; the resolved **digest** is read at first
+deployment and recorded in the session fingerprint, because a tag can move."""
 DEP_LOCK = "inference/requirements-vllm.lock.txt"
 
 
@@ -140,7 +149,8 @@ def protocol_hash() -> str:
                "donor_cap": DONOR_CAP, "concurrency": CONCURRENCY,
                "subset_36": SUBSET_36, "budget": BUDGET,
                "checkpoints": CHECKPOINTS, "model": MODEL,
-               "sampling": SAMPLING, "serving_config": SERVING_CONFIG})
+               "sampling": SAMPLING, "serving_config": SERVING_CONFIG,
+               "task": TASK, "image": IMAGE})
 
 
 def manifest_hash(specs: list[dict]) -> str:

@@ -371,8 +371,10 @@ def build_backend(args, out: Path):
             "exists for tests, which inject their own. Use --backend real "
             "with --execute-registered-c2h to run the registered experiment.")
     from experiments.coding.c2h_backend import RealBackend
-    return RealBackend(out=out, endpoint=args.endpoint, image=args.image,
-                       platform=args.platform)
+    # No image parameter: it is registered in c2h_protocol and must not be
+    # overridable from a shell, because changing the task changes the
+    # experiment rather than its cost.
+    return RealBackend(out=out, endpoint=args.endpoint, platform=args.platform)
 
 
 def main(argv=None) -> int:
@@ -386,7 +388,6 @@ def main(argv=None) -> int:
                     help="required with --backend real; without it the real "
                          "backend refuses to run")
     ap.add_argument("--endpoint", default="http://127.0.0.1:8000/v1")
-    ap.add_argument("--image", default="")
     ap.add_argument("--platform", default="")
     args = ap.parse_args(argv)
     out = Path(args.out)
@@ -401,9 +402,6 @@ def main(argv=None) -> int:
             "refusing to run: --backend real requires --execute-registered-c2h. "
             "This runs the registered experiment against a live serving stack "
             "and spends money; it is not something to trigger by shell history.")
-    if args.backend == "real" and not args.image:
-        raise SystemExit("--backend real requires --image")
-
     backend = build_backend(args, out)
     return 0 if execute(out, backend.run_donor, backend.run_continuation
                         )["verdict_allowed"] else 1

@@ -23,8 +23,7 @@ HEAVY = ("litellm", "vllm", "docker", "minisweagent", "httpx", "torch")
 
 
 def be(tmp_path, **kw):
-    return RealBackend(out=tmp_path, endpoint="http://127.0.0.1:8000/v1",
-                       image="img:latest", **kw)
+    return RealBackend(out=tmp_path, endpoint="http://127.0.0.1:8000/v1", **kw)
 
 
 # ── 1. construction and import are inert ──
@@ -45,8 +44,7 @@ def test_resolve_only_is_side_effect_free_with_a_real_backend(tmp_path, capsys):
     from experiments.coding.run_c2h import main
     out = tmp_path / "o"
     with mock.patch("experiments.coding.c2h_backend.RealBackend") as R:
-        rc = main(["--resolve-only", "--backend", "real", "--image", "i",
-                   "--out", str(out)])
+        rc = main(["--resolve-only", "--backend", "real", "--out", str(out)])
     assert rc == 0
     R.assert_not_called()                      # never even constructed
     assert not (out / "run.jsonl").exists()
@@ -243,26 +241,26 @@ def test_a_tampered_artifact_does_not_count(tmp_path):
     assert b.block_complete(["a"]) is False
 
 
-def test_execute_is_not_wired_and_says_so(tmp_path):
-    b = be(tmp_path)
-    with pytest.raises(IntegrityStop) as e:
-        b._execute("r", prefix=None, step_limit=None)
-    assert e.value.stage == "not_wired"
+
 
 
 # ── 8. the CLI gates ──
 def test_real_backend_refuses_without_the_confirmation_flag():
     from experiments.coding.run_c2h import main
     with pytest.raises(SystemExit) as e:
-        main(["--backend", "real", "--image", "i", "--out", "/tmp/nope"])
+        main(["--backend", "real", "--out", "/tmp/nope"])
     assert "--execute-registered-c2h" in str(e.value)
 
 
-def test_real_backend_requires_an_image():
-    from experiments.coding.run_c2h import main
-    with pytest.raises(SystemExit) as e:
-        main(["--backend", "real", "--execute-registered-c2h", "--out", "/tmp/nope"])
-    assert "--image" in str(e.value)
+def test_the_image_is_registered_and_not_a_cli_option(tmp_path):
+    """Changing the task changes the experiment, not its price."""
+    from experiments.coding import run_c2h
+    src = Path(run_c2h.__file__).read_text()
+    assert "--image" not in src
+    b = be(tmp_path)
+    assert b.image == P.IMAGE and b.task == P.TASK
+    with pytest.raises(TypeError):
+        RealBackend(out=tmp_path, endpoint="e", image="other:tag")
 
 
 def test_the_default_backend_is_not_real():
@@ -375,3 +373,181 @@ def test_non_verdicts_refuse_rather_than_becoming_FAIL(body):
     from experiments.coding.c2h_checker import INSTANCE, label_from_report
     with pytest.raises(UnlabelledDonor):
         label_from_report({INSTANCE: body})
+
+
+# ── 11. no Docker anywhere in the test suite ──
+@pytest.fixture(autouse=True)
+def _no_docker(monkeypatch):
+    """Any real Docker invocation fails the test that caused it."""
+    import subprocess
+    real = subprocess.run
+
+    def guard(cmd, *a, **kw):
+        argv = cmd if isinstance(cmd, (list, tuple)) else [str(cmd)]
+        if any("docker" in str(x) for x in argv):
+            raise AssertionError(f"a test invoked Docker: {argv}")
+        return real(cmd, *a, **kw)
+
+    monkeypatch.setattr(subprocess, "run", guard)
+
+
+def test_the_docker_guard_actually_fires(tmp_path):
+    """The guard raises; image_digest wraps it, so the evidence is the wrapped
+    message. Either way no Docker ran, which is the point."""
+    b = be(tmp_path)
+    with pytest.raises(IntegrityStop) as e:
+        b.image_digest()
+    assert e.value.stage == "image_digest"
+    assert "invoked Docker" in e.value.detail
+
+
+# ── 12. the wired _execute: one path, differing only by prefix ──
+class _Env:
+    container_id = "container-abc123"
+    def cleanup(self): pass
+
+
+def _wire(monkeypatch, tmp_path, prefix_seen, messages=None):
+    """Patch materialize / ForkedAgent / yaml so _execute runs with no Docker."""
+    import agents.coding.fork as fork_mod
+    env = _Env()
+    monkeypatch.setattr(fork_mod, "materialize",
+                        lambda *a, **kw: (env, {"tracked_diff_hash": "T",
+                                                "workspace_diff_hash": "W"}))
+
+    class FakeAgent:
+        def __init__(self, model, env, prefix_messages=None, **cfg):
+            prefix_seen.append(list(prefix_messages or []))
+            self.messages = messages if messages is not None else [
+                {"role": "assistant",
+                 "extra": {"actions": [{"command": "pytest -q"}],
+                           "transport_attempts": 1,
+                           "transport_events": [{"attempt": 1, "outcome": "ok"}]}}]
+        def run(self, task):
+            return {"exit_status": "Submitted", "submission": "diff --git"}
+
+    import agents.coding.archiving_agent as arch
+    monkeypatch.setattr("agents.coding.fork.forking", lambda base: FakeAgent)
+    monkeypatch.setattr(arch, "archiving", lambda base: base)
+    del arch
+
+
+def test_donor_injects_no_prefix_and_continuation_does(tmp_path, monkeypatch):
+    seen = []
+    b = be(tmp_path)
+    monkeypatch.setattr(RealBackend, "image_digest", lambda self: "sha256:dead")
+    monkeypatch.setattr(RealBackend, "model", lambda self: object())
+    _wire(monkeypatch, tmp_path, seen)
+
+    r = b._execute("donor_00", prefix=None, step_limit=None)
+    assert seen[-1] == [] and r["prefix_injected"] is False
+
+    frozen = [{"role": "system"}, {"role": "user", "content": "<pr_description>fix</pr_description>"},
+              {"role": "assistant"}, {"role": "tool"}]
+    monkeypatch.setattr(RealBackend, "_restore",
+                        lambda self, d, extra, ls: (frozen, {"step_dir": "s",
+                                                             "tracked_diff_hash": "T",
+                                                             "horizon": 24,
+                                                             "donor_run_id": d}))
+    r2 = b._execute("cont", prefix="donor_00", step_limit=226, horizon=24)
+    assert seen[-1] == frozen
+    assert r2["prefix_injected"] is True and r2["prefix_messages"] == 4
+    assert r2["archive"]["horizon"] == 24
+
+
+def test_execute_records_container_digest_hashes_commands_and_status(tmp_path, monkeypatch):
+    b = be(tmp_path)
+    monkeypatch.setattr(RealBackend, "image_digest", lambda self: "sha256:beef")
+    monkeypatch.setattr(RealBackend, "model", lambda self: object())
+    _wire(monkeypatch, tmp_path, [])
+    r = b._execute("donor_00", prefix=None, step_limit=None)
+    assert r["container_id"] == "container-abc123"
+    assert r["image_digest"] == "sha256:beef" and r["image"] == P.IMAGE
+    assert r["start_tracked"] == "T" and r["start_workspace"] == "W"
+    assert r["commands"] == ["pytest -q"]
+    assert r["exit_status"] == "Submitted"
+
+
+def test_every_transport_attempt_is_summed_into_the_record(tmp_path, monkeypatch):
+    msgs = [{"role": "assistant", "extra": {"actions": [{"command": "a"}],
+             "transport_attempts": 2,
+             "transport_events": [{"attempt": 1, "outcome": "exception"},
+                                  {"attempt": 2, "outcome": "ok"}]}},
+            {"role": "assistant", "extra": {"actions": [{"command": "b"}],
+             "transport_attempts": 1,
+             "transport_events": [{"attempt": 1, "outcome": "ok"}]}}]
+    b = be(tmp_path)
+    monkeypatch.setattr(RealBackend, "image_digest", lambda self: "sha256:1")
+    monkeypatch.setattr(RealBackend, "model", lambda self: object())
+    _wire(monkeypatch, tmp_path, [], messages=msgs)
+    r = b._execute("x", prefix=None, step_limit=None)
+    assert r["transport_attempts"] == 3
+    assert len(r["transport_events"]) == 3
+
+
+def test_the_same_client_is_reused_for_donor_and_continuation(tmp_path, monkeypatch):
+    b = be(tmp_path)
+    client = _compliant_client()
+    calls = {"n": 0}
+    def one_client(self):
+        calls["n"] += 1
+        return client
+    monkeypatch.setattr(RealBackend, "image_digest", lambda self: "sha256:1")
+    monkeypatch.setattr(RealBackend, "model", one_client)
+    monkeypatch.setattr(RealBackend, "_restore",
+                        lambda self, d, e, ls: ([{"role": "system"}, {"role": "user"}],
+                                                {"step_dir": "s", "horizon": 16}))
+    _wire(monkeypatch, tmp_path, [])
+    b._execute("donor_00", prefix=None, step_limit=None)
+    b._execute("cont", prefix="donor_00", step_limit=234, horizon=16)
+    assert calls["n"] == 2              # asked twice, and model() memoises
+
+
+# ── 13. restoring a fork root ──
+def test_missing_archive_is_an_integrity_stop(tmp_path):
+    b = be(tmp_path)
+    with pytest.raises(IntegrityStop) as e:
+        b._restore("donor_00", {"horizon": 16}, lambda p: {})
+    assert e.value.stage == "restore" and "no archive" in e.value.detail
+
+
+def test_a_spec_without_a_horizon_is_an_integrity_stop(tmp_path):
+    b = be(tmp_path)
+    with pytest.raises(IntegrityStop) as e:
+        b._restore("donor_00", {}, lambda p: {})
+    assert "no horizon" in e.value.detail
+
+
+def test_an_archived_step_without_a_prefix_is_an_integrity_stop(tmp_path):
+    d = tmp_path / "raw" / "donor_00.archive" / "step_0016"
+    d.mkdir(parents=True)
+    b = be(tmp_path)
+    with pytest.raises(IntegrityStop) as e:
+        b._restore("donor_00", {"horizon": 16}, lambda p: {"messages": []})
+    assert "no message prefix" in e.value.detail
+
+
+def test_a_resolvable_archive_returns_the_frozen_prefix(tmp_path):
+    d = tmp_path / "raw" / "donor_00.archive" / "step_0024"
+    d.mkdir(parents=True)
+    b = be(tmp_path)
+    msgs, state = b._restore("donor_00", {"horizon": 24},
+                             lambda p: {"messages": [{"role": "system"}],
+                                        "tracked_diff_hash": "T"})
+    assert msgs == [{"role": "system"}]
+    assert state["horizon"] == 24 and state["tracked_diff_hash"] == "T"
+    assert state["step_dir"].endswith("step_0024")
+
+
+# ── 14. identity drift now covers task, image and digest ──
+@pytest.mark.parametrize("field", ["task", "image", "image_digest"])
+def test_task_and_image_cannot_drift(tmp_path, field):
+    b = be(tmp_path)
+    b._identity = {"endpoint": "e", "vllm_pid": "1", "gpu": "g", "hostname": "h",
+                   "model_id": "m", "revision": "r", "task": P.TASK,
+                   "image": P.IMAGE, "image_digest": "sha256:1"}
+    with mock.patch.object(RealBackend, "identity",
+                           return_value=dict(b._identity) | {field: "other"}):
+        with pytest.raises(IntegrityStop) as e:
+            b.assert_same_serving_process()
+    assert e.value.stage == "serving_identity"

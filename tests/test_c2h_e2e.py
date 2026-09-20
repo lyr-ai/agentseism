@@ -263,3 +263,69 @@ def test_block_artifacts_match_the_log(tmp_path):
         import hashlib
         assert hashlib.sha256(f.read_text().encode()).hexdigest() == r["file_sha256"]
         assert [x["run_id"] for x in json.loads(f.read_text())["results"]] == r["specs"]
+
+
+# ── 9. the whole registered pipeline, end to end, on a fake stack ──
+def test_full_pipeline_acquires_freezes_runs_and_completes(tmp_path):
+    """Acquisition under the cap, a real manifest and order hash frozen from
+    the donors that actually arrived, all 72 specs, all 24 blocks, and the one
+    terminal state that permits a verdict."""
+    # 20% FAIL, the observed rate: 4 FAIL arrive by donor 19.
+    pattern = ["PASS", "PASS", "PASS", "PASS", "FAIL"]
+    ran = []
+
+    def backend(spec):
+        ran.append(spec["run_id"])
+        return {"exit_status": "Submitted", "transport_attempts": 1}
+
+    rep = run(tmp_path, pattern=tuple(pattern), backend=backend)
+
+    assert rep["state"] == "complete_72"
+    assert rep["verdict_allowed"] is True
+    assert rep["protocol_hash"] == P.protocol_hash()
+
+    log = RunLog(tmp_path / "run.jsonl")
+    recs = log.read()
+
+    # acquisition: inside the cap, earliest qualifying, both arms filled
+    donors = [r for r in recs if r["kind"] == "donor"]
+    assert len(donors) <= P.DONOR_CAP
+    labels = [d["label"] for d in donors]
+    assert labels.count("FAIL") == 4 and labels.count("PASS") >= 4
+
+    # the frozen manifest is the one that ran
+    frozen = [r for r in recs if r["kind"] == "manifest_frozen"][0]
+    m = json.loads((tmp_path / "manifest.json").read_text())
+    assert frozen["manifest_hash"] == m["manifest_hash"] == rep["manifest_hash"]
+    assert frozen["order_hash"] == m["order_hash"] == rep["order_hash"]
+    assert frozen["n_specs"] == 72 and frozen["n_blocks"] == 24
+    assert plan(m["donors"])["manifest_hash"] == m["manifest_hash"]
+
+    # donors bound to the manifest are exactly the earliest qualifying ones
+    bound = {d["run_id"] for d in m["donors"]}
+    earliest_fail = [d["run_id"] for d in donors if d["label"] == "FAIL"][:4]
+    assert set(earliest_fail) <= bound
+
+    # execution: 72 specs, 24 blocks, in order, nothing repeated
+    assert len(ran) == 72 and len(set(ran)) == 72
+    assert sorted(ran) == sorted(s["run_id"] for s in m["specs"])
+    ends = [r for r in recs if r["kind"] == "block_end"]
+    assert [r["block_index"] for r in ends] == list(range(24))
+    assert incomplete_blocks(log) == []
+
+    # artifacts
+    for i in range(24):
+        assert (tmp_path / f"block_{i:02d}.json").exists()
+        assert (tmp_path / f"block_{i:02d}.json.sha256").exists()
+    assert json.loads((tmp_path / "report.json").read_text())["state"] == "complete_72"
+
+
+def test_full_pipeline_at_the_low_yield_rate_stops_instead(tmp_path):
+    """The same pipeline, a rate where four failures never arrive: the cap is
+    reached, nothing is run, and no verdict is permitted."""
+    rep = run(tmp_path, pattern=("PASS",) * 14 + ("FAIL",))   # ~7% FAIL
+    assert rep["state"] == "donor_yield_feasibility_stop"
+    assert rep["verdict_allowed"] is False
+    log = RunLog(tmp_path / "run.jsonl")
+    assert sum(1 for r in log.read() if r["kind"] == "donor") == P.DONOR_CAP
+    assert not [r for r in log.read() if r["kind"] == "block_start"]

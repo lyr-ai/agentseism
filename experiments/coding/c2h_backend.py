@@ -66,15 +66,43 @@ class RealBackend:
     `run_donor` / `run_continuation`.
     """
 
-    def __init__(self, out: Path, endpoint: str, image: str,
-                 platform: str = "", checker=None):
+    def __init__(self, out: Path, endpoint: str, platform: str = "",
+                 checker=None):
         self.out = Path(out)
         self.endpoint = endpoint
-        self.image = image
+        self.image = P.IMAGE          # registered; deliberately not a parameter
+        self.task = P.TASK
         self.platform = platform
         self._checker = checker
         self._model = None
         self._identity: dict | None = None
+        self._image_digest: str | None = None
+
+    def image_digest(self) -> str:
+        """The resolved digest of the registered tag, read once.
+
+        A tag can move; a digest cannot. It is read at first use rather than
+        configured, and it enters the fingerprint so a silently re-pushed image
+        cannot pass as the same one.
+        """
+        if self._image_digest is None:
+            import subprocess
+            try:
+                out = subprocess.run(
+                    ["docker", "image", "inspect", "--format",
+                     "{{index .RepoDigests 0}}", self.image],
+                    capture_output=True, text=True, timeout=60)
+            except Exception as exc:  # noqa: BLE001
+                raise IntegrityStop("image_digest",
+                                    f"{type(exc).__name__}: {exc}",
+                                    {"image": self.image}) from None
+            if out.returncode != 0 or not out.stdout.strip():
+                raise IntegrityStop(
+                    "image_digest",
+                    f"cannot resolve a digest for {self.image}: "
+                    f"{(out.stderr or '').strip()[:200]}", {"image": self.image})
+            self._image_digest = out.stdout.strip()
+        return self._image_digest
 
     # ── lazily built, once, and shared ──
     def model(self):
@@ -116,7 +144,9 @@ class RealBackend:
         fp = session_fingerprint()
         return {"endpoint": self.endpoint, "model_id": P.MODEL["id"],
                 "revision": P.MODEL["revision"], "vllm_pid": fp["vllm_pid"],
-                "gpu": fp["gpu"], "hostname": fp["hostname"]}
+                "gpu": fp["gpu"], "hostname": fp["hostname"],
+                "task": self.task, "image": self.image,
+                "image_digest": self._image_digest}
 
     def assert_same_serving_process(self) -> None:
         """Donors and continuations must come from one serving process."""
@@ -124,7 +154,8 @@ class RealBackend:
             return
         now = self.identity()
         drift = [k for k in ("endpoint", "vllm_pid", "gpu", "hostname",
-                             "model_id", "revision")
+                             "model_id", "revision", "task", "image",
+                             "image_digest")
                  if self._identity.get(k) != now.get(k)]
         if drift:
             raise IntegrityStop(
@@ -215,17 +246,144 @@ class RealBackend:
     def _execute(self, run_id, prefix, step_limit, **extra) -> dict:
         """Build the container, run the agent, return the full record.
 
-        Everything the turn produced is kept: messages, tool calls, raw
-        responses, transport attempts, errors and timings. Storing only the
-        parsed decision would make a later question about *why* unanswerable,
-        which is the defect the Phase 2 `reason` field already demonstrated.
+        **One path for donors and continuations.** The same `materialize`, the
+        same `ForkedAgent`, the same tool configuration. The only difference is
+        whether a frozen prefix is injected: a donor starts from the task's
+        initial state with `prefix_messages=[]`, a continuation resumes from
+        the archived state the manifest names. Any other difference between the
+        arms would be a confound this experiment could not separate from its
+        own effect.
+
+        Everything the run produced is kept: messages, tool calls, raw
+        responses, transport attempts, container id, image digest, workspace
+        and archive hashes, commands and exit status. Storing only the parsed
+        decision would make a later question about *why* unanswerable, which is
+        the defect the Phase 2 `reason` field already demonstrated.
         """
-        from agents.coding.fork import materialize  # noqa: F401
-        raise IntegrityStop(
-            "not_wired",
-            "the container and agent loop are not connected yet; this backend "
-            "is statically wired and mock-tested only, and no machine has been "
-            "rented", {"run_id": run_id})
+        import copy
+
+        import yaml
+        from minisweagent.agents.interactive import InteractiveAgent
+
+        from agents.coding.archiving_agent import archiving
+        from agents.coding.fork import ForkMismatch, forking, load_step, materialize
+
+        ForkedAgent = forking(archiving(InteractiveAgent))
+        digest = self.image_digest()
+        model = self.model()
+
+        prefix_messages, archive_state = [], None
+        if prefix is not None:
+            prefix_messages, archive_state = self._restore(prefix, extra, load_step)
+
+        try:
+            env, snapshot = materialize(
+                archive_state.get("step_dir") if archive_state else None,
+                image=self.image,
+                expected=archive_state.get("tracked_diff_hash") if archive_state else None,
+                include_untracked=True) if archive_state else self._fresh_env(
+                    materialize, digest)
+        except ForkMismatch as exc:
+            raise IntegrityStop("fork_mismatch", str(exc),
+                                {"run_id": run_id, "prefix": prefix}) from None
+        except Exception as exc:  # noqa: BLE001
+            raise IntegrityStop("container", f"{type(exc).__name__}: {exc}",
+                                {"run_id": run_id, "image": self.image}) from None
+
+        config = yaml.safe_load(
+            (Path(__import__("minisweagent").__file__).parent
+             / "config/benchmarks/swebench.yaml").read_text())
+        agent_config = dict(config.get("agent", {})) | {
+            "step_limit": step_limit or config.get("agent", {}).get("step_limit"),
+            "mode": "yolo", "confirm_exit": False,
+            "output_path": str(self.out / "raw" / f"{run_id}.trajectory.json"),
+        }
+        agent = ForkedAgent(model, env,
+                            prefix_messages=copy.deepcopy(prefix_messages),
+                            **agent_config)
+        try:
+            result = agent.run(task=self._task_text(prefix_messages, config))
+        except Exception as exc:  # noqa: BLE001
+            raise IntegrityStop("agent", f"{type(exc).__name__}: {exc}",
+                                {"run_id": run_id}) from None
+        finally:
+            try:
+                env.cleanup()
+            except Exception:  # noqa: BLE001
+                pass
+
+        messages = getattr(agent, "messages", [])
+        events = [e for m in messages for e in
+                  (m.get("extra", {}) or {}).get("transport_events", [])]
+        return {
+            "exit_status": result.get("exit_status"),
+            "submission": result.get("submission"),
+            "messages": messages,
+            "commands": [a.get("command") for m in messages
+                         for a in (m.get("extra", {}) or {}).get("actions", [])],
+            "transport_attempts": sum(
+                (m.get("extra", {}) or {}).get("transport_attempts", 0)
+                for m in messages),
+            "transport_events": events,
+            "container_id": getattr(env, "container_id", None)
+            or getattr(env, "container", None),
+            "image": self.image, "image_digest": digest,
+            "prefix_injected": bool(prefix_messages),
+            "prefix_messages": len(prefix_messages),
+            "archive": archive_state,
+            "start_tracked": (snapshot or {}).get("tracked_diff_hash"),
+            "start_workspace": (snapshot or {}).get("workspace_diff_hash"),
+        }
+
+    def _fresh_env(self, materialize, digest):
+        """A donor's container: the task's initial state, no archive.
+
+        Returns `materialize`'s own `(env, snapshot)` pair unchanged, so the
+        donor and the continuation paths hand `_execute` the same shape.
+        """
+        return materialize(None, image=self.image, expected=None,
+                           include_untracked=True)
+
+    def _restore(self, donor_run_id: str, extra: dict, load_step):
+        """Locate the archived fork root the manifest names. Exactly one.
+
+        A missing archive is an integrity stop, and so is an ambiguous one: a
+        continuation that guesses which state it resumed from is not resuming
+        from the manifest.
+        """
+        horizon = extra.get("horizon")
+        if horizon is None:
+            raise IntegrityStop("restore", "no horizon on the spec",
+                                {"donor_run_id": donor_run_id})
+        archive = self.out / "raw" / f"{donor_run_id}.archive"
+        if not archive.is_dir():
+            raise IntegrityStop("restore", f"no archive at {archive}",
+                                {"donor_run_id": donor_run_id, "horizon": horizon})
+        matches = sorted(archive.glob(f"step_{horizon:04d}"))
+        if len(matches) != 1:
+            raise IntegrityStop(
+                "restore",
+                f"{len(matches)} archived states match horizon {horizon} for "
+                f"{donor_run_id}; the manifest names exactly one",
+                {"matches": [str(m) for m in matches]})
+        step = load_step(matches[0])
+        messages = step.get("messages") or []
+        if not messages:
+            raise IntegrityStop("restore", "archived step has no message prefix",
+                                {"step_dir": str(matches[0])})
+        return messages, {"step_dir": str(matches[0]),
+                          "tracked_diff_hash": step.get("tracked_diff_hash"),
+                          "horizon": horizon, "donor_run_id": donor_run_id}
+
+    @staticmethod
+    def _task_text(prefix_messages: list[dict], config: dict) -> str:
+        import re
+        if prefix_messages and len(prefix_messages) > 1:
+            content = prefix_messages[1].get("content") or ""
+            m = re.search(r"<pr_description>\s*(.*?)\s*</pr_description>",
+                          content, re.S)
+            return m.group(1) if m else content
+        return config.get("task", "") or P.TASK
 
     @staticmethod
     def _require_attempt_record(rec: dict, run_id: str) -> None:
