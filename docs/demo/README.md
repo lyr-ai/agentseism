@@ -32,5 +32,6 @@ output-pr-report.md          what it emits on a pull request (format only)
 
 `output-baseline-profile.md` is what makes that commitment necessary rather than
 cautious: five independent runs of one agent on one task at temperature zero
-produced five different final repository states, and all five were accepted. An
-agent that gates on trajectory identity would block every one of them.
+produced five different final repository states, and **four of the five passed
+the SWE-bench evaluation** — four accepted solutions, no two alike. An agent
+that gates on trajectory identity would block all four.

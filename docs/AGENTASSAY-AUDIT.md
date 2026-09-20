@@ -46,7 +46,7 @@ compute.
 | 4 | Is SPRT applied to **paired** baseline/candidate observations? | Unpaired SPRT on a noisy agent is a much weaker test |
 | 5 | How are repeated measurements and multiple comparisons handled? | 7,605 trials across 5 models × 3 scenarios × many mutations invites inflation |
 | 6 | What is the **denominator** of the 78–100% cost reduction? | Against one fixed-N baseline, or the worst one? A saving is only meaningful against what a practitioner would actually run |
-| 7 | Does the behavioural fingerprint treat harmless trace variation as regression? | Our own data says five accepted solutions differed on every trajectory |
+| 7 | Does the behavioural fingerprint treat harmless trace variation as regression? | Our own data has four accepted solutions differing on every trajectory |
 | 8 | Is there an `incomparable` state when the model or runtime changes? | It treats model change as a mutation; Gate 9 suggests that can invalidate the comparison rather than constitute one |
 
 Questions 7 and 8 are the two where our existing frozen data already says
@@ -65,7 +65,8 @@ evidence.
 
 **B — Does a more powerful trace test false-alarm more?** AgentAssay reports
 trace fingerprinting as high-power. Our `h2_phase_a1` data has five independent
-runs of one task producing five distinct final states, **all accepted**. The
+runs of one task producing five distinct final states, **four of them
+accepted**. The
 direct test: *does a test with more power to detect trajectory change also
 have more power to report harmless change as regression?* That is an adversarial
 check on their headline mechanism, and a negative result is still publishable

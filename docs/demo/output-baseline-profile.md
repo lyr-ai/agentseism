@@ -16,12 +16,13 @@ Serving     vLLM, max_model_len 131072, prefix caching on
 Outcome
 - exit status          Submitted     5 / 5
 - final patch produced 5 / 5
+- SWE-bench resolved   4 / 5         ← r4's patch did not resolve the issue
 
 Stability  ← this is why one run is not evidence
 - distinct final repository states      5 of 5 runs
-      ed135952e20c   843 B      901cfacceed3  1229 B
-      687e8628805f   978 B      5ece9b7438d7  1939 B
-      5b38138161e5   690 B
+      ed135952e20c   843 B  PASS   901cfacceed3  1229 B  PASS
+      687e8628805f   978 B  PASS   5ece9b7438d7  1939 B  PASS
+      5b38138161e5   690 B  FAIL
 - trajectory length                     31, 31, 33, 41, 47 steps
 - shared intermediate state             all 5 pass through 400ed4047a82 (438 B),
                                         the one-line self.records = []
@@ -29,8 +30,12 @@ Stability  ← this is why one run is not evidence
 
 Reading
 - Five runs of one agent, one task, one model, temperature zero produced five
-  different accepted solutions. Trajectory identity is not a quality target
-  here, and a check that gated on it would block all five.
+  different final states. Four of them resolved the issue: four accepted
+  solutions, no two alike. Trajectory identity is not a quality target here,
+  and a check that gated on it would block all four.
+- The fifth did not resolve it. So the variation is not uniformly benign
+  either — which is why the gate is on outcomes and not on trajectories in
+  either direction.
 - The shared intermediate state is robust across two context lengths and two
   transport paths. Whatever drives runs to it survives serving changes that
   visibly change everything downstream.
@@ -49,6 +54,7 @@ does this agent vary when nothing has changed?** Five distinct outcomes from an
 unchanged agent sets the floor for what a candidate has to do before a difference
 means anything.
 
-The number that matters for CI design is not 5/5 distinct. It is that they were
-all *accepted*: the variation is real and consequential-looking, and none of it
-is a defect.
+The number that matters for CI design is not 5/5 distinct. It is that **four of
+them were accepted**: most of the variation is real, consequential-looking, and
+not a defect — while one run of the five genuinely was wrong. A trajectory-level
+check cannot tell those apart; only the outcome can.
