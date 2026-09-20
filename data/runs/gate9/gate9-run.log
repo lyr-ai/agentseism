@@ -1,0 +1,197 @@
+protocol hash 0fafa0a2534272a6   fork roots 24
+  FAIL pytest-dev__pytest-10051__r4       h=16 step=16  prefix= 34 msgs  donor=  503 chars  actions=yes
+  FAIL pytest-dev__pytest-10051__r4       h=24 step=24  prefix= 50 msgs  donor=  140 chars  actions=yes
+  FAIL pytest-dev__pytest-10051__r4       h=28 step=28  prefix= 58 msgs  donor=   60 chars  actions=yes
+  FAIL A_3                                h=16 step= 8  prefix= 34 msgs  donor=  337 chars  actions=yes
+  FAIL A_3                                h=24 step=16  prefix= 51 msgs  donor=  199 chars  actions=yes
+  FAIL A_3                                h=28 step=20  prefix= 59 msgs  donor=   88 chars  actions=yes
+  FAIL A_6                                h=16 step= 8  prefix= 34 msgs  COMPATIBILITY_UNKNOWN (C2.3.1)
+  FAIL A_6                                h=24 step=16  prefix= 51 msgs  donor=    0 chars  actions=yes
+  FAIL A_6                                h=28 step=20  prefix= 59 msgs  donor=   41 chars  actions=yes
+  FAIL B_0                                h=16 step= 6  prefix= 34 msgs  donor=   79 chars  actions=yes
+  FAIL B_0                                h=24 step=14  prefix= 50 msgs  donor=  213 chars  actions=yes
+  FAIL B_0                                h=28 step=18  prefix= 58 msgs  donor=  113 chars  actions=yes
+  PASS pytest-dev__pytest-10051__r0       h=16 step=16  prefix= 34 msgs  donor=  565 chars  actions=yes
+  PASS pytest-dev__pytest-10051__r0       h=24 step=24  prefix= 50 msgs  donor=  357 chars  actions=yes
+  PASS pytest-dev__pytest-10051__r0       h=28 step=28  prefix= 58 msgs  donor=  106 chars  actions=yes
+  PASS pytest-dev__pytest-10051__r1       h=16 step=16  prefix= 34 msgs  donor=  100 chars  actions=yes
+  PASS pytest-dev__pytest-10051__r1       h=24 step=24  prefix= 50 msgs  donor=   62 chars  actions=yes
+  PASS pytest-dev__pytest-10051__r1       h=28 step=28  prefix= 58 msgs  donor=  115 chars  actions=yes
+  PASS pytest-dev__pytest-10051__r2       h=16 step=16  prefix= 34 msgs  donor=  350 chars  actions=yes
+  PASS pytest-dev__pytest-10051__r2       h=24 step=24  prefix= 50 msgs  donor=  461 chars  actions=yes
+  PASS pytest-dev__pytest-10051__r2       h=28 step=28  prefix= 58 msgs  donor=  114 chars  actions=yes
+  PASS pytest-dev__pytest-10051__r3       h=16 step=16  prefix= 34 msgs  donor=  153 chars  actions=yes
+  PASS pytest-dev__pytest-10051__r3       h=24 step=24  prefix= 50 msgs  donor=  614 chars  actions=yes
+  PASS pytest-dev__pytest-10051__r3       h=28 step=28  prefix= 58 msgs  donor=    0 chars  actions=yes
+
+archived-comparable roots: 23   compatibility_unknown: 1
+This is mini-swe-agent version 2.4.6.
+Check the v2 migration guide at https://klieret.short.gy/mini-v2-migration
+Loading global config from '/home/ubuntu/.config/mini-swe-agent/.env'
+
+serving Qwen/Qwen3.6-27B-FP8  (stream, attempt_timeout=180, max_attempts=6)
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+  FAIL pytest-dev__pytest-10051__r4       h=16  raw=differ  act=differ  503→528 chars  57.7s
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+  FAIL pytest-dev__pytest-10051__r4       h=24  raw=differ  act=differ  140→102 chars  2.2s
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+  FAIL pytest-dev__pytest-10051__r4       h=28  raw=differ  act=differ  60→66 chars  1.9s
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+  FAIL A_3                                h=16  raw=differ  act=differ  337→374 chars  25.9s
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+  FAIL A_3                                h=24  raw=differ  act=differ  199→0 chars  10.5s
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+  FAIL A_3                                h=28  raw=differ  act=differ  88→75 chars  2.1s
+  FAIL A_6                                h=16  SKIPPED — compatibility_unknown (C2.3.1)
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+  FAIL A_6                                h=24  raw=differ  act=differ  0→149 chars  13.7s
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+  FAIL A_6                                h=28  raw=differ  act=differ  41→40 chars  1.7s
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+  FAIL B_0                                h=16  raw=differ  act=differ  79→0 chars  1.6s
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+  FAIL B_0                                h=24  raw=differ  act=differ  213→0 chars  8.7s
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+  FAIL B_0                                h=28  raw=differ  act=differ  113→86 chars  1.9s
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+  PASS pytest-dev__pytest-10051__r0       h=16  raw=differ  act=differ  565→639 chars  12.1s
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+  PASS pytest-dev__pytest-10051__r0       h=24  raw=differ  act=differ  357→406 chars  16.0s
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+  PASS pytest-dev__pytest-10051__r0       h=28  raw=differ  act=differ  106→61 chars  2.2s
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+  PASS pytest-dev__pytest-10051__r1       h=16  raw=differ  act=differ  100→97 chars  17.1s
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+  PASS pytest-dev__pytest-10051__r1       h=24  raw=differ  act=differ  62→80 chars  8.7s
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+  PASS pytest-dev__pytest-10051__r1       h=28  raw=differ  act=differ  115→72 chars  5.3s
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+  PASS pytest-dev__pytest-10051__r2       h=16  raw=differ  act=differ  350→89 chars  12.0s
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+  PASS pytest-dev__pytest-10051__r2       h=24  raw=differ  act=differ  461→310 chars  40.4s
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+  PASS pytest-dev__pytest-10051__r2       h=28  raw=differ  act=differ  114→121 chars  3.3s
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+  PASS pytest-dev__pytest-10051__r3       h=16  raw=differ  act=differ  153→162 chars  2.9s
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+  PASS pytest-dev__pytest-10051__r3       h=24  raw=differ  act=differ  614→444 chars  34.3s
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+  PASS pytest-dev__pytest-10051__r3       h=28  raw=differ  act=differ  0→65 chars  3.0s
+
+──── GATE 9: STOP ────  over 23 archived-comparable roots, 1 compatibility_unknown
+A key action or tool call differs. The 72 specs are NOT run. This host does not meet donor compatibility, and that is the finding.
