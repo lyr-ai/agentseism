@@ -295,3 +295,86 @@ def test_every_verdict_carries_the_contract_hash_and_version(scenario):
 def test_the_shipped_contracts_validate():
     for p in (DEFAULT, PILOT):
         assert isinstance(load(p), Contract)
+
+
+# ── the PR report renderer ──
+from experiments.coding.report import Row, render  # noqa: E402
+
+
+def _v(verdict_name, **over):
+    c = load(DEFAULT)
+    if verdict_name == "INCOMPARABLE":
+        return decide(c, FP, FP | {"model_revision": "x"})
+    m = full(c)
+    if verdict_name == "REGRESSION":
+        m["task_success"] = ok(effect=-0.31, ci_low=-0.42, ci_high=-0.20)
+    if verdict_name == "INSUFFICIENT_EVIDENCE":
+        m["task_success"] = ok(evidence={"scenarios": 1})
+    diag = ["trace_divergence"] if verdict_name == "PASS_WITH_CHANGE" else None
+    return decide(c, FP, FP, m, diag)
+
+
+@pytest.mark.parametrize("name", ["REGRESSION", "INSUFFICIENT_EVIDENCE",
+                                  "INCOMPARABLE", "PASS_WITH_CHANGE", "PASS"])
+def test_every_verdict_renders_with_its_contract_footer(name):
+    md = render(_v(name))
+    assert md.startswith("## AgentSeism:")
+    assert "1e3047d6fefbdae6" in md and "default-1" in md
+
+
+def test_insufficient_is_never_rendered_as_a_pass():
+    md = render(_v("INSUFFICIENT_EVIDENCE"))
+    assert "not a pass" in md
+    assert "do not read this as a pass" in md
+
+
+def test_incomparable_says_zero_trials_were_spent():
+    md = render(_v("INCOMPARABLE"))
+    assert "Trials run: **0**" in md and "No regression was computed" in md
+
+
+def test_rca_cannot_be_rendered_under_a_non_regression_verdict():
+    """A reader would take it as a reason the merge is risky."""
+    for name in ("PASS", "PASS_WITH_CHANGE", "INSUFFICIENT_EVIDENCE"):
+        with pytest.raises(ValueError, match="RCA runs only on REGRESSION"):
+            render(_v(name), rca=["first separation after tool handling"])
+
+
+def test_rca_renders_under_regression_and_says_why_it_ran():
+    md = render(_v("REGRESSION"), rca=["first separation after tool handling"],
+                unaffected="runs without malformed calls show no regression")
+    assert "run because the outcome regressed, not because the trace moved" in md
+    assert "Unaffected:" in md
+
+
+def test_a_descriptive_only_verdict_is_labelled_in_the_report():
+    c = load(PILOT)
+    v = decide(c, FP, FP, {"task_success": ok(effect=-0.3, ci_low=-0.4,
+                                              ci_high=-0.2,
+                                              evidence={"scenarios": 3,
+                                                        "trials_per_condition": 3})})
+    assert "descriptive only" in render(v)
+    assert "not a release decision" in render(v)
+
+
+def test_warnings_are_rendered_as_non_blocking():
+    c = load(DEFAULT)
+    m = full(c) | {"cost_per_success": ok(effect=0.9, ci_low=0.6, ci_high=1.2)}
+    md = render(decide(c, FP, FP, m))
+    assert "do not block a merge" in md
+
+
+def test_the_demo_reports_are_reproducible_from_frozen_data():
+    """The two shipped demos regenerate byte-identically, so the README cannot
+    drift from the artifacts it claims to be computed from."""
+    import subprocess
+    before = {p: p.read_text() for p in
+              [Path("docs/demo/pr-report-pass-with-change.md"),
+               Path("docs/demo/pr-report-incomparable.md")]}
+    r = subprocess.run([".venv-eval/bin/python",
+                        "experiments/coding/make_demo_reports.py"],
+                       capture_output=True, text=True,
+                       env={"PYTHONPATH": ".", "PATH": "/usr/bin:/bin"})
+    assert r.returncode == 0, r.stderr
+    for p, text in before.items():
+        assert p.read_text() == text
