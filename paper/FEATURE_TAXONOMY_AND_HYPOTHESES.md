@@ -1,5 +1,11 @@
 # Feature taxonomy and mutation-to-feature hypotheses
 
+**Status:** **amended the same day — see `docs/ROADMAP-2026-09-20.md` §A.**
+The taxonomy is narrowed from 6 standard features to 3 primary + 3 diagnostic,
+and from 4 mutations to 3, with tool timeout deferred for wall-clock
+instability. Nothing had run, so the change was free; it is recorded as an
+amendment rather than an edit. What follows is as first frozen.
+
 **Status:** frozen taxonomy, hypotheses registered. **Not yet a full
 pre-registration** — the minimum practical effects and trial counts in §6 are
 proposed, not fixed, and must be settled before any run.
