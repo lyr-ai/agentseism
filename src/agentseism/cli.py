@@ -28,7 +28,8 @@ from pathlib import Path
 
 from agentseism.contract import Measurement, decide, precheck_comparability
 from agentseism.execution import (
-    CallableRunner, ShellEvaluator, ShellRunner, fingerprint, run_trials,
+    CallableRunner, ConfigurationError, ShellEvaluator, ShellRunner,
+    fingerprint, run_trials,
 )
 from agentseism.pr_report import Row, render
 from agentseism.resolve import provenance, resolve_and_validate
@@ -39,10 +40,10 @@ CONTRACT_TEMPLATE = """# AgentSeism contract. You name the thresholds; the tool
 # names the statistics and prints every one of them in the report.
 runner:
   type: shell
-  command: "python run_agent.py --task {task_file} --out {artifact_dir}"
+  command: "{python} run_agent.py --task {task_file} --out {artifact_dir}"
 
 evaluator:
-  command: "python check_result.py {artifact_dir}"
+  command: "{python} check_result.py {artifact_dir}"
 
 features:
   task_success:     {gate: true,    regression_threshold: 0.10}
@@ -122,7 +123,12 @@ def _build(surface, args):
     if r.get("type") == "python":
         mod, _, fn = r["callable"].partition(":")
         import importlib
-        runner = CallableRunner(getattr(importlib.import_module(mod), fn))
+        try:
+            runner = CallableRunner(getattr(importlib.import_module(mod), fn))
+        except (ImportError, AttributeError) as exc:
+            raise ConfigurationError(
+                f"cannot import runner callable {r['callable']!r}: "
+                f"{type(exc).__name__}: {exc}") from None
     else:
         runner = ShellRunner(r.get("command", ""),
                              timeout=int(r.get("timeout", 3600)))
@@ -139,9 +145,18 @@ def _plan(c, surface, tasks, trials, label) -> int:
         print(f"    - {t}")
     print(f"  trials per task      {trials}")
     print(f"  total runner calls   {len(tasks) * trials}")
-    print(f"  runner               {r.get('type', 'shell')}: "
-          f"{r.get('command') or r.get('callable')}")
-    print(f"  evaluator            {(surface.get('evaluator') or {}).get('command')}")
+    from agentseism.execution import expand_python, runtime_identity
+    raw_cmd = r.get("command") or r.get("callable") or ""
+    print(f"  runner               {r.get('type', 'shell')}: {raw_cmd}")
+    if "{python}" in raw_cmd:
+        print(f"    expands to         {expand_python(raw_cmd)}")
+    ev_cmd = (surface.get("evaluator") or {}).get("command") or ""
+    print(f"  evaluator            {ev_cmd}")
+    if "{python}" in ev_cmd:
+        print(f"    expands to         {expand_python(ev_cmd)}")
+    ri = runtime_identity()
+    print(f"  interpreter          {ri['python_implementation']} "
+          f"{ri['python_version']} at {ri['python_executable']}")
     print(f"  gating features      {', '.join(c.gating) or '(none)'}")
     print(f"  comparability        {', '.join(c.require_same)}")
     print(f"  contract             {c.raw['contract_version']} {c.content_sha256}")
@@ -347,7 +362,15 @@ def main(argv=None) -> int:
     d.set_defaults(fn=cmd_diagnose)
 
     args = ap.parse_args(argv)
-    return args.fn(args)
+    try:
+        return args.fn(args)
+    except ConfigurationError as exc:
+        # A setup problem, not a result. Printed as one, with no partial
+        # artifact left behind and no verdict implied.
+        print(f"\nconfiguration error: {exc}", file=sys.stderr)
+        print("Nothing was scored and no baseline or report was written.",
+              file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":

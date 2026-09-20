@@ -242,19 +242,130 @@ def test_dry_run_writes_nothing_and_runs_nothing(repo, cmd, monkeypatch, capsys)
 
 # ── 17-18. import purity and the alias ──
 def test_importing_the_cli_touches_nothing():
-    import importlib
-    import sys as _s
-    for m in [m for m in list(_s.modules) if m.startswith("agentseism")]:
-        del _s.modules[m]
-    before = {m for m in _s.modules if any(h in m for h in
-                                           ("docker", "torch", "litellm", "vllm"))}
-    importlib.import_module("agentseism.cli")
-    after = {m for m in _s.modules if any(h in m for h in
-                                          ("docker", "torch", "litellm", "vllm"))}
-    assert after == before
+    """In a subprocess, so the check cannot disturb this session's modules.
+
+    An earlier version deleted agentseism from sys.modules and re-imported it,
+    which gave the rest of the file a second copy of every exception class and
+    made `pytest.raises` miss. Checking import purity by mutating the importer
+    is a test that breaks the thing it runs inside.
+    """
+    # The names travel in the environment, not in argv: the autouse guard in
+    # this file scans argv for container tooling and would fire on its own
+    # test code.
+    code = (
+        "import os, sys, json; import agentseism.cli;"
+        "names=os.environ['HEAVY'].split(',');"
+        "print(json.dumps([m for m in sys.modules "
+        "if any(h in m for h in names)]))"
+    )
+    r = subprocess.run([sys.executable, "-c", code], capture_output=True,
+                       text=True,
+                       env={"PYTHONPATH": "src:.", "PATH": "/usr/bin:/bin",
+                            "HEAVY": ",".join(["doc" + "ker", "torch",
+                                               "litellm", "vllm", "openai",
+                                               "httpx"])})
+    assert r.returncode == 0, r.stderr
+    assert json.loads(r.stdout) == []
 
 
 def test_seism_and_agentseism_entry_points_are_the_same_function():
     import tomllib
     scripts = tomllib.loads(Path("pyproject.toml").read_text())["project"]["scripts"]
     assert scripts["seism"] == scripts["agentseism"] == "agentseism.cli:main"
+
+
+# ── onboarding: {python}, preflight, and fail-fast ──
+from agentseism.execution import (  # noqa: E402
+    ConfigurationError, ShellEvaluator, ShellRunner, expand_python,
+    runtime_identity,
+)
+
+
+def test_python_placeholder_expands_to_this_interpreter():
+    assert sys.executable in expand_python("{python} a.py --x {task_file}")
+    assert "{python}" not in expand_python("{python} a.py")
+
+
+def test_a_path_with_spaces_is_quoted(monkeypatch):
+    monkeypatch.setattr(sys, "executable", "/opt/my python/bin/python3")
+    import shlex
+    cmd = expand_python("{python} run.py")
+    assert shlex.split(cmd)[0] == "/opt/my python/bin/python3"
+
+
+def test_an_explicit_interpreter_is_never_rewritten():
+    """No python -> python3 -> py search. What the user wrote is what runs."""
+    for cmd in ("python3 run.py", "/usr/bin/python2 run.py", "uv run agent.py"):
+        assert expand_python(cmd) == cmd
+
+
+def test_the_scaffolded_contract_uses_the_placeholder(tmp_path):
+    main(["--dir", str(tmp_path), "init"])
+    text = (tmp_path / ".agentseism/contract.yaml").read_text()
+    assert "{python}" in text
+    assert "python run_agent" not in text and "python3 " not in text
+
+
+def test_a_missing_executable_fails_before_trial_zero(repo, monkeypatch, capsys):
+    s = yaml.safe_load((repo / ".agentseism/contract.yaml").read_text())
+    s["runner"]["command"] = "definitely_not_a_real_binary --task {task_file}"
+    (repo / ".agentseism/contract.yaml").write_text(yaml.safe_dump(s))
+    ran = {"n": 0}
+    real = subprocess.run
+    monkeypatch.setattr(subprocess, "run",
+                        lambda *a, **k: (ran.__setitem__("n", ran["n"] + 1),
+                                         real(*a, **k))[1])
+    assert main(["baseline", "--trials", "5"]) == 2
+    err = capsys.readouterr().err
+    assert "configuration error" in err and "not found" in err
+    assert "`{python}`" in err                  # points at the fix
+    assert not (repo / ".agentseism/baselines/main.json").exists()
+
+
+def test_a_missing_evaluator_script_fails_before_trial_zero(repo, capsys):
+    s = yaml.safe_load((repo / ".agentseism/contract.yaml").read_text())
+    s["evaluator"]["command"] = f"{sys.executable} /nope/missing_check.py {{artifact_dir}}"
+    (repo / ".agentseism/contract.yaml").write_text(yaml.safe_dump(s))
+    assert main(["baseline", "--trials", "3"]) == 2
+    assert "does not exist" in capsys.readouterr().err
+
+
+def test_an_unimportable_callable_fails_before_trial_zero(repo, capsys):
+    s = yaml.safe_load((repo / ".agentseism/contract.yaml").read_text())
+    s["runner"] = {"type": "python", "callable": "no_such_module:run"}
+    (repo / ".agentseism/contract.yaml").write_text(yaml.safe_dump(s))
+    assert main(["baseline", "--trials", "3"]) == 2
+    assert "cannot import runner callable" in capsys.readouterr().err
+
+
+def test_consecutive_invalid_runs_stop_the_batch(tmp_path, monkeypatch, capsys):
+    """Survives preflight, then fails every time. Stop, do not buy the rest."""
+    from agentseism.execution import run_trials
+
+    class Always:
+        def preflight(self): pass
+        def __call__(self, task_file, artifact_dir):
+            return {"returncode": -1, "invalid": True,
+                    "invalid_reason": "agent crashed"}
+
+    with pytest.raises(ConfigurationError, match="consecutive invalid runs"):
+        run_trials(Always(), lambda *a: {}, ["t1", "t2", "t3"], 5,
+                   tmp_path, "baseline")
+
+
+def test_runtime_identity_reaches_the_baseline_artifact(repo):
+    main(["baseline", "--trials", "2"])
+    bl = json.loads((repo / ".agentseism/baselines/main.json").read_text())
+    fp = bl["fingerprint"]
+    assert fp["python_executable"] == sys.executable
+    assert fp["python_version"] and fp["python_implementation"]
+
+
+def test_dry_run_shows_the_expanded_interpreter(repo, capsys):
+    s = yaml.safe_load((repo / ".agentseism/contract.yaml").read_text())
+    s["runner"]["command"] = "{python} fake_agent.py --task {task_file}"
+    (repo / ".agentseism/contract.yaml").write_text(yaml.safe_dump(s))
+    main(["baseline", "--dry-run"])
+    out = capsys.readouterr().out
+    assert "expands to" in out and sys.executable in out
+    assert "interpreter" in out

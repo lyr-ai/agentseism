@@ -51,7 +51,7 @@ statistics and prints every one of them in the report.
 ```yaml
 # .agentseism/contract.yaml
 runner:
-  command: "python run_agent.py --task {task_file}"
+  command: "{python} run_agent.py --task {task_file}"
 features:
   task_success:     {gate: true,    regression_threshold: 0.10}
   recovery_success: {gate: true,    regression_threshold: 0.15}
