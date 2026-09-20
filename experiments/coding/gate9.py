@@ -17,9 +17,11 @@ retry is not substituted for it, another horizon is not substituted for it, and
 no looser matching rule is introduced. The only admissible phrasing downstream
 is "all 23 archived-comparable fork roots ...", never "all fork roots".
 
-Per root: replay the frozen message prefix to this stack at the registered
-sampling parameters, and compare against what the donor actually recorded as
-its next turn:
+Per root: replay the frozen message prefix to this stack **through the same
+client the continuation uses** -- `InstrumentedLitellmModel` constructed exactly
+as `run_c2.py` constructs it, `stream=True`, `attempt_timeout=180`,
+`max_attempts=6` -- and compare against what the donor actually recorded as its
+next turn:
 
     raw      the response text, byte for byte
     action   the structured action list, where both sides parse
@@ -162,10 +164,22 @@ def main() -> int:
     if args.resolve_only:
         return 0
 
-    from openai import OpenAI
-    client = OpenAI(base_url=args.base, api_key="not-needed")
-    model = client.models.list().data[0].id
-    print(f"\nserving {model}")
+    # The same client, built the same way, because C2.3 asks for the generation
+    # parameters the continuation would use and not for an approximation of
+    # them. An earlier revision of this file issued a plain non-streaming
+    # OpenAI call, which has no `attempt_timeout`: the agent aborts and retries
+    # an attempt that is still generating at 180 s, and without that bound a
+    # single root ran past 36,000 tokens with no end in sight. That was a
+    # defect in this instrument, not an observation about the host.
+    import os
+    os.environ.setdefault("OPENAI_API_BASE", args.base)
+    os.environ.setdefault("OPENAI_API_KEY", "not-needed")
+    from agents.coding.instrumented_model import InstrumentedLitellmModel
+    client = InstrumentedLitellmModel(
+        model_name=f"openai/{P.MODEL['id']}", model_kwargs={"drop_params": True},
+        stream=True, attempt_timeout=180, max_attempts=6)
+    model = P.MODEL["id"]
+    print(f"\nserving {model}  (stream, attempt_timeout=180, max_attempts=6)")
 
     results, unknown = [], []
     for r, t in targets:
@@ -178,19 +192,28 @@ def main() -> int:
                   f"SKIPPED — compatibility_unknown (C2.3.1)")
             continue
         t0 = time.time()
-        resp = client.chat.completions.create(
-            model=model, messages=t["prefix"],
-            temperature=P.SAMPLING["temperature"], seed=P.SAMPLING["seed"],
-        )
-        text = resp.choices[0].message.content or ""
-        c = compare(t["donor"], text, None)
+        try:
+            msg = client.query(list(t["prefix"]))
+            text = msg.get("content") or ""
+            acts = (msg.get("extra") or {}).get("actions")
+            err = None
+        except Exception as exc:  # noqa: BLE001
+            # Recorded, not retried around. A root the registered client cannot
+            # complete is a fact about this stack under the registered
+            # configuration, and it is carried into the verdict as a non-match.
+            text, acts, err = "", None, f"{type(exc).__name__}: {str(exc)[:200]}"
+        c = compare(t["donor"], text, acts)
+        c["error"] = err
         c |= {k: r[k] for k in ("arm", "source_batch", "source_name", "horizon",
                                 "archive_step")}
         c["seconds"] = round(time.time() - t0, 1)
         results.append(c)
         print(f"  {r['arm']:4} {r['source_name']:34} h={r['horizon']:>2}  "
               f"raw={'MATCH' if c['raw_match'] else 'differ':6}  "
-              f"{c['donor_len']}→{c['got_len']} chars  {c['seconds']}s")
+              f"act={'MATCH' if c['action_match'] else 'differ':6}  "
+              f"{c['donor_len']}→{c['got_len']} chars  {c['seconds']}s"
+              + (f"  [{c['error']}]" if c.get("error") else ""))
+        sys.stdout.flush()
 
     code, why = verdict(results)
     out = Path(args.out); out.mkdir(parents=True, exist_ok=True)
