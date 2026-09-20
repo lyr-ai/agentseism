@@ -30,6 +30,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
+# The registered run environment, set here rather than inherited from a shell.
+# `MSWEA_COST_TRACKING=ignore_errors` is pre-registered
+# (INTERVENTION_PREREG_H2.md:228, CODING_EXPERIMENT_PREREG.md:91) and exported
+# by run_phase_a.sh and run_coding_experiment.sh, but nothing in this file set
+# it. Without it litellm raises on a model it has no price for -- *after*
+# generating -- so every response is discarded and every comparison reads as a
+# mismatch. Relying on the caller's shell made a registered setting invisible.
+os.environ.setdefault("MSWEA_COST_TRACKING", "ignore_errors")
+
 import yaml
 from minisweagent.agents.interactive import InteractiveAgent
 
