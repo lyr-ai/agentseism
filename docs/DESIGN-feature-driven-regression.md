@@ -3,6 +3,12 @@
 **Status:** product and research positioning, 2026-09-20. Supersedes
 `DESIGN-regression-testing-mainline.md` as the entry point. No machine rented.
 
+> **2026-09-20 — the paper framing narrowed after the contribution matrix.**
+> The product may stay a full framework; the paper may not be written as one.
+> Its centre is the classification of changes — see
+> `docs/CONTRIBUTION-MATRIX.md` §6. Features, mutations, the contract and RCA
+> are apparatus.
+
 ## 1. The positioning
 
 > AgentSeism is a **regression test harness for agent engineering changes**: it

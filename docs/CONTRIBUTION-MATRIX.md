@@ -137,9 +137,87 @@ pilot's shape depends on whether it is meant to strengthen the strongest claim
 or the cheapest one. **It is not yet decided, and this document does not decide
 it.**
 
-## 6. Still open
+## 6. The narrowed paper
 
-- Section 5 of the review's own recommendation ("进一步收窄") was truncated in
-  transit and is not reconstructed here.
-- Which candidate the pilot strengthens, given §5.
-- The contract schema, which is still the next zero-cost step.
+The product may stay a full framework. **The paper may not be written as one.**
+
+> ~~A feature-driven testing framework for stochastic agents.~~
+
+That is absorbed on contact by AgentAssay and by the eval platforms. The
+centre is not the features; it is the **classification of changes**:
+
+> **Not Every Behavioral Change Is a Regression: Outcome Grounding and
+> Comparability for Stochastic Agent CI**
+
+| Observation | Correct verdict |
+|---|---|
+| outcome drops significantly, environments comparable | `REGRESSION` |
+| trace changes significantly, outcome holds | `DIAGNOSTIC_CHANGE` / `PASS_WITH_CHANGE` |
+| serving fingerprint incompatible | `INCOMPARABLE` |
+| not enough data | `INSUFFICIENT_EVIDENCE` |
+
+Everything else becomes apparatus, and says so: features measure change,
+mutations produce known engineering changes, the user contract defines what
+matters, RCA explains a confirmed regression. **None of them is the
+contribution.**
+
+The boundary to hold:
+
+> AgentSeism is not a more complete AgentAssay. It addresses what existing
+> regression frameworks do not answer *before* running a statistical test:
+> **is this comparison valid, and is the detected behavioural change worth
+> blocking a release for?**
+
+## 7. What that framing demands of the experiment
+
+If the four-way classification is the contribution, **the experiment has to
+produce all four verdicts.** Two already exist in frozen data; two do not.
+
+| Verdict | Evidence | Status |
+|---|---|---|
+| `DIAGNOSTIC_CHANGE` | `h2_phase_a1`, 6/6 pairs all resolved | **held** |
+| `INCOMPARABLE` | Gate 9, 0/23 agent held fixed | **held** |
+| `REGRESSION` | — | **needed** — a real one, from a registered mutation |
+| `INSUFFICIENT_EVIDENCE` | — | **needed**, and it must be *earned* |
+
+The last row is the one most easily faked. `INSUFFICIENT_EVIDENCE` is only
+meaningful if it arises from a real effect too small to resolve at the trial
+count — not from running two trials and declaring uncertainty. It has to be
+distinguishable from `PASS`, which is the open item already recorded in
+`FEATURE_TAXONOMY_AND_HYPOTHESES.md` §6, and it is now load-bearing rather than
+housekeeping.
+
+So the minimum experiment is not "one regression". It is **a mutation strong
+enough to produce `REGRESSION` and one weak enough to produce
+`INSUFFICIENT_EVIDENCE` at the registered trial count** — which means the
+effect thresholds and trial allocation of Phase 3 have to be chosen so that
+both outcomes are reachable. A design in which every mutation either clearly
+regresses or clearly passes cannot demonstrate the classification it proposes.
+
+## 8. The two experiments, and their cost asymmetry
+
+The review names the two that matter, and they are the two strongest
+candidates in §4:
+
+1. **Harmless-shift** — a trace/fingerprint detector alarms on
+   outcome-equivalent trajectories; an outcome-grounded policy does not block.
+2. **Comparability** — a serving-stack change produces a large trajectory
+   shift, so without a compatibility gate it is misattributed to the agent.
+
+If both hold, the paper has its own question. If only the scorecard, mutations
+and RCA can be shown, it is a product and not a distinct method paper.
+
+**They do not cost the same** (§5). Harmless-shift needs one machine and a
+second task. Comparability needs **two serving stacks** — a second GPU type, or
+a deliberate driver or runtime change — which is a larger purchase than the
+$8–16 slice or the $20–30 pilot.
+
+Unresolved, and to be settled before the pilot is designed: whether the first
+money strengthens the strongest claim (comparability, `n = 1`) or the cheapest
+one (harmless-shift, `n = 6` pairs on one task).
+
+## 9. Still open
+
+- Which of §8's two the pilot strengthens.
+- How `REGRESSION` and `INSUFFICIENT_EVIDENCE` are both made reachable (§7).
+- The contract schema, still the next zero-cost step.
