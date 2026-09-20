@@ -51,6 +51,25 @@ serving:
   # four times the sequence length; concurrency is not what this experiment
   # needs, headroom is.
 
+  # 2026-09-20 — CONFIG COMPLETENESS DEFECT, recorded rather than silently
+  # added. This file's header has always claimed it is identical to
+  # configs/model.yaml "same parsers, same sampler" except max_model_len and
+  # max_num_seqs. It never carried the three parser keys. `start_vllm.sh` only
+  # passes a flag when the corresponding key is present, so this file alone
+  # does not reproduce the serving that actually happened.
+  #
+  # The donor batch did run with them, and the evidence is in the batch record
+  # itself: h2_phase_a1 reports a separate `reasoning` token column (42318,
+  # 19399, ...), which only exists when --reasoning-parser is active, and the
+  # archived assistant turns carry extra.actions, which only exist when tool
+  # calls are parsed. stack.txt names this file as serving_config, so the file
+  # was incomplete relative to the run it is supposed to describe.
+  #
+  # Copied verbatim from configs/model.yaml. No value is chosen here.
+  enable_auto_tool_choice: true
+  tool_call_parser: qwen3_coder
+  reasoning_parser: qwen3
+
 sampling:
   # Frozen so that repeated runs differ only through the sampler's own
   # nondeterminism, matching how the Sonnet runs were collected.
