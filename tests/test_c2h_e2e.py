@@ -56,6 +56,8 @@ def run(out, pattern=("FAIL", "PASS"), backend=backend_ok, amounts=(1.0,),
 
     # A reading is consumed per authorised checkpoint, so pre-load generously;
     # the state machine still refuses a stale one.
+    if b.baseline() is None:            # a resume never re-baselines
+        b.record_baseline(0.0, billing_period="2026-09")
     orig = b.check
     def check(cp, idx=None):
         v = next(it, last[0]); last[0] = v

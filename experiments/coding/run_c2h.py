@@ -269,25 +269,47 @@ def resolve_only(out: Path) -> int:
     import tempfile
     log = RunLog(Path(tempfile.mkdtemp()) / "probe.jsonl")
     b = Budget(log)
+    b.record_reading(500.0)
     try:
-        b.check("after_setup"); check("refuses with no billing reading", False)
+        b.check("after_setup"); check("refuses with no baseline", False)
     except BudgetStop as e:
-        check("refuses with no billing reading", e.kind == "no_billing_reading")
-    for usd, cp, want in ((10.0, "after_setup", None), (86.0, "before_block", "no_new_block"),
-                          (91.0, "after_donors", "stop_stage"),
-                          (101.0, "after_setup", "absolute")):
-        b.record_reading(usd)
+        check("refuses with no baseline", e.kind == "no_billing_baseline",
+              "the account's history must not be charged to this run")
+    # An account that already carries the first H100's Gate 9 spend.
+    BASE = 200.0
+    b.record_baseline(BASE, billing_period="resolve-only")
+    for delta, cp, want in ((10.0, "after_setup", None),
+                            (86.0, "before_block", "no_new_block"),
+                            (91.0, "after_donors", "stop_stage"),
+                            (101.0, "after_setup", "absolute")):
+        b.record_reading(BASE + delta, billing_period="resolve-only")
         try:
-            b.check(cp, 0); got = None
+            got, st = None, b.check(cp, 0)
         except BudgetStop as e:
-            got = e.kind
-        check(f"${usd:.0f} at {cp} -> {want}", got == want, f"got {got}")
+            got, st = e.kind, e.state
+        check(f"this run ${delta:.0f} (total ${BASE + delta:.0f}) at {cp} -> {want}",
+              got == want, f"got {got}")
+    b.record_reading(BASE - 1.0, billing_period="resolve-only")
+    try:
+        b.check("after_setup"); got = None
+    except BudgetStop as e:
+        got = e.kind
+    check("a reading below the baseline stops", got == "reading_below_baseline")
+    b.record_reading(BASE + 1.0, billing_period="a-different-period")
+    try:
+        b.check("after_setup"); got = None
+    except BudgetStop as e:
+        got = e.kind
+    check("a changed billing period stops", got == "billing_period_changed")
     try:
         b.check("whenever_i_feel_like_it"); check("rejects ad-hoc checkpoints", False)
     except ValueError:
         check("rejects ad-hoc checkpoints", True)
     check("billing entry is manual-only by default",
           log.last_billing()["source"] == "manual")
+    check("readings record the page total, never a hand-typed delta",
+          "current_total" in log.last_billing()
+          and "delta" not in log.last_billing())
 
     print("\n── artifact layout ──")
     out.mkdir(parents=True, exist_ok=True)

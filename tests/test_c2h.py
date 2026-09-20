@@ -107,8 +107,17 @@ def test_donor_acquisition_never_exceeds_the_cap(tmp_path):
 
 
 # ── budget, §6.2 ──
+def test_a_baseline_is_required_before_any_reading_counts(tmp_path):
+    b = Budget(RunLog(tmp_path / "l.jsonl"))
+    b.record_reading(500.0)
+    with pytest.raises(BudgetStop) as e:
+        b.check("after_setup")
+    assert e.value.kind == "no_billing_baseline"
+
+
 def test_billing_must_be_entered_not_estimated(tmp_path):
     b = Budget(RunLog(tmp_path / "l.jsonl"))
+    b.record_baseline(0.0, billing_period="2026-09")
     with pytest.raises(BudgetStop) as e:
         b.check("after_setup")
     assert e.value.kind == "no_billing_reading"
@@ -124,6 +133,7 @@ def test_billing_must_be_entered_not_estimated(tmp_path):
 ])
 def test_threshold_state_machine(tmp_path, usd, cp, kind):
     b = Budget(RunLog(tmp_path / "l.jsonl"))
+    b.record_baseline(0.0, billing_period="2026-09")
     b.record_reading(usd)
     if kind is None:
         assert b.check(cp, 0)["usd"] == usd
@@ -135,6 +145,7 @@ def test_threshold_state_machine(tmp_path, usd, cp, kind):
 
 def test_forecast_only_at_registered_checkpoints(tmp_path):
     b = Budget(RunLog(tmp_path / "l.jsonl"))
+    b.record_baseline(0.0, billing_period="2026-09")
     b.record_reading(1.0)
     with pytest.raises(ValueError, match="fixes when a forecast"):
         b.check("mid_block")
@@ -143,6 +154,7 @@ def test_forecast_only_at_registered_checkpoints(tmp_path):
 def test_an_estimate_warns_but_never_authorises(tmp_path):
     """It is logged, and it is refused as authority — for any checkpoint."""
     log = RunLog(tmp_path / "l.jsonl"); b = Budget(log)
+    b.record_baseline(0.0, billing_period="2026-09")
     b.record_reading(5.0, source="estimate")
     for cp in P.CHECKPOINTS:
         with pytest.raises(BudgetStop) as e:
@@ -154,6 +166,7 @@ def test_an_estimate_warns_but_never_authorises(tmp_path):
 
 def test_one_reading_authorises_one_block(tmp_path):
     log = RunLog(tmp_path / "l.jsonl"); b = Budget(log)
+    b.record_baseline(0.0, billing_period="2026-09")
     b.record_reading(5.0)
     assert b.check("before_block", 0)["usd"] == 5.0
     with pytest.raises(BudgetStop) as e:
@@ -213,3 +226,93 @@ def test_protocol_hash_tracks_the_registered_values(monkeypatch):
     before = P.protocol_hash()
     monkeypatch.setattr(P, "HORIZONS", (16, 24, 32))
     assert P.protocol_hash() != before
+
+
+# ── budget baseline: thresholds apply to this run, not the account's history ──
+def test_thresholds_measure_this_run_not_the_account_total(tmp_path):
+    """The account already carries the first H100's Gate 9 spend. Judging
+    C2-H against the raw page total would charge it for money spent before it
+    existed."""
+    b = Budget(RunLog(tmp_path / "l.jsonl"))
+    b.record_baseline(200.0, billing_period="2026-09")
+    b.record_reading(210.0)
+    s = b.check("after_setup")
+    assert s["usd"] == 10.0                 # this run
+    assert s["current_total"] == 210.0 and s["billing_baseline"] == 200.0
+
+
+def test_a_total_far_above_a_threshold_is_fine_if_the_delta_is_not(tmp_path):
+    b = Budget(RunLog(tmp_path / "l.jsonl"))
+    b.record_baseline(1000.0, billing_period="2026-09")
+    b.record_reading(1050.0)
+    assert b.check("before_block", 0)["usd"] == 50.0       # no stop at $1050
+
+
+@pytest.mark.parametrize("total,kind", [
+    (284.0, None), (285.0, "no_new_block"), (290.0, "stop_stage"),
+    (300.0, "absolute"),
+])
+def test_thresholds_fire_on_the_delta(tmp_path, total, kind):
+    b = Budget(RunLog(tmp_path / "l.jsonl"))
+    b.record_baseline(200.0, billing_period="2026-09")
+    b.record_reading(total)
+    if kind is None:
+        assert b.check("before_block", 0)["usd"] == round(total - 200.0, 2)
+    else:
+        with pytest.raises(BudgetStop) as e:
+            b.check("before_block", 0)
+        assert e.value.kind == kind
+
+
+def test_a_reading_below_the_baseline_stops(tmp_path):
+    b = Budget(RunLog(tmp_path / "l.jsonl"))
+    b.record_baseline(200.0, billing_period="2026-09")
+    b.record_reading(150.0)
+    with pytest.raises(BudgetStop) as e:
+        b.check("after_setup")
+    assert e.value.kind == "reading_below_baseline"
+
+
+def test_a_changed_billing_period_stops(tmp_path):
+    b = Budget(RunLog(tmp_path / "l.jsonl"))
+    b.record_baseline(200.0, billing_period="2026-09")
+    b.record_reading(210.0, billing_period="2026-10")
+    with pytest.raises(BudgetStop) as e:
+        b.check("after_setup")
+    assert e.value.kind == "billing_period_changed"
+
+
+def test_a_changed_currency_stops(tmp_path):
+    b = Budget(RunLog(tmp_path / "l.jsonl"))
+    b.record_baseline(200.0, billing_period="2026-09", currency="USD")
+    b.record_reading(210.0, currency="EUR")
+    with pytest.raises(BudgetStop) as e:
+        b.check("after_setup")
+    assert e.value.kind == "currency_changed"
+
+
+def test_the_baseline_is_frozen_once(tmp_path):
+    b = Budget(RunLog(tmp_path / "l.jsonl"))
+    b.record_baseline(200.0, billing_period="2026-09")
+    with pytest.raises(BudgetStop) as e:
+        b.record_baseline(500.0, billing_period="2026-09")
+    assert e.value.kind == "baseline_already_set"
+
+
+def test_the_operator_cannot_enter_a_delta_directly(tmp_path):
+    """Only page totals are entered. A hand-typed delta is an estimate wearing
+    a bill's clothes."""
+    import inspect
+    sig = inspect.signature(Budget.record_reading)
+    assert "delta" not in sig.parameters and "spent" not in sig.parameters
+    assert "usd" in sig.parameters            # the page total
+
+
+def test_the_artifact_keeps_baseline_total_and_delta(tmp_path):
+    log = RunLog(tmp_path / "l.jsonl"); b = Budget(log)
+    b.record_baseline(200.0, billing_period="2026-09")
+    b.record_reading(230.0)
+    b.check("after_setup")
+    ok = [r for r in log.read() if r["kind"] == "budget_ok"][-1]
+    assert (ok["billing_baseline"], ok["current_total"], ok["usd"]) == (200.0, 230.0, 30.0)
+    assert ok["billing_period"] == "2026-09" and ok["currency"] == "USD"

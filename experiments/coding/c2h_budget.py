@@ -20,6 +20,18 @@ reading would authorise twenty-four blocks and the ceiling would be decorative.
 
 *An estimate never authorises anything.* It is logged, and it warns, and it is
 refused as authority for a checkpoint or a block start.
+
+**Thresholds apply to this experiment's spend, not to the account's history.**
+The billing page shows a cumulative account total, and this account already
+carries the first H100's Gate 9 run. Comparing that number against $85 would
+have made C2-H's ceiling depend on money spent before it existed. A baseline is
+frozen before donor 0 and every later reading is the raw page total; the state
+machine judges the difference:
+
+    c2h_spend = current_total - billing_baseline
+
+The operator enters what the page says. They never enter "what I think this run
+cost" -- a delta typed by hand is an estimate wearing a bill's clothes.
 """
 
 from __future__ import annotations
@@ -118,20 +130,48 @@ class Budget:
     def __init__(self, log: RunLog):
         self.log = log
 
+    def record_baseline(self, current_total: float, billing_period: str,
+                        currency: str = "USD", note: str = "") -> dict:
+        """Freeze the origin: what the account had already spent before C2-H.
+
+        Entered once, before donor 0. `billing_period` and `currency` are
+        recorded so that a page showing a different period or currency later is
+        caught rather than silently differenced against the wrong origin.
+        """
+        prior = self.baseline()
+        if prior is not None:
+            raise BudgetStop("baseline_already_set",
+                             f"a baseline of ${prior['current_total']:.2f} was "
+                             f"frozen at {prior['ts']}; it is the origin and is "
+                             "not re-entered", prior)
+        return self.log.append("billing_baseline",
+                               current_total=float(current_total),
+                               billing_period=str(billing_period),
+                               currency=str(currency),
+                               operator=getpass.getuser(), note=note)
+
+    def baseline(self) -> dict | None:
+        r = [x for x in self.log.read() if x["kind"] == "billing_baseline"]
+        return r[0] if r else None
+
     def record_reading(self, usd: float, source: str = "manual",
-                       note: str = "") -> dict:
+                       note: str = "", billing_period: str | None = None,
+                       currency: str | None = None) -> dict:
         """Enter a cumulative spend read from the billing page.
 
         `source` is recorded verbatim. Anything other than "manual" is an
         estimate: it is logged and it warns, and `check` refuses to be
         authorised by it.
         """
+        base = self.baseline()
         seq = 1 + max([r.get("seq", 0) for r in self.log.read()
                        if r["kind"] == "billing_reading"] or [0])
-        return self.log.append("billing_reading", seq=seq, usd=float(usd),
-                               source=source, operator=getpass.getuser(),
-                               note=note,
-                               entered_by_env=os.environ.get("C2H_OPERATOR", ""))
+        return self.log.append(
+            "billing_reading", seq=seq, current_total=float(usd),
+            billing_period=billing_period or (base or {}).get("billing_period"),
+            currency=currency or (base or {}).get("currency", "USD"),
+            source=source, operator=getpass.getuser(), note=note,
+            entered_by_env=os.environ.get("C2H_OPERATOR", ""))
 
     def _consumed_seq(self) -> int:
         return max([r.get("consumed_seq", 0) for r in self.log.read()
@@ -142,22 +182,54 @@ class Budget:
         if checkpoint not in P.CHECKPOINTS:
             raise ValueError(f"{checkpoint!r} is not one of {P.CHECKPOINTS}; "
                              "§6.1 fixes when a forecast is re-estimated")
+        base = self.baseline()
+        if base is None:
+            raise BudgetStop("no_billing_baseline",
+                             "no billing baseline is frozen; C2-H's thresholds "
+                             "apply to its own spend, and without an origin the "
+                             "account's history would be charged to it",
+                             {"checkpoint": checkpoint})
         last = self.log.last_billing()
         if last is None:
             raise BudgetStop("no_billing_reading",
                              "no cumulative spend has been entered; §6.2 is a "
                              "billed-spend rule and cannot run on estimates",
                              {"checkpoint": checkpoint})
-        usd, stale = last["usd"], last["source"] != "manual"
+
+        total, stale = last["current_total"], last["source"] != "manual"
+        # The page can only go up, and only within one period and currency.
+        if last.get("billing_period") != base["billing_period"]:
+            raise BudgetStop("billing_period_changed",
+                             f"reading period {last.get('billing_period')!r} != "
+                             f"baseline period {base['billing_period']!r}; the "
+                             "difference would not be this experiment's spend",
+                             {"baseline": base, "reading": last})
+        if last.get("currency") != base.get("currency"):
+            raise BudgetStop("currency_changed",
+                             f"reading currency {last.get('currency')!r} != "
+                             f"baseline {base.get('currency')!r}",
+                             {"baseline": base, "reading": last})
+        if total < base["current_total"]:
+            raise BudgetStop("reading_below_baseline",
+                             f"${total:.2f} is below the frozen baseline of "
+                             f"${base['current_total']:.2f}; a cumulative total "
+                             "cannot fall, so one of the two is wrong",
+                             {"baseline": base, "reading": last})
+
+        usd = round(total - base["current_total"], 2)     # this run's spend
         state = {"checkpoint": checkpoint, "block_index": block_index,
-                 "usd": usd, "reading_ts": last["ts"], "estimate_only": stale,
+                 "usd": usd, "current_total": total,
+                 "billing_baseline": base["current_total"],
+                 "billing_period": base["billing_period"],
+                 "currency": base.get("currency", "USD"),
+                 "reading_ts": last["ts"], "estimate_only": stale,
                  "reading_seq": last.get("seq", 0)}
 
         # An estimate is information, never authority.
         if stale:
             self.log.append("budget_refused", reason="estimate_only", **state)
             raise BudgetStop("estimate_only",
-                             f"the latest reading (${usd:.2f}) has source "
+                             f"the latest reading (total ${total:.2f}) has source "
                              f"{last['source']!r}; only a manual billing-page "
                              "reading authorises a checkpoint or a block",
                              state)
@@ -173,16 +245,19 @@ class Budget:
 
         if usd >= P.BUDGET["absolute"]:
             self.log.append("budget_stop", reason="absolute", **state)
-            raise BudgetStop("absolute", f"${usd:.2f} >= ${P.BUDGET['absolute']}", state)
+            raise BudgetStop("absolute", f"this run has spent ${usd:.2f} (total ${total:.2f} - baseline "
+                             f"${base['current_total']:.2f}) >= ${P.BUDGET['absolute']}", state)
         if usd >= P.BUDGET["stop_stage"]:
             self.log.append("budget_stop", reason="stop_stage", **state)
             raise BudgetStop("stop_stage",
-                             f"${usd:.2f} >= ${P.BUDGET['stop_stage']}: stop after "
+                             f"this run has spent ${usd:.2f} (total ${total:.2f} - baseline "
+                             f"${base['current_total']:.2f}) >= ${P.BUDGET['stop_stage']}: stop after "
                              "the current stage, retrieve artifacts, terminate", state)
         if usd >= P.BUDGET["no_new_block"] and checkpoint == "before_block":
             self.log.append("budget_stop", reason="no_new_block", **state)
             raise BudgetStop("no_new_block",
-                             f"${usd:.2f} >= ${P.BUDGET['no_new_block']}: start no "
+                             f"this run has spent ${usd:.2f} (total ${total:.2f} - baseline "
+                             f"${base['current_total']:.2f}) >= ${P.BUDGET['no_new_block']}: start no "
                              "new block", state)
         self.log.append("budget_ok", consumed_seq=state["reading_seq"], **state)
         return state

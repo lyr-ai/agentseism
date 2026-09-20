@@ -108,6 +108,16 @@ task  image  image_digest  dependency_lock_sha256  protocol_hash
 
 ## 8. Budget, donors and integrity
 
+- [x] **Thresholds apply to this run's spend, not the account total.** A
+      baseline is frozen before donor 0 and the state machine judges
+      `current_total − billing_baseline`. The account already carries the first
+      H100's Gate 9 spend; comparing the raw page total against `$85` would have
+      charged C2-H for money spent before it existed. **This was the last
+      blocking defect and is fixed.**
+- [x] A reading below the baseline, a changed billing period or a changed
+      currency each stop rather than being differenced.
+- [x] The operator enters page totals only; `record_reading` has no `delta` or
+      `spent` parameter, and every record keeps baseline, total and delta.
 - [x] `after_setup` runs **before donor 0** and requires a manual reading.
 - [x] An estimate authorises nothing, at any checkpoint.
 - [x] One reading authorises one block; reuse is `stale_reading`.
@@ -155,7 +165,7 @@ stop if it fails.
 | 6 | `pip freeze` on the instance matches `requirements-vllm.lock.txt` |
 | 7 | vLLM PID recorded; it must not change for the rest of the run |
 | 8 | ≥ 100 GB free disk; model cached; image pulled |
-| 9 | **Cumulative Lambda spend entered manually** — this is the budget origin, and donor 0 cannot start without it |
+| 9 | **Billing baseline frozen**: the page's cumulative total, its billing period and currency, entered manually. This is the origin; donor 0 cannot start without it, and it is never re-entered — a resume reuses it |
 | 10 | Retrieval rehearsed once on an empty `data/runs/c2h` before real data exists |
 | 11 | `--resolve-only` re-run on the instance; `protocol 1fda86fedc297132`, `order f398cf46bfba1a9d` |
 

@@ -183,9 +183,28 @@ total, each 4 or 2 continuations.
 
 ### 6.2 Budget, with a buffer for billing lag
 
-The hard rule is **cumulative Lambda spend**, read from the billing page, and it
-includes start-up, model download and tear-down — not just the wall clock of a
-script.
+The hard rule is **this experiment's spend**, not the account's cumulative
+total. The account already carries the first H100's Gate 9 run, and judging
+C2-H against the raw billing page would charge it for money spent before it
+existed.
+
+```text
+c2h_spend = current_total - billing_baseline
+```
+
+A **baseline** is frozen before donor 0: the page total at that moment, with its
+billing period and currency. Every later entry is the raw page total, and the
+thresholds are applied to the difference. The operator never enters "what I
+think this run cost" — a hand-typed delta is an estimate wearing a bill's
+clothes. Every budget record keeps the baseline, the current total and the
+computed delta.
+
+Four conditions stop the run rather than being differenced: no baseline, a
+reading below the baseline (a cumulative total cannot fall), a changed billing
+period, or a changed currency.
+
+The rule includes start-up, model download and tear-down — not just the wall
+clock of a script.
 
 | threshold | action |
 |---:|---|
