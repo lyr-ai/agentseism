@@ -416,9 +416,63 @@ The same core work remains valuable if the standalone product path is slow: it c
 > actionable prevention to post-failure diagnosis.
 
 C2 is already pre-registered (`paper/PREREG_C2_RECOVERABILITY.md`, amendments
-C2.1 and C2.2) and frozen as 72 continuation specs in
-`experiments/coding/c2_protocol.py`. It is not new work; it awaits a native x86
-Linux VM with Docker and an A100.
+C2.1, C2.2, C2.3, C2.3.1) and frozen as 72 continuation specs in
+`experiments/coding/c2_protocol.py`. It is not new work.
+
+### 2026-09-20 — C2 is blocked, and the block is itself a result
+
+An attempt to execute C2 on a colocated H100 PCIe host **did not reach the 72
+specs.** Amendment C2.3 required a serving-stack behavioural compatibility
+check first, because the donor trajectories were produced on an
+A100-SXM4-80GB (`data/runs/h2_phase_a1/stack.txt`) and only an H100 was
+available. Gate 9 ran that check over the 23 archived-comparable fork roots —
+the frozen prefix replayed through the same client and the same registered
+generation parameters the continuation would use — and compared against the
+donors' own recorded turns.
+
+```
+model response received, no exception/timeout   23/23
+structured action extracted                     23/23
+raw response identical to the donor's             0/23
+structured action identical to the donor's        0/23
+```
+
+Zero matches, in both arms, at every horizon — not a marginal call. Per C2.3
+branch 3: **the 72 specs are not run**, and C2 stays frozen.
+
+**What this establishes, and what it does not.** It establishes that this host
+does not meet donor compatibility. It does **not** isolate a hardware cause:
+the GPU execution kernels, the driver version and several dependency versions
+all moved together, and `temperature 0` is not token-level determinism across
+execution stacks — that non-determinism is this project's own premise. The
+admissible sentence is *"the H100 serving stack did not pass a pre-registered
+behavioural compatibility check against the A100 donor stack; 23 of 23
+archived-comparable fork roots differ in both raw response and structured
+action."* `A_6 h=16` is `compatibility_unknown` under C2.3.1 and is outside the
+23, so *"all fork roots"* is not a phrase this work may use.
+
+C2 restarts only on a machine that reproduces the donor A100 stack, or under a
+separately registered experiment that does not rest on a *same-agent-continues-
+its-own-trajectory* claim.
+
+### Why this matters to the product, independently of C2
+
+A trajectory-level comparison that forks from a recorded state and re-samples
+is **sensitive to the serving stack**, and sensitive enough that a same-family,
+same-vLLM, same-CUDA, same-weights host reproduced none of 23 recorded turns.
+
+That is direct evidence for §4.1, which was previously argued rather than
+measured:
+
+> gate on outcomes; diagnose with trajectories
+
+A CI check that compared trajectories against a recorded baseline would fire on
+every pull request after any serving change — a GPU pool rotation, a driver
+update, an inference-server upgrade — none of which is a regression in the
+agent. The baseline compatibility key in §6.1 is therefore not bookkeeping: it
+is the mechanism that stops a stack change from being reported as a behavioural
+one, and it must include the serving stack, not only the model id and
+revision.
 
 The three C2 outcomes and what each does to this document:
 
@@ -427,6 +481,7 @@ The three C2 outcomes and what each does to this document:
 | **Localizable and recoverable** | Strongest story: detect the regression, localize it, and still have time to intervene before merge. | §9 proceeds unchanged. |
 | **Localizable but not recoverable** | Still real debugging value, but it may not be advertised as actionable pre-merge intervention. | §9 must find an earlier *predictive* signal, or restate its claim. |
 | **Neither predictable nor recoverable** | The trajectory-localization path is weak as a product. | Shift the centre of gravity to outcome regression detection, failure clustering, or another diagnostic layer. |
+| **Not yet measured — C2 blocked** | Current state as of 2026-09-20. No recoverability claim is available in either direction. | §9 stays unfrozen. |
 
 The dependency is not merely scheduling. C2's outcome rewrites §9.5 acceptance
 condition 4 — *the localized divergence is useful to a developer*. A divergence

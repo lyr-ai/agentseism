@@ -69,4 +69,60 @@ count; the admissible phrasing stays *"all 23 archived-comparable fork roots
 ## Attempt 4
 
 Started 2026-09-20 03:08 UTC. The only change from attempt 3 is restoration of
-the pre-registered environment variable. Result recorded below when complete.
+the pre-registered environment variable. **Completed; the first attempt to
+produce valid responses.**
+
+### Integrity gate
+
+```
+model response received, no exception/timeout   23/23
+raw assistant text parsed                       23/23
+structured action extracted                     23/23
+request_error / timeout / parse failure             0
+INTEGRITY: PASS
+```
+
+The first pass of this check reported a failure and was wrong. Criterion 1 had
+been implemented as "content string non-empty", which is not what a non-empty
+*response* means in a tool-calling protocol: three roots returned zero-length
+content carrying a valid tool call — `error` None, a real command, a
+`tool_call_id` — and the donor side carries the same shape at `A_6 h=24` and
+`r3 h=28`. The correction rests on that evidence, including evidence from the
+donor data itself, not on convenience.
+
+### Verdict
+
+```
+raw response identical to the donor's      0 / 23
+structured action identical to the donor's 0 / 23
+```
+
+**C2.3 branch 3.** Zero matches, both arms, every horizon; no marginal case to
+adjudicate. The 72 specs are **not** run. Raw results frozen at `cae5b78` in
+`data/runs/gate9/`.
+
+Two examples of the difference, for the record:
+
+```
+B_0 h=16   donor  find /testbed -path "*test*" -name "*.py" -exec grep -l "caplog" ...
+           got    find /testbed -path "*testing*" -name "*.py" -type f ...
+
+A_3 h=24   donor  cat > /tmp/fix_clear2.py << 'EOF' ...
+           got    sed -n '685,700p' /testbed/src/_pytest/logging.py
+```
+
+The second changes behavioural category: the donor is writing a patch, this
+host is reading a file.
+
+### Scope of the finding
+
+This host does not meet donor compatibility. It does **not** isolate a hardware
+cause — GPU execution kernels, driver version (580.126.16 → 580.105.08) and
+several dependency versions moved together, and `temperature 0` is not
+token-level determinism across execution stacks, which is this project's own
+premise. The admissible sentence is that the H100 serving stack did not pass a
+pre-registered behavioural compatibility check against the A100 donor stack,
+with 23 of 23 archived-comparable fork roots differing in both raw response and
+structured action.
+
+The host was terminated after the artifacts were verified pushed.
