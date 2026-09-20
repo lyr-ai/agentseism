@@ -7,8 +7,15 @@ licenses exactly one sentence: the batch passed a pre-registered behavioural
 compatibility check.
 
 Coverage is every distinct fork root the 72 specs reduce to -- 24 of them,
-8 source trajectories x 3 horizons -- deduplicated, all tested. One hit proves
-nothing.
+8 source trajectories x 3 horizons -- deduplicated. One hit proves nothing.
+
+Per amendment C2.3.1, `A_6 h=16` carries no archived donor turn: the donor
+emitted a response with no tool call, the scaffold injected its correction and
+kept only the retry. That root is `compatibility_unknown` -- not a pass and not
+a fail -- and the verdict is computed over the 23 archived-comparable roots. The
+retry is not substituted for it, another horizon is not substituted for it, and
+no looser matching rule is introduced. The only admissible phrasing downstream
+is "all 23 archived-comparable fork roots ...", never "all fork roots".
 
 Per root: replay the frozen message prefix to this stack at the registered
 sampling parameters, and compare against what the donor actually recorded as
@@ -70,8 +77,12 @@ def target(root: dict, runs: Path) -> dict:
         raise ValueError(f"{root['source_name']}@{s}: next archive is not longer")
     donor = after[len(prefix)]
     if donor.get("role") != "assistant":
-        raise ValueError(f"{root['source_name']}@{s}: next turn is "
-                         f"{donor.get('role')}, not assistant")
+        # C2.3.1: the scaffold discarded a malformed donor turn and kept only
+        # the retry, so no comparison target exists. Not an error and not a
+        # failure -- the root is excluded from the verdict and recorded as such.
+        return {"prefix": prefix, "donor": None,
+                "unknown_reason": f"next turn is {donor.get('role')}, not assistant: "
+                                  "scaffold correction, donor response not archived"}
     return {"prefix": prefix, "donor": donor}
 
 
@@ -132,13 +143,23 @@ def main() -> int:
         t = target(r, runs)
         targets.append((r, t))
         d = t["donor"]
+        if d is None:
+            print(f"  {r['arm']:4} {r['source_name']:34} h={r['horizon']:>2} "
+                  f"step={r['archive_step']:>2}  prefix={len(t['prefix']):>3} msgs  "
+                  f"COMPATIBILITY_UNKNOWN (C2.3.1)")
+            continue
         acts = (d.get("extra") or {}).get("actions")
         print(f"  {r['arm']:4} {r['source_name']:34} h={r['horizon']:>2} "
               f"step={r['archive_step']:>2}  prefix={len(t['prefix']):>3} msgs  "
               f"donor={len(d.get('content') or ''):>5} chars  "
               f"actions={'yes' if acts else 'NONE'}")
+    comparable = sum(1 for _, t in targets if t["donor"] is not None)
+    print(f"\narchived-comparable roots: {comparable}   "
+          f"compatibility_unknown: {len(targets) - comparable}")
+    if comparable != 23:
+        print(f"REFUSING: C2.3.1 fixes 23 archived-comparable roots, found {comparable}")
+        return 2
     if args.resolve_only:
-        print("\nresolve-only: every root has a frozen prefix and a recorded donor turn.")
         return 0
 
     from openai import OpenAI
@@ -146,8 +167,16 @@ def main() -> int:
     model = client.models.list().data[0].id
     print(f"\nserving {model}")
 
-    results = []
+    results, unknown = [], []
     for r, t in targets:
+        if t["donor"] is None:
+            unknown.append({**{k: r[k] for k in ("arm", "source_batch",
+                             "source_name", "horizon", "archive_step")},
+                            "status": "compatibility_unknown",
+                            "reason": t["unknown_reason"]})
+            print(f"  {r['arm']:4} {r['source_name']:34} h={r['horizon']:>2}  "
+                  f"SKIPPED — compatibility_unknown (C2.3.1)")
+            continue
         t0 = time.time()
         resp = client.chat.completions.create(
             model=model, messages=t["prefix"],
@@ -170,9 +199,16 @@ def main() -> int:
         "prereg": "paper/PREREG_C2_RECOVERABILITY.md amendment C2.3",
         "model": model, "sampling": P.SAMPLING,
         "written_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "verdict": code, "reason": why, "results": results,
+        "verdict": code, "reason": why,
+        "archived_comparable": len(results),
+        "compatibility_unknown": unknown,
+        "reporting_rule": "Admissible phrasing is 'all 23 archived-comparable "
+                          "fork roots ...'. 'All fork roots passed' is not a "
+                          "sentence this experiment may write. (C2.3.1)",
+        "results": results,
     }, indent=2))
-    print(f"\n──── GATE 9: {code} ────\n{why}")
+    print(f"\n──── GATE 9: {code} ────  over {len(results)} archived-comparable "
+          f"roots, {len(unknown)} compatibility_unknown\n{why}")
     return 0 if code != "STOP" else 1
 
 
