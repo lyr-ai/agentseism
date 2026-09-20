@@ -346,3 +346,54 @@ the third.
 Gate 9's per-root results, this host's stack record, the Gate 8 replay log and
 the protocol hash are committed together, so a set of C2 outcomes can never be
 separated from the evidence about the stack that produced them.
+
+### Amendment C2.3.1, 2026-09-20 — one fork root has no archived comparison target
+
+**Written before any inference on this host.** Discovered by `gate9.py
+--resolve-only`, which validates archives and comparison targets without a model
+call. The reason is independent of any model result, because no model result
+exists.
+
+**The defect.** At `A_6`, `h=16` (archive step 8) the donor emitted a response
+containing no tool call. The scaffold injected `"No tool calls found in the
+response. Every response MUST include at least one tool call."` and kept only
+the retry. **The donor's own turn at that fork point was never archived**, so
+there is nothing to compare a new response against. This is an archive
+completeness defect, not a property of the host.
+
+**Disposition.** `A_6 h=16` is marked **`compatibility_unknown`**. It is not a
+pass and not a fail.
+
+Gate 9's verdict is computed over the **23 archived-comparable fork roots**.
+
+**What is explicitly not done**, because each would create a new way to pass:
+
+- the retry response is **not** substituted for the missing one — it was produced
+  from prefix *plus* the scaffold's correction, not from the frozen prefix;
+- another horizon of `A_6` is **not** substituted for it;
+- no looser or structural matching rule is introduced for this root.
+
+**Reporting rule.** From here on the only admissible phrasing is *"all 23
+archived-comparable fork roots passed/failed …"*. **"All fork roots passed" is
+not a sentence this experiment may write.**
+
+**The 72 specs stay frozen and all 72 execute.** `A_6 h=16` is not deleted; the
+experimental set is not modified a second time.
+
+**Two readouts, both fixed here and both reported.** Neither may be selected
+over the other after seeing results.
+
+1. The registered **72-spec** result, reported in full as planned.
+2. A **69-spec** sensitivity analysis excluding the three specs whose fork root
+   is `A_6 h=16`.
+
+**Interpretive boundaries, fixed here.**
+
+- The **69** support an absolute recoverability reading, conditional on the
+  serving-stack behavioural compatibility that Gate 9 established.
+- `A_6 h=16`, and therefore the full **72**, support only FAIL/PASS and
+  horizon comparisons **within** the H100 stack. That root may not be described
+  as *the same agent continuing its own trajectory*, because compatibility at it
+  was never established.
+
+This amendment narrows what is provable. It creates no new path to passing.
