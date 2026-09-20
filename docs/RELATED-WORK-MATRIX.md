@@ -1,7 +1,12 @@
 # Related work — the matrix that gates the mutation suite
 
-**Status:** preliminary. **Verdict: framing survives, narrowly.**
-**Date:** 2026-09-20
+**Status:** **GATE FIRED — the mutation-suite framing is stopped.**
+**Date:** 2026-09-20 (preliminary pass), same day (gate)
+
+> **2026-09-20 — direct prior art found. See §0.** The gate written in §4 has
+> fired. The narrow verdict below stood for less than a day, and the document
+> is kept as written so the sequence is legible: a framing was narrowed, a gate
+> was set on it, and the gate then stopped it.
 
 Entries below were gathered in review and are **not independently verified
 here**. Each needs checking against its source before it reaches an
@@ -9,7 +14,61 @@ introduction — the same rule the Phase 2 bibliography followed.
 
 ---
 
-## 1. Preliminary verdict
+## 0. Gate fired — AgentAssay
+
+**Found in review, not verified here.** *AgentAssay: Token-Efficient Regression
+Testing for Non-Deterministic AI Agent Workflows*, arXiv:2603.02601, a 2026-03
+technical report.
+
+It occupies **both** gate columns, and the mutation suite as well:
+
+| What we intended to claim | AgentAssay |
+|---|---|
+| stochastic agent regression testing | yes |
+| baseline vs changed agent | yes |
+| prompt / tool / model / orchestration changes | yes |
+| agent-specific mutation operators | yes |
+| PASS / FAIL / INCONCLUSIVE | yes |
+| CI/CD statistical gate | yes |
+| repeated trials | yes |
+| SPRT adaptive stopping | yes |
+| variance-based budget allocation | yes |
+| trace behavioural fingerprint | yes |
+| cost reduction as the headline result | yes |
+
+Reported: 5 models, 3 scenarios, 7,605 trials, SPRT cutting trials by 78%, and
+agent mutations split into prompt / tool / model / context.
+
+This is not adjacent work. It is **near-verbatim prior art for the main-line
+question**, including the mutation taxonomy.
+
+### The gate, applied as written
+
+§4 said: if either *CI decision target* or *budget-adaptive repeated
+evaluation* is occupied, the framing narrows or changes. Both are occupied, and
+so is mutation testing. Therefore:
+
+> **Stop claiming "budget-aware stochastic agent regression testing + mutation
+> suite" as the main contribution. No pre-registration. No machine.**
+
+**This is what the gate was for.** It cost nothing and it fired before $100 was
+spent on an experiment whose contribution was already published. That is the
+whole argument for doing the related-work pass first, and it is worth recording
+as a result of the process rather than only as bad news.
+
+### What this does not establish
+
+AgentAssay is a single-author 52-page technical report with no code repository
+visible on the page seen, and three scenarios. Its scope claims are broad and
+its evidence and implementation quality are **unaudited**.
+
+That changes nothing about the gate. **Public prior art blocks the claim
+whether or not it turns out to be strong.** Quality matters for what we do
+next, not for whether we may claim the same contribution.
+
+---
+
+## 1. Preliminary verdict (superseded by §0)
 
 > **Framing survives, but only in its narrow form: budget-aware statistical
 > regression testing for stochastic tool-using agents.**
@@ -104,15 +163,15 @@ learn that now than after a $100 run.
 
 ## 5. Order of work
 
+~~Original order — the gate stopped it at step two:~~
+
 ```
 systematic related-work matrix (§4)
-      ↓  gate: last two columns empty?
-freeze the mutation suite, with §3's admissibility rule
-      ↓
-cost model and the adaptive-allocation baseline
-      ↓
-decide what the first $100 buys
+      ↓  gate: last two columns empty?     ← FIRED, both occupied
+freeze the mutation suite                  ← NOT STARTED
 ```
+
+Replaced by `docs/AGENTASSAY-AUDIT.md`.
 
 **C2-H stays sealed. No machine is rented.** Its apparatus is finished,
 audited and `CONDITIONAL GO`; it has lost first claim on the budget, not its
