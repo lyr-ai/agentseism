@@ -200,3 +200,126 @@ deleted once running.**
 - confirmation of the 24-run / 1200 s design, which trades repetitions for
   budget certainty and is the one choice here that is a judgement rather than
   an arithmetic consequence.
+
+---
+
+# Amendment P.1 — boundaries on the 1200 s cap and the 24-run shape
+
+**2026-09-20, before any run.** The design is accepted as a **budget-censored
+feasibility pilot**, not a small statistical experiment. These six boundaries
+exist so the cap cannot leak into the interpretation of the results.
+
+## 1. A timeout is not a task failure
+
+```
+1200 s reached → INVALID / CENSORED
+```
+
+**Never scored as a failed task.** Otherwise a budget rule manufactures a
+regression out of long tasks, and the longest tasks are exactly the ones M1 and
+M3 are hypothesised to affect.
+
+Reported beside every number:
+
+- capped runs per arm;
+- capped runs per task;
+- steps completed before the cap;
+- **differential censoring** between baseline and each candidate.
+
+If a mutation hits the cap more often than baseline, that is a **feasibility
+observation** and is reported as one. It is **not** written as an outcome
+regression: "the run was stopped for cost" and "the agent got worse" are
+different statements, and only the second is a regression.
+
+## 2. A cell needs 2 of 2 valid to be interpreted
+
+Each `task × arm` is registered for two repetitions.
+
+| Valid | Treatment |
+|---|---|
+| 2 / 2 | descriptive comparison permitted |
+| 1 / 2 | **cell is insufficient** |
+| 0 / 2 | **cell is insufficient** |
+
+No re-running. No substituting another task. No borrowing evidence from another
+cell. Without this, "exactly two repetitions" quietly becomes "two, and more
+when two is not enough", which is optional stopping on the quantity being
+measured.
+
+## 3. $28.29 is not margin
+
+It is $1.71 under the stop, and the following are not in it: pre-start time,
+download and warm-up, billing lag, artifact retrieval, and a bill that updates
+only after a block has begun.
+
+All three stops stand:
+
+| | |
+|---|---|
+| $20 | warning |
+| $25 | **start no new block** |
+| $30 | absolute stop |
+
+**At $25 the run does not continue because "only the last block is left".**
+That sentence is exactly how a ceiling becomes advisory.
+
+So **24 runs is the planned shape, not a guaranteed one.** If the budget
+truncates it, the output is a `budget-censored feasibility run` and **no Gate 2
+verdict** — the same rule as §6.4 of the C2-H registration.
+
+## 4. Block order: frozen, interleaved, hashed
+
+Not all baseline first, then mutations in order. Drift over the session would
+then align with arm.
+
+Generated from seed `20260920`, fixed here, entering the manifest hash:
+
+```
+rep 0  task_1: M3, M1, baseline, M2
+rep 0  task_2: M2, baseline, M1, M3
+rep 0  task_3: M2, baseline, M1, M3
+rep 1  task_1: baseline, M3, M2, M1
+rep 1  task_2: M2, baseline, M1, M3
+rep 1  task_3: M2, M1, M3, baseline
+
+order_hash  a0d4df1f7729e04e      24 cells
+```
+
+**Not adjustable during the run.** A reordering mid-session is a different
+experiment, and the hash says so.
+
+## 5. `max_steps` and the wall-clock cap are different terminations
+
+M1 changes the **agent's step budget**. 1200 s is **infrastructure spend
+protection**. They must never be recorded as the same event:
+
+| Termination | Meaning |
+|---|---|
+| agent stopped by `max_steps` | a **mutation outcome** — this is what M1 does |
+| harness stopped at 1200 s | a **censored observation** — says nothing about the agent |
+
+Collapsing them would let the budget cap masquerade as M1's effect, which is
+the single most likely way this pilot could produce a wrong answer that looks
+right.
+
+## 6. What this pilot can and cannot answer
+
+**Can:** whether the three features extract stably · whether each mutation
+moves in its registered direction · whether a negative control moves in step ·
+whether invalid runs and censoring make the design unusable · whether the PR
+report is intelligible · whether the system completes most or all of the plan
+within budget.
+
+**Cannot:** statistical power · a calibrated false-positive rate · general
+effectiveness · a release-grade regression · generalisation across agents.
+
+**The independent unit count is three.** Two repetitions do not make `N = 6`,
+and no sentence in the write-up may imply otherwise.
+
+## Decision
+
+> **3 tasks × 4 arms × 2 repetitions, 1200 s cap.**
+
+The only shape that keeps three tasks, three mutations and repeated
+observation under $30. The price is that every conclusion is descriptive
+feasibility, and **no censored cell is ever re-run**.
