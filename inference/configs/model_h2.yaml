@@ -26,6 +26,7 @@ model:
   trust_remote_code: false
 
 serving:
+  host: 127.0.0.1   # loopback only; see start_vllm.sh
   max_model_len: 131072
   # Raised from the 32768 the primary experiment served. The reason is recorded
   # in INTERVENTION_PREREG_H2.md and predates any H2 outcome: 4 of 30 primary

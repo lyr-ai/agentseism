@@ -32,7 +32,12 @@ MODEL=$(y model.id); REV=$(y model.revision)
     | sed 's/^/gpu=/' || echo "gpu=none"
 } | tee "$OUT/stack.txt"
 
-ARGS=(--model "$MODEL" --revision "$REV" --host 0.0.0.0 --port 8000
+# Bind from the config, defaulting to loopback. The colocated design means the
+# agent, the containers and the server share a host, so the server has no reason
+# to be reachable off it -- and on a cloud VM with a public IP, 0.0.0.0 would
+# publish an unauthenticated endpoint.
+HOST=$(y serving.host); HOST=${HOST:-127.0.0.1}
+ARGS=(--model "$MODEL" --revision "$REV" --host "$HOST" --port 8000
       --dtype "$(y model.dtype)"
       --max-model-len "$(y serving.max_model_len)"
       --gpu-memory-utilization "$(y serving.gpu_memory_utilization)"
@@ -46,4 +51,6 @@ ARGS=(--model "$MODEL" --revision "$REV" --host 0.0.0.0 --port 8000
 [ "$(y model.trust_remote_code)" = "True" ] && ARGS+=(--trust-remote-code)
 
 echo "+ vllm serve ${ARGS[*]}"
+# `python3` resolves through PATH so a venv can supply it; the caller exports
+# the venv bin, which also puts `ninja` where vLLM's kernel build can find it.
 exec python3 -m vllm.entrypoints.openai.api_server "${ARGS[@]}"
