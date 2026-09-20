@@ -48,6 +48,13 @@ Candidate mutations: max-step limit, tool timeout, error-recovery policy,
 context pruning, retry policy, prompt scaffold edit, model revision, serving
 configuration.
 
+**Admissibility rule, to be pre-registered with the suite.** Every mutation
+must be an *engineering change to the agent*, and the measured quantity a
+*regression decision across revisions*. A mutation that reduces to "add noise
+to a tool and watch success fall" is covered by existing robustness
+benchmarking and collapses the framing; see the AgentNoiseBench comparison in
+`docs/RELATED-WORK-MATRIX.md` §3.
+
 ## 3. Baselines it must beat
 
 This is what makes it a method paper rather than an observation. The comparison
@@ -103,6 +110,13 @@ trajectory diagnosis, and mutation-based evaluation aimed at agent CI.
 **No priority claim is made until a related-work search covers agent
 evaluation, flaky-test literature, mutation testing and LLM-agent regression
 CI.** That search is a prerequisite for the introduction, not a formality.
+
+**Preliminary pass done, 2026-09-20 — see `docs/RELATED-WORK-MATRIX.md`.** It
+does not kill the direction, but it narrows it: "agent testing" is not
+claimable territory, and the paper question must be the specific one, *how
+should CI decide whether a change has regressed a stochastic tool-using agent
+under a limited evaluation budget?* The systematic four-bucket matrix is the
+gate on starting the mutation suite.
 
 ## 7. What this costs, and what it means for renting
 
