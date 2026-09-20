@@ -323,3 +323,124 @@ and no sentence in the write-up may imply otherwise.
 The only shape that keeps three tasks, three mutations and repeated
 observation under $30. The price is that every conclusion is descriptive
 feasibility, and **no censored cell is ever re-run**.
+
+---
+
+# Amendment P.2 — final pilot parameters
+
+**2026-09-20, before any run.** Supersedes the arm set, the trial shape and the
+order in §2–§3 and P.1 §4. Everything else stands.
+
+## The three arms
+
+| Arm | Recovery challenge | `step_limit` | `format_error_template` |
+|---|---|---:|---|
+| baseline | yes | 250 | full guidance |
+| **M1** | yes | **40** | full guidance |
+| **M2** | yes | 250 | **`<error>` only** |
+
+Both comparisons remain single-axis: **M1 vs baseline** changes only the step
+limit; **M2 vs baseline** changes only the recovery guidance.
+
+**M3 is removed.** `mini-swe-agent` has no context-pruning axis — `AgentConfig`
+exposes `step_limit`, `cost_limit`, `wall_time_limit_seconds` and
+`max_consecutive_format_errors`, and neither environments nor models carry
+pruning or context-window management. Building the feature in order to test it
+would be circular, and filling the slot with `cost_limit` would only restate
+M1's resource-exhaustion mechanism.
+
+### M1 = 40, and what chose it
+
+| `step_limit` | binds | % of live reference runs |
+|---:|---:|---:|
+| 30 | 24 | 83% |
+| **40** | **15** | **52%** |
+| 45 | 6 | 21% |
+| 125 | 0 | 0% |
+
+250 never binds — the largest observed run is 81 steps — so halving it would
+have changed nothing.
+
+**29 of the 32 reference runs come from one task family.** The 52% is a
+strength-selection input, **not a prediction of activation on the held-out
+tasks**, and no sentence may treat it as one.
+
+### The recovery challenge is a test condition, not a scored mutation
+
+Every arm meets the same injected malformed call at the same point: the first
+valid tool call is recorded, **never executed**, and the agent travels its
+ordinary `FormatError` path. Injecting only into M2 would make baseline differ
+from it on two axes — the event and the guidance — and nothing could be
+attributed.
+
+Feasibility verified with a fake model and environment
+(`tests/test_recovery_challenge.py`, 10 tests): the injection point, all three
+arms, exactly once per run, baseline/M2 identical but for the guidance text,
+the suppressed call never reaching the environment, and the artifact keeping
+the original call, the event and the recovery.
+
+## The limit this creates, written before the results
+
+> **M1 estimates the conditional effect of a lower step limit *after* one
+> pre-registered malformed-call challenge — not the general step-limit effect
+> on ordinary fault-free runs.**
+
+Admissible:
+
+> Under the registered recovery challenge, reducing `step_limit` from 250 to
+> 40 produced the observed change.
+
+**Not admissible:**
+
+> ~~`step_limit = 40` generally reduces success.~~
+
+Likewise **M2 measures recovery after a controlled challenge, and estimates
+nothing about how often malformed calls occur in production.** The natural rate
+in the reference data is 5 of 32 runs, which is why the event is registered
+rather than awaited.
+
+## Rules that follow
+
+- `NOT_ELIGIBLE` runs — those that never produced a first valid tool call —
+  enter **neither** the recovery denominator **nor** the failure count.
+- The steps the challenge itself consumes are **not** refunded from M1's
+  40-step budget. M1 is "40 steps, one of which met a challenge", and that is
+  what is reported.
+- Termination codes stay separate: an agent stopped by its **step budget** is a
+  mutation outcome; a harness stop at **1200 s** is a censored observation
+  (P.1 §5).
+- If many runs are `NOT_ELIGIBLE`, M2's conclusion is **insufficient**. No
+  additional injection, no re-running.
+
+## Shape and order
+
+```
+3 tasks × 3 arms × 2 replicates = 18 runs
+per-run infrastructure cap: 1200 s
+worst case ≈ $21 against a $30 stop — real margin, not $1.71
+```
+
+Regenerated from seed `20260920` over the **new 18-cell set**, not by deleting
+M3 from the old 24-cell order, so the sequence is determined by the registered
+set as a whole:
+
+```
+rep 0  task_1: baseline, M1, M2
+rep 0  task_2: M2, M1, baseline
+rep 0  task_3: baseline, M2, M1
+rep 1  task_1: M2, M1, baseline
+rep 1  task_2: M2, baseline, M1
+rep 1  task_3: M2, M1, baseline
+
+order_hash  cfe8856c9c9167b5      18 cells      (supersedes a0d4df1f7729e04e)
+```
+
+Not adjustable during the run.
+
+## Remaining, and mechanical
+
+On the instance, before any run: draw the three tasks by §1's rule, freeze the
+agent commit, resolve the image digests, verify the model and serving stack,
+enter the billing baseline, and hold a final review.
+
+**No real pilot run is produced until all six are done.**
