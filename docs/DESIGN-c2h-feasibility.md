@@ -94,8 +94,16 @@ line 1546); the independent batch `r0`–`r4` was 1 of 5.
 
 **`p` is not known.** Four events out of twenty give a Wilson 95% interval of
 **[0.081, 0.416]**. Every probability below is a *plug-in* estimate computed as
-though `p = 0.20` were the truth, and none of them is a guarantee. How much that
-matters:
+though `p` were the truth at that value.
+
+**What the table below is, and is not.** Substituting the interval endpoints
+into a binomial is a **plausible-rate sensitivity envelope**. It is *not* a
+statement that the experiment's success probability lies in that range with 95%
+confidence. A genuine predictive probability would require stating a prior and
+using the Beta-binomial posterior predictive; that is unnecessary for budgeting,
+and the sensitivity analysis is the more transparent object here. Read the
+columns as "if the rate were this, then", never as a confidence band on
+success:
 
 | donors N | P(≥4 FAIL) at p=0.081 | at p=0.20 | at p=0.416 |
 |---:|---:|---:|---:|
@@ -120,43 +128,71 @@ With that caveat attached, the plug-in table:
 rate sits below 0.20. Matching C2's four-FAIL arm needs ~30 at `p = 0.20` — and
 no fixed N is safe across the interval.
 
-### 4.2 Wall clock, from observed donor runs
+### 4.2 Measured inputs
 
-Observed on A100: `1185, 543, 397, 1347, 213` s — mean 737 s, max 1347 s.
+**Correction to an earlier revision of this document.** It used donor wall times
+of 1185 / 543 / 397 / 1347 / 213 s, taken from `paper/experiments.md` line 1076.
+Those belong to an **earlier, aborted batch** (steps 52/36/37/39/27). The donors
+C2 actually forks from are `h2_phase_a1` (steps 31/41/33/47/31). All numbers
+below come from those probe timestamps.
 
-| stage | mean | worst |
-|---|---:|---:|
-| 20 donors | 4.1 h | 7.5 h |
-| 30 donors | 6.1 h | 11.2 h |
-| 72 continuations | 14.7 h | 26.9 h |
-| 48 continuations | 9.8 h | 18.0 h |
-| 36 continuations | 7.4 h | 13.5 h |
+**Donors, the real ones:**
 
-Continuations carry a donor prefix, so these are optimistic: context is larger
-from step one. Prefix caching pulls the other way — every continuation in an arm
-shares its donor prefix, so after the first it is a cache hit.
+```
+r0  31 steps    971 s   16.2 min
+r1  41 steps   3107 s   51.8 min
+r2  33 steps    475 s    7.9 min
+r3  47 steps    437 s    7.3 min
+r4  31 steps    258 s    4.3 min
+            median 475 s   mean 1050 s   max 3107 s
+per step:   median 14.8 s  mean 28.6 s   max 77.7 s
+```
 
-### 4.3 Budget — conditionally feasible, not yet budget-safe
+The spread is 12×. A mean is not a plan here; all three cases below carry their
+own statistic.
 
-At the observed Lambda rate `R = $3.29/h`, plus ~1 h of setup and download:
+**Continuations, priced per horizon from the frozen timestamps** — the remaining
+wall clock from each fork root to its donor's end, rather than guessed from a
+whole run:
 
-| design | mean | worst |
-|---|---:|---:|
-| 30 donors + 72 continuations | 21.9 h = **$71.99** | 39.1 h = **$128.64** |
-| 30 donors + 36 continuations | 14.5 h = $47.74 | — |
-| sequential donors + 72 continuations | 19.8 h = $65.26 | bounded by the cap |
-| sequential donors + 36 continuations | 12.5 h = $41.01 | bounded by the cap |
+| h | n | median | mean | max |
+|---:|---:|---:|---:|---:|
+| 16 | 8 | 259 s | 503 s | 2318 s |
+| 24 | 8 | 38 s | 144 s | 670 s |
+| 28 | 8 | 18 s | 76 s | 435 s |
 
-**The mean fits $50–100. The worst case does not.** That is a budget-safety
-problem, not an infeasibility: the correct description is **conditionally
-feasible, not yet budget-safe**. Reading a worst-case overrun as "cannot be
-done" would be the wrong inference, and the earlier revision of this document
-made it.
+**These are an anchor, not a prediction.** A continuation re-samples; it does not
+replay the donor's tail, and its budget is `250 − h` steps — 234 at h=16. At the
+median 14.8 s/step that ceiling is ~1.0 h *per continuation*.
 
-What is *not* yet resolved is the interaction between the two risks: the
-donor-yield uncertainty of §4.1 and the wall-clock spread. A full cost model has
-to price the continuation stage and the failure-stop rule together before a
-machine is booked again.
+**H100 throughput, measured by Gate 9** (23 single turns): median 8.7 s, mean
+12.4 s, max 57.7 s, median 89 characters generated. One turn is not one step, so
+this does **not** license a speed discount: `R = 1` relative to the A100 donors
+until a like-for-like comparison exists.
+
+### 4.3 Three budgets
+
+At `R = $3.29/h` with 0.6 h of setup (dependency install, model download, vLLM
+start, validate — measured this session, excluding debugging):
+
+| case | statistic used | 72 cont | 36 cont |
+|---|---|---:|---:|
+| **Expected / planning** | median donor, median per-step × 25 steps | 10.5 h — **$34.61** | 6.8 h — $22.41 |
+| **Observed-conservative** | mean donor, mean per-step × 35 steps | 26.2 h — **$86.06** | 16.1 h — $53.13 |
+| **Hard cap** | cap-30 donors at observed max, continuation at `step_limit` | 95.9 h — **$315.50** | 61.2 h — $201.34 |
+
+Three things follow.
+
+**The planning case is comfortable**, at roughly a third of the budget — and
+materially cheaper than the earlier revision claimed, because that revision used
+the wrong donors.
+
+**The conservative case fits, barely.** $86 leaves no room for a restart.
+
+**The theoretical ceiling is 3× the budget.** No shape of this experiment is
+bounded by its own structure; it is bounded only by a spend stop. That is the
+argument for making cumulative cost the hard rule rather than a step or time
+budget.
 
 ### 4.3.1 Sequential donor acquisition
 
@@ -233,11 +269,23 @@ which makes it a **serving condition**, not a speed knob. Gate 9 is the standing
 evidence that execution-path changes are not free. Do not adopt it to save wall
 clock.
 
-**6. Budget and stopping.** Hard ceiling of **$100 or 30 instance-hours,
-whichever comes first**. If the donor stage reaches its cap without the
-registered FAIL count, the experiment stops and reports that; continuations do
-not run. The budget is not raised mid-run to finish — doing so would price the
-experiment on how it happens to be going.
+**6. Budget and stopping.** The hard rule is **cumulative Lambda spend reaching
+$100**, checked against the billing page, not a derived quantity. Thirty
+instance-hours is $98.70 at $3.29/h — close enough to be redundant as a second
+cap, and it ignores start-up and tear-down time that is billed but does not
+appear in any run's clock. **30 instance-hours becomes a warning line, not an
+independent ceiling.**
+
+Four stops, all fixed before renting:
+
+- donor stage reaches its cap of 30 without the registered FAIL count → stop,
+  report, **run no continuations**;
+- projected remaining cost would cross $100 → stop;
+- any environment or serving integrity gate fails → stop;
+- whatever completed is a feasibility artifact. **No top-up to finish.**
+
+The budget is not raised mid-run, because that prices the experiment on how it
+happens to be going.
 
 ## 6. Recommendation
 
