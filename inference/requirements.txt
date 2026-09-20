@@ -1,8 +1,22 @@
-# Pinned. Resolve exact versions on first deploy and commit them back here --
-# an unpinned serving stack makes every later comparison ambiguous.
+# The anchor, not the full set. `vllm==0.28.0` is the one version the donor
+# batches actually recorded (data/runs/h2_phase_a1/stack.txt), so it is the
+# constraint that must hold; everything else is resolved from it and captured in
+# requirements-vllm.lock.txt.
+#
+# 2026-09-20 — DEPLOYMENT DEFECT, recorded rather than quietly corrected. The
+# transformers and huggingface_hub pins below never resolved in a clean
+# environment: `transformers==5.16.1` and `huggingface_hub==1.2.1` conflict, and
+# pip fails with ResolutionImpossible. The header above said "resolve exact
+# versions on first deploy and commit them back here", which was never done, so
+# these lines had not been validated by any install. Resolving from the vllm
+# anchor yields transformers 5.17.0 and huggingface_hub 1.32.0 on Python 3.10.
+#
+# This is an environment-reproduction fix. No model revision, generation
+# parameter, horizon, trajectory or spec changed, and it was made before any
+# model request on the new host.
 vllm==0.28.0
 torch>=2.9  # resolved by the vllm wheel
-transformers==5.16.1
-huggingface_hub==1.2.1
-openai==2.14.0
+transformers   # resolved: 5.17.0  -- see requirements-vllm.lock.txt
+huggingface_hub  # resolved: 1.32.0
+openai           # resolved: 3.16.2 -- the 2.14.0 pin did not survive the vllm resolve either
 pyyaml==6.0.3
