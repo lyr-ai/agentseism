@@ -1,5 +1,12 @@
 # AgentSeism: Budget-Aware Stochastic Regression Debugging for Agent CI
 
+> **2026-09-20 — superseded as the research main line.** The centre of the work
+> is now `docs/DESIGN-regression-testing-mainline.md`: whether CI can decide, at
+> reasonable cost, that an agent change made things worse. This document's
+> architecture, evidence states and gating principle carry over unchanged; what
+> changed is which question the paper leads with. Recoverability (C2-H) is
+> demoted to a secondary diagnostic study.
+
 **Status:** Design proposal  
 **Date:** 2026-09-19  
 **Primary product surface:** GitHub pull-request check  
