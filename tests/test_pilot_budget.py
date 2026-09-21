@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from agentseism.budget import Budget, BudgetStop, RunLog
 from agentseism.pilot import PILOT_THRESHOLDS
-from agentseism.pilot_budget import main
+from agentseism.pilot_budget import main, phase_ts
 
 LAUNCH = "2026-09-21T17:20:00Z"
 SETUP = "2026-09-21T17:30:00Z"
@@ -235,3 +235,27 @@ def test_records_written_before_n_existed_are_still_honoured(tmp_path):
         '"checkpoint": "after_setup", "supersedes_ts": "2026-09-21T17:45:29Z", '
         '"reason": "pre-setup reading"}\n')
     assert Budget(RunLog(p), PILOT_THRESHOLDS).authorisation("after_setup") is None
+
+
+def test_after_setup_can_be_required_to_postdate_the_smoke_test(tmp_path):
+    """P.4: the checkpoint must cover the smoke test's cost, not only setup's.
+    A reading taken between setup and the smoke run is refused."""
+    log, b = _log(tmp_path, reading_ts="2026-09-21T18:00:00Z")
+    log.append("phase", name="setup_started")
+    rows = (tmp_path / "run.jsonl").read_text().splitlines()
+    rows[-1] = rows[-1].replace(_ts_of(rows[-1]), "2026-09-21T17:50:00Z")
+    (tmp_path / "run.jsonl").write_text("\n".join(rows) + "\n")
+    log2 = RunLog(tmp_path / "run.jsonl")
+    log2.append("phase", name="smoke_completed")
+    rows = (tmp_path / "run.jsonl").read_text().splitlines()
+    rows[-1] = rows[-1].replace(_ts_of(rows[-1]), "2026-09-21T18:30:00Z")
+    (tmp_path / "run.jsonl").write_text("\n".join(rows) + "\n")
+
+    b2 = Budget(RunLog(tmp_path / "run.jsonl"), PILOT_THRESHOLDS)
+    with pytest.raises(BudgetStop) as e:
+        b2.check("after_setup", not_before=phase_ts(
+            RunLog(tmp_path / "run.jsonl"), "smoke_completed"))
+    assert e.value.kind == "reading_predates_spend"
+    # the same reading would have satisfied the weaker marker
+    assert b2.check("after_setup", not_before=phase_ts(
+        RunLog(tmp_path / "run.jsonl"), "setup_started"))["usd"] == 0.18

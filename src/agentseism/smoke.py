@@ -130,11 +130,17 @@ def evaluate_chain(result: dict) -> dict:
 
 
 def run_smoke(config: RB.BackendConfig, out_dir: Path | str = SMOKE_DIR,
-              backend=None) -> dict:
+              backend=None, serving: dict | None = None) -> dict:
     """Execute the one smoke cell, freeze it, and report on the chain.
 
     One execution. No retry, here or below: `run_cell` runs the agent once and
     the evaluator once, and a failure is reported rather than attempted again.
+
+    `serving` records the stack that answered it -- endpoint, model, revision,
+    the vLLM pid, the dependency lock and the serving config. The pilot must
+    run against the same values, and recording them here is what lets that be
+    checked rather than assumed: a smoke test that proved a *different* stack
+    works has proved nothing about the one that will serve the pilot.
     """
     out = Path(out_dir)
     if out.name != "smoke":
@@ -158,6 +164,7 @@ def run_smoke(config: RB.BackendConfig, out_dir: Path | str = SMOKE_DIR,
         "task": cell["task"], "arm": cell["arm"],
         "step_limit": cell["step_limit"], "hint": cell["hint"],
         "timeout_seconds": config.timeout_seconds,
+        "serving": dict(serving or {}),
         **result,
     }
     path = out / "smoke_run.json"
@@ -174,6 +181,7 @@ def run_smoke(config: RB.BackendConfig, out_dir: Path | str = SMOKE_DIR,
         "artifact": str(path), "sha256": digest, "artifact_verified": verified,
         "evaluator_resolved": result["evaluator_resolved"],
         "outcome_state": result["outcome_state"],
+        "serving": dict(serving or {}),
         "note": "resolved is reported, never gated on: whether the task was "
                 "solved says nothing about whether the chain is connected",
         **chain,
@@ -194,6 +202,11 @@ def main(argv=None) -> int:
     ap.add_argument("--model-base-url", default="http://127.0.0.1:8000/v1")
     ap.add_argument("--model-name", required=True)
     ap.add_argument("--model-revision", required=True)
+    # Recorded so the pilot's fingerprint can be checked against the stack the
+    # smoke test actually exercised, rather than assumed to be the same one.
+    ap.add_argument("--vllm-pid", default="")
+    ap.add_argument("--dependency-lock-sha256", default="")
+    ap.add_argument("--serving-config-sha256", default="")
     args = ap.parse_args(argv)
 
     rows = [l.split("\t") for l in
@@ -208,7 +221,15 @@ def main(argv=None) -> int:
                            model_base_url=args.model_base_url,
                            model_name=args.model_name,
                            model_revision=args.model_revision)
-    rep = run_smoke(cfg, args.out)
+    serving = {
+        "model_base_url": args.model_base_url,
+        "model_name": args.model_name,
+        "model_revision": args.model_revision,
+        "vllm_pid": args.vllm_pid,
+        "dependency_lock_sha256": args.dependency_lock_sha256,
+        "serving_config_sha256": args.serving_config_sha256,
+    }
+    rep = run_smoke(cfg, args.out, serving=serving)
     for name, _, why in CRITERIA:
         mark = "ok  " if rep["criteria"][name] else "FAIL"
         print(f"  {name:<34} {mark}  {why}")

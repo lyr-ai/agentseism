@@ -31,7 +31,7 @@ set -euo pipefail
 PROTOCOL_HASH="5f4b95c9a250fccf"   # moved by P.3, P.5 and P.6
 ORDER_HASH="cfe8856c9c9167b5"
 EXPECTED_CELLS=18
-EXPECTED_TESTS=638
+EXPECTED_TESTS=642
 BASELINE_USD="7.16"
 BASELINE_CURRENCY="USD"
 BASELINE_PERIOD="September 2026"
@@ -106,6 +106,13 @@ disk_gb() { df -BG --output=avail "$1" | tail -1 | tr -dc '0-9'; }
 # `< /proc/pid/cmdline` is checked rather than attempted: a failed redirection
 # is reported by the shell before any 2>/dev/null on the same command applies,
 # so the fallback would still print an error.
+# pid plus its start time. A pid alone is not an identity: a server that died
+# and was restarted can hold the same number, and the fingerprint would then
+# describe a session that never served the smoke test.
+vllm_identity() {
+  printf '%s|%s' "$1" "$(ps -o lstart= -p "$1" 2>/dev/null | tr -s ' ')"
+}
+
 cmdline_of() {
   if [ -r "/proc/$1/cmdline" ]; then
     tr '\0' ' ' < "/proc/$1/cmdline"
@@ -611,6 +618,7 @@ start_serving() {
   done
   ok "vllm" "ready after ${waited}s, pid $(cat "$pidfile")"
   date -u +%FT%TZ > "$STATE/vllm.started_at"
+  vllm_identity "$(cat "$pidfile")" > "$STATE/vllm.identity"
 }
 
 # ════════════════════════════════════════════════════════════════════════
@@ -642,13 +650,46 @@ run_smoke_test() {
     ok "smoke image" "$dig"
   fi
   cat "$STATE/image_digests.tsv" "$STATE/smoke_image.tsv" > "$STATE/smoke_digests.tsv"
+  local pid before after locks cfgsha
+  pid="$(cat "$STATE/vllm.pid")"
+  before="$(vllm_identity "$pid")"
+  [ "$before" = "$(cat "$STATE/vllm.identity")" ] \
+    || die "the vLLM session changed before the smoke test even started"
+  locks="$(cat "$REPO/inference/requirements-vllm.lock.txt" \
+               "$REPO/inference/requirements-eval.lock.txt" | sha256sum | cut -d' ' -f1)"
+  cfgsha="$(sha_of "$REPO/$SERVING_CONFIG")"
+
   cd "$REPO"
   PYTHONPATH=src:. HF_HOME="$WORK/hf" "$WORK/.venv-eval/bin/python" \
     -m agentseism.smoke --digests "$STATE/smoke_digests.tsv" \
     --out "$WORK/smoke" --work-dir "$WORK/smoke-work" \
+    --model-base-url "http://127.0.0.1:$VLLM_PORT/v1" \
     --model-name "$EXPECTED_MODEL" --model-revision "$EXPECTED_REVISION" \
+    --vllm-pid "$pid" --dependency-lock-sha256 "$locks" \
+    --serving-config-sha256 "$cfgsha" \
     || die "the registered smoke test failed; the chain is not connected and no pilot run follows"
   cd - >/dev/null
+
+  # The same session, still alive. A restart between the smoke run and the
+  # fingerprint would bind the pilot to a server that never answered it.
+  after="$(vllm_identity "$pid")"
+  [ "$after" = "$before" ] \
+    || die "the vLLM session changed during the smoke test ($before -> $after); the fingerprint would not describe the server that served it"
+  ok "vllm session" "unchanged across the smoke run, pid $pid"
+
+  # The moment `after_setup` must be newer than (P.4): the checkpoint has to
+  # cover the smoke test's cost, not only setup's.
+  PYTHONPATH=src RUN_LOG="$PILOT_DIR/run.jsonl" python3 - <<'PY' || die "could not mark smoke_completed"
+import os
+from pathlib import Path
+from agentseism.budget import RunLog
+log = RunLog(Path(os.environ["RUN_LOG"]))
+if not [r for r in log.read() if r["kind"] == "phase" and r.get("name") == "smoke_completed"]:
+    r = log.append("phase", name="smoke_completed")
+    print(f"  smoke_completed                    {r['ts']}")
+else:
+    print("  smoke_completed                    already marked (resumed run)")
+PY
   mark_done smoke
 }
 
@@ -686,6 +727,8 @@ fingerprint() {
       *) die "the serving command line is missing: $r" ;; esac
   done
 
+  [ "$(vllm_identity "$pid")" = "$(cat "$STATE/vllm.identity")" ] \
+    || die "the vLLM session is not the one the smoke test ran against"
   local locks; locks="$(cat "$REPO/inference/requirements-vllm.lock.txt" \
                             "$REPO/inference/requirements-eval.lock.txt" | sha256sum | cut -d' ' -f1)"
   STATE="$STATE" REPO="$REPO" PID="$pid" ARGS="$args" LOCKS="$locks" \
@@ -783,9 +826,10 @@ write_report() {
   # cost of setup. It is taken separately, with a number read now:
   #
   #   python -m agentseism.pilot_budget --log <run.jsonl> \
-  #     --reading <page total> --checkpoint after_setup --not-before @setup_started
+  #     --reading <page total> --checkpoint after_setup --not-before @smoke_completed
   #
-  # which refuses any reading older than the setup_started marker.
+  # which refuses any reading older than the smoke_completed marker,
+  # so the checkpoint covers the smoke test's cost as well as setup's.
   PYTHONPATH=src RUN_LOG="$PILOT_DIR/run.jsonl" \
   "$WORK/.venv-eval/bin/python" - <<'PY' || die "could not read the budget state"
 import os
@@ -795,14 +839,38 @@ from agentseism.pilot import PILOT_THRESHOLDS
 b = Budget(RunLog(Path(os.environ["RUN_LOG"])), PILOT_THRESHOLDS)
 log = b.log
 base, last = b.baseline(), log.last_billing()
-mark = [r for r in log.read() if r["kind"] == "phase" and r.get("name") == "setup_started"]
+mark = [r for r in log.read() if r["kind"] == "phase" and r.get("name") == "smoke_completed"]
 print(f"  baseline      ${base['current_total']:.2f}")
 print(f"  last reading  ${last['current_total']:.2f}   entered {last['ts']}")
-print(f"  setup began   {mark[-1]['ts'] if mark else '(unmarked)'}")
+print(f"  smoke ended   {mark[-1]['ts'] if mark else '(unmarked)'}")
 print("  after_setup   DEFERRED -- the only reading predates setup; it cannot")
 print("                authorise a checkpoint covering setup's cost")
 PY
   cd - >/dev/null
+
+  # Invariant: the smoke test ran against the stack the pilot will use. Not
+  # assumed from the ordering -- compared field by field, because "the same
+  # server" is exactly the thing a restart would quietly break.
+  SMOKE_REPORT="$WORK/smoke/smoke_report.json" FP="$STATE/serving_fingerprint.json" \
+    python3 - <<'PY' || die "the smoke test did not run against the stack the pilot will use"
+import json, os, sys
+from pathlib import Path
+sm = json.loads(Path(os.environ["SMOKE_REPORT"]).read_text())
+fp = json.loads(Path(os.environ["FP"]).read_text())
+got = sm.get("serving") or {}
+if not got:
+    sys.exit("  the smoke report records no serving stack")
+pairs = [("model_revision", "model_revision"),
+         ("dependency_lock_sha256", "dependency_lock_sha256"),
+         ("serving_config_sha256", "serving_config_sha256"),
+         ("vllm_pid", "vllm_pid")]
+for a, b in pairs:
+    x, y = str(got.get(a, "")), str(fp.get(b, ""))
+    if x != y:
+        sys.exit(f"  smoke {a}={x!r} but fingerprint {b}={y!r}")
+    print(f"  {a:<34} ok  {x[:40]}")
+print(f"  {'endpoint':<34} ok  {got.get('model_base_url')}")
+PY
 
   STATE="$STATE" COMMIT="$EXPECTED_COMMIT" RUN_LOG="$PILOT_DIR/run.jsonl" \
   SMOKE_REPORT="$WORK/smoke/smoke_report.json" \
@@ -828,7 +896,7 @@ rep = {
     "smoke": json.loads(Path(os.environ["SMOKE_REPORT"]).read_text())
              if Path(os.environ["SMOKE_REPORT"]).exists() else None,
     "after_setup_checkpoint": "deferred: requires a billing reading taken "
-                              "after the setup_started marker",
+                              "after the smoke_completed marker",
     "backend_constructible": True,
     "unverified": [],
     "note": "pilot_model_requests is 0: the only model requests made here "
@@ -858,7 +926,7 @@ PY
   printf '  * the after_setup checkpoint is taken with a reading from NOW:\n'
   printf '      python -m agentseism.pilot_budget --log %s \\\n' "$PILOT_DIR/run.jsonl"
   printf '        --reading <page total> --checkpoint after_setup \\\n'
-  printf '        --not-before @setup_started\n'
+  printf '        --not-before @smoke_completed\n'
   printf '    The launch reading cannot authorise it: setup spent money the\n'
   printf '    page had not seen when that number was read.\n'
   printf '  * then a further fresh reading before block 1 -- one reading\n'

@@ -137,17 +137,26 @@ fi
 # scripted: MOCK_SMOKE_FAIL makes the chain look broken.
 case " \$* " in
   *" -m agentseism.smoke "*)
-    out=""; prev=""
-    for a in "\$@"; do [ "\$prev" = "--out" ] && out="\$a"; prev="\$a"; done
+    out=""; rev=""; pid=""; lock=""; cfg=""; url=""; prev=""
+    for a in "\$@"; do
+      case "\$prev" in
+        --out) out="\$a" ;; --model-revision) rev="\$a" ;;
+        --vllm-pid) pid="\$a" ;; --dependency-lock-sha256) lock="\$a" ;;
+        --serving-config-sha256) cfg="\$a" ;; --model-base-url) url="\$a" ;;
+      esac
+      prev="\$a"
+    done
     mkdir -p "\$out"
+    [ -n "\${MOCK_SMOKE_OTHER_STACK:-}" ] && rev="some-other-revision"
     if [ -n "\${MOCK_SMOKE_FAIL:-}" ]; then
       printf '{"passed": false, "failed": ["evaluator_decided"], "smoke": true, "pilot_evidence": false, "evaluator_resolved": null}\n' > "\$out/smoke_report.json"
       echo "  evaluator_decided                  FAIL  the evaluator returned an explicit boolean resolved"
       echo "  SMOKE FAILED: evaluator_decided" >&2
       exit 1
     fi
-    printf '{"passed": true, "failed": [], "smoke": true, "pilot_evidence": false, "evaluator_resolved": %s, "outcome_state": "%s", "task": "pytest-dev__pytest-10051", "arm": "baseline", "runs": 1}\n' \
-      "\${MOCK_SMOKE_RESOLVED:-false}" "\${MOCK_SMOKE_STATE:-RESOLVED_FALSE}" > "\$out/smoke_report.json"
+    printf '{"passed": true, "failed": [], "smoke": true, "pilot_evidence": false, "evaluator_resolved": %s, "outcome_state": "%s", "task": "pytest-dev__pytest-10051", "arm": "baseline", "runs": 1, "serving": {"model_base_url": "%s", "model_revision": "%s", "vllm_pid": "%s", "dependency_lock_sha256": "%s", "serving_config_sha256": "%s"}}\n' \
+      "\${MOCK_SMOKE_RESOLVED:-false}" "\${MOCK_SMOKE_STATE:-RESOLVED_FALSE}" \
+      "\$url" "\$rev" "\$pid" "\$lock" "\$cfg" > "\$out/smoke_report.json"
     echo "  evaluator_resolved                 \${MOCK_SMOKE_RESOLVED:-false} — reported, not gated on"
     echo "  SMOKE PASS — the chain is connected; this is not pilot evidence"
     exit 0 ;;

@@ -232,3 +232,34 @@ def test_the_report_states_that_resolved_is_not_gated_on(tmp_path):
     rep = smoke(tmp_path, evaluator_resolved=False)
     assert "never gated on" in rep["note"]
     assert set(rep["criteria"]) == {n for n, _, _ in S.CRITERIA}
+
+
+# ── the stack the smoke test ran against is recorded ──
+SERVING = {"model_base_url": "http://127.0.0.1:8000/v1",
+           "model_name": "Qwen/Qwen3.6-27B-FP8",
+           "model_revision": "e89b16eb", "vllm_pid": "6262",
+           "dependency_lock_sha256": "ba6a0fee", "serving_config_sha256": "c0ffee"}
+
+
+def test_the_report_records_the_stack_that_answered_it(tmp_path):
+    rep = S.run_smoke(cfg(tmp_path), tmp_path / "smoke",
+                      backend=lambda c, cf: result(), serving=SERVING)
+    assert rep["serving"] == SERVING
+    body = json.loads((tmp_path / "smoke" / "smoke_run.json").read_text())
+    assert body["serving"] == SERVING
+
+
+def test_without_a_recorded_stack_nothing_can_be_cross_checked(tmp_path):
+    """A smoke test that proved some *other* stack works proves nothing about
+    the one that will serve the pilot, and an empty record says so."""
+    rep = S.run_smoke(cfg(tmp_path), tmp_path / "smoke",
+                      backend=lambda c, cf: result())
+    assert rep["serving"] == {}
+
+
+def test_the_serving_record_carries_what_the_fingerprint_binds(tmp_path):
+    rep = S.run_smoke(cfg(tmp_path), tmp_path / "smoke",
+                      backend=lambda c, cf: result(), serving=SERVING)
+    for field in ("model_revision", "vllm_pid", "dependency_lock_sha256",
+                  "serving_config_sha256"):
+        assert rep["serving"][field], f"{field} is not recorded"
