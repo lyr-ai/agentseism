@@ -28,10 +28,10 @@
 set -euo pipefail
 
 # ── frozen values. Changing one here is changing the experiment. ──
-PROTOCOL_HASH="3ee68b88bb99894d"
+PROTOCOL_HASH="e1f786939faeb9ea"   # amendment P.3 moved it
 ORDER_HASH="cfe8856c9c9167b5"
 EXPECTED_CELLS=18
-EXPECTED_TESTS=483
+EXPECTED_TESTS=504
 BASELINE_USD="7.16"
 BASELINE_CURRENCY="USD"
 BASELINE_PERIOD="September 2026"
@@ -39,7 +39,9 @@ EXPECTED_MODEL="Qwen/Qwen3.6-27B-FP8"
 EXPECTED_REVISION="e89b16ebf1988b3d6befa7de50abc2d76f26eb09"
 EXPECTED_MAX_MODEL_LEN=131072
 SERVING_CONFIG="inference/configs/model_h2.yaml"
-EXCLUDE_TASK="pytest-dev__pytest-10051"
+# The exclusion and the draw rule live in pilot_protocol.EXCLUDED_INSTANCES
+# and pilot_protocol.select_tasks, which are unit-tested. This script runs
+# the rule; it does not restate it.
 TASKS_WANTED=3
 DATASET="SWE-bench/SWE-bench_Verified"
 EXPECTED_UNIVERSE=500
@@ -98,14 +100,6 @@ skip()      { note "$1" "already done -- skipping (resumable step)"; }
 # named before it. Parse the count instead of grepping for the literal, so a
 # 484 reads as a mismatch rather than as an absence of "483 passed".
 parse_passed() { grep -oE '[0-9]+ passed' "$1" | tail -1 | cut -d' ' -f1; }
-
-# swebench image names replace the `__` in an instance id with `_1776_`.
-image_for() {
-  # shellcheck disable=SC2018,SC2019  # byte-for-byte the form eligibility.sh
-  # uses; instance ids are ASCII and the image name must match it exactly.
-  printf 'docker.io/swebench/sweb.eval.x86_64.%s:latest' \
-    "$(printf '%s' "$1" | sed 's/__/_1776_/' | tr 'A-Z' 'a-z')"
-}
 
 disk_gb() { df -BG --output=avail "$1" | tail -1 | tr -dc '0-9'; }
 
@@ -403,42 +397,30 @@ PY
     || die "$DATASET has $n instances, expected $EXPECTED_UNIVERSE -- the candidate set changed and the draw is not the registered one"
   ok "universe" "$n instances  sha $(sha_of "$universe" | cut -c1-16)…"
 
+  # The rule itself is `pilot_protocol.select_tasks` and is unit-tested; this
+  # shell does not reimplement it, it runs it. One pull per candidate the rule
+  # asks about, every examined candidate written with its reason, and a stop
+  # -- never a relaxation -- if three distinct repositories are not found.
   if is_done draw && [ -s "$drawn" ] && [ "$(wc -l < "$drawn")" -eq "$TASKS_WANTED" ]; then
     skip "draw"
   else
-    : > "$tsv"; : > "$drawn"
-    printf 'instance\timage\tresult\tutc\n' >> "$tsv"
-    local found=0 iid img
-    while read -r iid; do
-      [ -n "$iid" ] || continue
-      [ "$found" -lt "$TASKS_WANTED" ] || break
-      if [ "$iid" = "$EXCLUDE_TASK" ]; then
-        printf '%s\t-\texcluded_by_registration\t%s\n' "$iid" "$(date -u +%FT%TZ)" >> "$tsv"
-        note "$iid" "excluded by the registration"
-        continue
-      fi
-      img="$(image_for "$iid")"
-      local free; free="$(disk_gb /)"
-      [ "${free:-0}" -ge "$MIN_DISK_GB" ] \
-        || die "only ${free} GB free before pulling $iid; stopping rather than filling the disk"
-      # One attempt. A pull that fails is a recorded fact about the candidate,
-      # not something to try again until it works.
-      if docker pull --platform linux/amd64 --quiet "$img" </dev/null >/dev/null 2>&1; then
-        printf '%s\t%s\tpull_ok\t%s\n' "$iid" "$img" "$(date -u +%FT%TZ)" >> "$tsv"
-        printf '%s\n' "$iid" >> "$drawn"
-        found=$((found + 1))
-        ok "$iid" "pulled  ($found/$TASKS_WANTED)"
-      else
-        printf '%s\t%s\tpull_failed\t%s\n' "$iid" "$img" "$(date -u +%FT%TZ)" >> "$tsv"
-        note "$iid" "pull failed -- recorded, not retried"
-      fi
-    done < "$universe"
-    [ "$found" -eq "$TASKS_WANTED" ] \
-      || die "only $found of $TASKS_WANTED candidate images pulled"
+    PYTHONPATH=src:. "$WORK/.venv-eval/bin/python" -m agentseism.task_draw \
+      --universe "$universe" --tsv "$tsv" --drawn "$drawn" \
+      --min-disk-gb "$MIN_DISK_GB" \
+      || die "the task draw did not complete; every candidate examined is in $tsv"
     mark_done draw
   fi
+
+  local repos; repos="$(cut -f2 "$tsv" | tail -n +2 | sort -u | wc -l | tr -d ' ')"
+  local distinct; distinct="$(awk -F'\t' '$4=="selected"{print $2}' "$tsv" | sort -u | wc -l | tr -d ' ')"
+  [ "$(wc -l < "$drawn")" -eq "$TASKS_WANTED" ] || die "the draw did not produce $TASKS_WANTED ids"
+  [ "$distinct" -eq "$TASKS_WANTED" ] \
+    || die "the drawn tasks span $distinct repositories, not $TASKS_WANTED"
   note "drawn" "$(tr '\n' ' ' < "$drawn")"
-  note "attempts" "$(( $(wc -l < "$tsv") - 1 )) recorded in $tsv"
+  ok "distinct repositories" "$distinct"
+  note "examined" "$(( $(wc -l < "$tsv") - 1 )) candidates recorded in $tsv"
+  note "skip reasons" "$(awk -F'\t' 'NR>1 && $4!="selected"{print $4}' "$tsv" | sort | uniq -c | tr '\n' ' ')"
+  note "repositories seen" "$repos"
   cd - >/dev/null
 }
 
@@ -449,10 +431,13 @@ freeze_image_digests() {
   step "8. image digests"
   local drawn="$STATE/drawn.txt" out="$STATE/image_digests.tsv"
   : > "$out"
+  # Image names come from the draw record, so there is one place that knows
+  # how an instance id becomes an image name.
   local iid img dig
   while read -r iid; do
     [ -n "$iid" ] || continue
-    img="$(image_for "$iid")"
+    img="$(awk -F'\t' -v i="$iid" '$1==i && $4=="selected"{print $3}' "$STATE/task_draw.tsv")"
+    [ -n "$img" ] || die "no image recorded for $iid in the draw log"
     dig="$(docker image inspect "$img" --format '{{index .RepoDigests 0}}' 2>/dev/null || true)"
     [ -n "$dig" ] || die "no repo digest for $img -- it cannot be frozen"
     printf '%s\t%s\n' "$iid" "$dig" >> "$out"
@@ -698,7 +683,8 @@ rep = {
     "kind": "stage_b_preflight_report",
     "repo_commit": os.environ["COMMIT"],
     "drawn_tasks": lines("drawn.txt"),
-    "draw_attempts": lines("task_draw.tsv")[1:],
+    "drawn_repositories": sorted({i.rsplit("-", 1)[0] for i in lines("drawn.txt")}),
+    "draw_examined": lines("task_draw.tsv")[1:],
     "image_digests": dict(l.split("\t") for l in lines("image_digests.tsv") if "\t" in l),
     "serving_fingerprint": json.loads((st / "serving_fingerprint.json").read_text()),
     "serving_fingerprint_sha256": (st / "serving_fingerprint.json.sha256").read_text().strip(),

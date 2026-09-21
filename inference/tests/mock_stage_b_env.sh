@@ -155,15 +155,31 @@ EOF
   date -u +%FT%TZ > "$root/work/state/steps/env_eval.done"
   date -u +%FT%TZ > "$root/work/state/steps/env_vllm.done"
   date -u +%FT%TZ > "$root/work/state/steps/universe.done"
+  # A universe shaped like the real one: ascending, and with one repository
+  # large enough at the head to have filled the whole draw under the version-1
+  # rule. MOCK_UNIVERSE_SINGLE_REPO collapses it to one repository, which the
+  # P.3 rule must refuse rather than relax.
   : > "$root/work/state/universe.txt"
-  local i
-  for i in $(seq 1 "${MOCK_UNIVERSE_N:-500}"); do
-    printf 'astropy__astropy-%05d\n' "$i" >> "$root/work/state/universe.txt"
-  done
+  local want="${MOCK_UNIVERSE_N:-500}" i n
+  if [ -n "${MOCK_UNIVERSE_SINGLE_REPO:-}" ]; then
+    for i in $(seq 1 "$want"); do
+      printf 'astropy__astropy-%05d\n' "$i" >> "$root/work/state/universe.txt"
+    done
+  else
+    n=$(( want * 2 / 5 ))          # astropy holds the head of the list
+    local rest=$(( want - n )) each
+    each=$(( rest / 3 ))
+    {
+      for i in $(seq 1 "$n");                    do printf 'astropy__astropy-%05d\n' "$i"; done
+      for i in $(seq 1 "$each");                 do printf 'django__django-%05d\n' "$i"; done
+      for i in $(seq 1 "$each");                 do printf 'matplotlib__matplotlib-%05d\n' "$i"; done
+      for i in $(seq 1 $(( rest - 2 * each ))); do printf 'sympy__sympy-%05d\n' "$i"; done
+    } >> "$root/work/state/universe.txt"
+  fi
   if [ -n "${MOCK_UNIVERSE_INCLUDES_EXCLUDED:-}" ]; then
-    # Put the excluded instance first, so the exclusion is actually exercised.
+    # The excluded instance goes first so the exclusion is actually exercised.
     { echo "pytest-dev__pytest-10051"; cat "$root/work/state/universe.txt"; } \
-      | head -n "${MOCK_UNIVERSE_N:-500}" > "$root/work/state/universe.txt.new"
+      | head -n "$want" > "$root/work/state/universe.txt.new"
     mv "$root/work/state/universe.txt.new" "$root/work/state/universe.txt"
   fi
 )

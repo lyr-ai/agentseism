@@ -178,9 +178,16 @@ def test_warning_is_optional_and_absent_for_c2h(tmp_path):
     assert not [r for r in log.read() if r["kind"] == "budget_warning"]
 
 
-def test_naming_the_warning_did_not_move_the_protocol_hash():
-    """WARNING_USD was already inside protocol_hash before it was wired up."""
-    assert P.protocol_hash() == "3ee68b88bb99894d"
+def test_the_protocol_hash_is_the_registered_one():
+    """Pinned so a registered value cannot move without this line moving too.
+
+    `3ee68b88bb99894d` was the value through amendment P.2; wiring up the $20
+    warning did not move it, because WARNING_USD was already inside the hash.
+    Amendment P.3 moved it to `e1f786939faeb9ea` by putting the task-selection
+    rule inside, which is the point of P.3: how the tasks are drawn is part of
+    the design.
+    """
+    assert P.protocol_hash() == "e1f786939faeb9ea"
 
 
 def test_no_new_block_after_the_threshold(tmp_path):

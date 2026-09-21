@@ -39,6 +39,12 @@ python -m agentseism.pilot --resolve-only  18 cells · cfe8856c9c9167b5 · PASS
 python -m agentseism.pilot --backend fake  18/18 cells frozen, digests verified
 ```
 
+**Superseded counts.** The suite is now **504 passed** and `protocol_hash` is
+**`e1f786939faeb9ea`** after amendment P.3 put the task-selection rule inside
+it. `cfe8856c9c9167b5` is unchanged: the order binds positions, not ids. The
+three-task draw is now three *distinct repositories* — see P.3 — and stage B
+is executed by `inference/stage_b_preflight.sh` rather than by hand.
+
 The fake run completes all 18 and is labelled synthetic throughout.
 
 ## B. On the instance — not started

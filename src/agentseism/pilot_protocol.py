@@ -16,6 +16,7 @@ from __future__ import annotations
 import hashlib
 import json
 import random
+import re
 
 PREREG = "paper/PREREG_PILOT.md"
 
@@ -37,6 +38,98 @@ is `INFRA_TIMEOUT_1200S`, a censored observation, and never M1's effect."""
 WARNING_USD = 20.0
 NO_NEW_BLOCK_USD = 25.0
 ABSOLUTE_LIMIT_USD = 30.0
+
+# ── task selection (amendment P.3) ──
+EXCLUDED_INSTANCES = ("pytest-dev__pytest-10051",)
+"""It produced the frozen donors and both counterexamples. Reusing it would let
+prior familiarity into a set meant to test the method."""
+
+TASK_SELECTION = {
+    "rule": "ascending_id_first_pullable_per_distinct_repository",
+    "version": 2,
+    "universe": "SWE-bench/SWE-bench_Verified:test",
+    "wanted": TASK_COUNT,
+    "exclude": list(EXCLUDED_INSTANCES),
+    "repository_key": "instance id with the trailing -<number> removed",
+    "skip_reasons": ["excluded_registered", "duplicate_repository", "pull_failed"],
+    "exhausted": "fail_closed",
+}
+"""Version 1 was *first three that pull*, and on this universe it draws three
+`astropy__astropy` instances: the ids sort ascending and one repository holds
+enough of the head of the list to fill the draw. Three scenarios from one
+repository are not three independent scenarios in the sense the pilot's
+extrapolation assumes.
+
+This was found before launch and with no pilot outcome in existence, so it is a
+design defect in the sampling rule, not a result-driven change. Amendment P.3
+records it.
+
+**Selection is part of the experiment**, so `TASK_SELECTION` is inside
+`protocol_hash` and the hash moves. `ORDER_HASH` does not: the order binds the
+*positions* `task_1..task_3`, never the ids that fill them."""
+
+
+def repository_of(instance_id: str) -> str:
+    """`astropy__astropy-12907` -> `astropy__astropy`.
+
+    Raises rather than guessing. An id this cannot parse means the universe is
+    not the one the rule was registered against, and silently treating the
+    whole id as a repository would make every such instance look distinct --
+    which is the one failure mode this rule exists to prevent.
+    """
+    m = re.fullmatch(r"(?P<repo>.+)-\d+", instance_id)
+    if not m:
+        raise ValueError(
+            f"{instance_id!r} is not <repository>-<number>; the candidate "
+            "universe is not the registered one")
+    return m.group("repo")
+
+
+def select_tasks(candidates, pull, wanted: int = TASK_COUNT,
+                 exclude=EXCLUDED_INSTANCES):
+    """The registered draw. Returns `(drawn, rows)`; every candidate examined
+    appears in `rows` with why it was skipped.
+
+    `pull` is injected so the rule is testable without Docker, and so this
+    function can be read without reference to how an image is fetched.
+
+    The repository check runs **before** the pull, and that ordering is an
+    efficiency decision with no effect on the result: a candidate whose
+    repository is already represented is never selected under either ordering,
+    so the drawn set is identical. Pulling first would fetch every remaining
+    instance of an already-selected repository -- on this universe upwards of a
+    hundred multi-gigabyte images -- only to discard them.
+
+    Exhaustion is a stop, not a relaxation: if the candidates run out before
+    `wanted` distinct repositories are found, the caller gets `ProtocolMismatch`
+    and no draw.
+    """
+    drawn: list[str] = []
+    repos: set[str] = set()
+    rows: list[tuple[str, str]] = []
+    for iid in candidates:
+        if len(drawn) == wanted:
+            break
+        if iid in exclude:
+            rows.append((iid, "excluded_registered"))
+            continue
+        repo = repository_of(iid)
+        if repo in repos:
+            rows.append((iid, "duplicate_repository"))
+            continue
+        if not pull(iid):
+            rows.append((iid, "pull_failed"))
+            continue
+        rows.append((iid, "selected"))
+        drawn.append(iid)
+        repos.add(repo)
+    if len(drawn) != wanted:
+        raise ProtocolMismatch(
+            f"{len(drawn)} of {wanted} distinct repositories found in "
+            f"{len(rows)} candidates examined; the rule is not relaxed to "
+            "finish the draw")
+    return drawn, rows
+
 
 ORDER_SEED = 20260920
 ORDER_HASH = "cfe8856c9c9167b5"
@@ -113,6 +206,9 @@ def protocol_hash() -> str:
          "replicates": REPLICATES, "timeout": RUN_TIMEOUT_SECONDS,
          "budget": [WARNING_USD, NO_NEW_BLOCK_USD, ABSOLUTE_LIMIT_USD],
          "order_seed": ORDER_SEED, "order_hash": ORDER_HASH,
+         # How the tasks are drawn is part of the design, so changing the rule
+         # has to move the hash.
+         "task_selection": TASK_SELECTION,
          "schema": SCHEMA_VERSION}, sort_keys=True).encode()).hexdigest()[:16]
 
 

@@ -81,10 +81,23 @@ grep -qE "^[[:space:]]*(newgrp|sg)[[:space:]]" "$SCRIPT"
 assert_false $? "no newgrp/sg bypass"
 grep -q "Not retrying at a smaller length" "$SCRIPT"
 assert_true $? "refuses the smaller-max_model_len fallback in so many words"
-if [ "$(grep -cE "^ +if docker pull" "$SCRIPT")" -eq 1 ]; then
+# The draw is executed by src/agentseism/task_draw.py, which is the only place
+# that touches Docker for an image.
+DRAW="$ROOT/src/agentseism/task_draw.py"
+if [ "$(grep -c '"docker", "pull"' "$DRAW")" -eq 1 ]; then
   ok "exactly one docker pull call site (no retry loop)"
 else
   bad "more than one docker pull call site"
+fi
+if [ "$(grep -c "docker_pull" "$DRAW")" -eq 2 ]; then
+  ok "docker_pull is defined once and called once"
+else
+  bad "docker_pull appears $(grep -c "docker_pull" "$DRAW") times, expected 2"
+fi
+if [ "$(grep -cE "^ *(if docker pull|docker pull)" "$SCRIPT")" -eq 0 ]; then
+  ok "the shell does not pull images itself"
+else
+  bad "the shell still pulls images"
 fi
 
 printf '\n──── 1. happy path (real pytest, real resolve-only) ────\n'
@@ -92,9 +105,9 @@ printf '\n──── 1. happy path (real pytest, real resolve-only) ───�
   expect_rc 0 "exits 0"
   expect_out "READY_FOR_MANUAL_PILOT_CONFIRMATION" "reaches the ready banner"
   expect_out "pilot_runs = 0" "reports pilot_runs = 0"
-  expect_out "483 passed" "runs the real suite and sees 483"
+  expect_out "504 passed" "runs the real suite and sees 504"
   expect_out "cfe8856c9c9167b5" "verifies the order hash"
-  expect_out "3ee68b88bb99894d" "verifies the protocol hash"
+  expect_out "e1f786939faeb9ea" "verifies the protocol hash (moved by P.3)"
   expect_out "pilot_spend   \$0.00" "computes spend against the frozen baseline"
   expect_out "--tool-call-parser qwen3_coder" "checks the parser flags on the live command line"
   REPORT="$SANDBOX/work/state/preflight_report.json"
@@ -104,6 +117,7 @@ r = json.load(open(sys.argv[1]))
 assert r["status"] == "READY_FOR_MANUAL_PILOT_CONFIRMATION", r["status"]
 assert r["pilot_runs"] == 0 and r["model_requests"] == 0
 assert len(r["drawn_tasks"]) == 3, r["drawn_tasks"]
+assert len(r["drawn_repositories"]) == 3, r["drawn_repositories"]
 assert len(r["image_digests"]) == 3, r["image_digests"]
 assert r["serving_fingerprint"]["vllm_version"] == "0.28.0"
 assert r["serving_fingerprint"]["model_revision"].startswith("e89b16eb")
@@ -152,20 +166,73 @@ printf '\n──── 5. arguments ────\n'
   expect_rc 65 "an unknown commit stops" )
 
 printf '\n──── 6. the frozen counts ────\n'
-( export MOCK_PYTEST_PASSED=482; run_scenario
-  expect_rc 65 "482 passed is not 483"
-  expect_out "expected exactly 483" "says what it wanted" )
-( export MOCK_PYTEST_PASSED=483 MOCK_UNIVERSE_N=499; run_scenario
+( export MOCK_PYTEST_PASSED=503; run_scenario
+  expect_rc 65 "503 passed is not 504"
+  expect_out "expected exactly 504" "says what it wanted" )
+( export MOCK_PYTEST_PASSED=504 MOCK_UNIVERSE_N=499; run_scenario
   expect_rc 65 "a changed candidate universe stops"
   expect_out "the draw is not the registered one" "explains why" )
 
+printf '\n──── 6b. repository diversity (amendment P.3) ────\n'
+( run_scenario
+  expect_rc 0 "draws across repositories"
+  expect_out "distinct repositories              ok  3" "three distinct repositories"
+  TSV="$SANDBOX/work/state/task_draw.tsv"
+  DRAWN="$SANDBOX/work/state/drawn.txt"
+  # The head of the universe is 200 astropy instances: under the version-1
+  # rule all three slots were astropy.
+  if [ "$(cut -f2 "$DRAWN" | sed -E 's/-[0-9]+$//' | sort -u | wc -l | tr -d ' ')" -eq 3 ]; then
+    ok "the drawn ids span three repositories"
+  else
+    bad "the drawn ids do not span three repositories: $(tr '\n' ' ' < "$DRAWN")"
+  fi
+  if [ "$(head -1 "$DRAWN")" = "astropy__astropy-00001" ]; then
+    ok "the first pullable id of the first repository is taken"
+  else
+    bad "first drawn is $(head -1 "$DRAWN"), expected astropy__astropy-00001"
+  fi
+  if [ "$(sed -n 2p "$DRAWN")" = "django__django-00001" ]; then
+    ok "it keeps scanning past the whole first repository"
+  else
+    bad "second drawn is $(sed -n 2p "$DRAWN"), expected django__django-00001"
+  fi
+  DUP="$(awk -F'\t' '$4=="duplicate_repository"' "$TSV" | wc -l | tr -d ' ')"
+  if [ "$DUP" -eq 199 ]; then
+    ok "every duplicate is written to the record ($DUP rows)"
+  else
+    bad "expected 199 duplicate_repository rows, found $DUP"
+  fi
+  expect_out "duplicate_repository" "the skip reasons are reported"
+  # Nothing but order, exclusion, repository and pull success may move a draw.
+  if [ "$(awk -F'\t' '$4=="selected"{print $1}' "$TSV" | tr '\n' ' ')" \
+     = "$(tr '\n' ' ' < "$DRAWN")" ]; then
+    ok "the record and the draw agree, in order"
+  else
+    bad "the selected rows do not match drawn.txt"
+  fi )
+
+( export MOCK_UNIVERSE_SINGLE_REPO=1; run_scenario
+  expect_rc 65 "one repository is not three"
+  expect_out "not relaxed" "refuses to relax the rule"
+  expect_out "pilot_runs = 0" "zero runs"
+  if [ -s "$SANDBOX/work/state/task_draw.tsv" ]; then
+    ok "the failed draw is still recorded"
+  else
+    bad "nothing was written for the failed draw"
+  fi
+  if [ -s "$SANDBOX/work/state/drawn.txt" ]; then
+    bad "a partial draw was written"
+  else
+    ok "no partial draw is written"
+  fi )
+
 printf '\n──── 7. image pulls are recorded, not retried ────\n'
-( export MOCK_PYTEST_PASSED=483 MOCK_PULL_FAIL_ALL=1; run_scenario
+( export MOCK_PYTEST_PASSED=504 MOCK_PULL_FAIL_ALL=1; run_scenario
   expect_rc 65 "no images means no run"
-  expect_out "only 0 of 3 candidate images pulled" "reports the shortfall"
+  expect_out "0 of 3 distinct repositories" "reports the shortfall"
   n="$(grep -c "pull_failed" "$SANDBOX/work/state/task_draw.tsv")"
-  if [ "$n" -gt 400 ]; then ok "every failed attempt is recorded ($n)"; else bad "every failed attempt is recorded ($n)"; fi )
-( export MOCK_PYTEST_PASSED=483 MOCK_PULL_FAIL_GLOB="*astropy_1776_astropy-0000[12]*"; run_scenario
+  if [ "$n" -eq 500 ]; then ok "every failed attempt is recorded ($n)"; else bad "expected 500 pull_failed rows, found $n"; fi )
+( export MOCK_PYTEST_PASSED=504 MOCK_PULL_FAIL_GLOB="*astropy_1776_astropy-0000[12]*"; run_scenario
   expect_rc 0 "walks past failures to the next candidates"
   grep -q "astropy__astropy-00001" "$SANDBOX/work/state/drawn.txt"
   assert_false $? "failed candidates are skipped, in order"
@@ -173,12 +240,12 @@ printf '\n──── 7. image pulls are recorded, not retried ────\n'
   assert_true $? "the first success is the first drawn" )
 
 printf '\n──── 8. vLLM refuses the KV pool: stop, do not shrink ────\n'
-( export MOCK_PYTEST_PASSED=483 MOCK_VLLM_OOM=1; run_scenario
+( export MOCK_PYTEST_PASSED=504 MOCK_VLLM_OOM=1; run_scenario
   expect_rc 65 "an OOM at 131072 stops"
   expect_out "Not retrying at a smaller length" "refuses the automatic fallback"
   expect_not_out "65536" "never tries the smaller length"
   expect_out "pilot_runs = 0" "zero runs" )
-( export MOCK_PYTEST_PASSED=483 MOCK_GPU_USED_MIB=40000; run_scenario
+( export MOCK_PYTEST_PASSED=504 MOCK_GPU_USED_MIB=40000; run_scenario
   expect_rc 65 "a busy card stops before vLLM starts"
   expect_out "leftover process" "names the likely cause" )
 
@@ -187,7 +254,7 @@ printf '\n──── 9. resume is idempotent ────\n'
   SANDBOX="$(mktemp -d)"; build_mock_host "$SANDBOX" "$REAL_PYTHON"
   runit() { (cd "$ROOT" && env PATH="$SANDBOX/bin:$PATH" WORK="$SANDBOX/work" \
       REPO_URL="$ROOT" BRANCH="$BRANCH_UNDER_TEST" EXPECTED_COMMIT="$COMMIT" \
-      READING1_USD=7.16 MOCK_PYTEST_PASSED=483 MOCK_PULLED="$SANDBOX/pulled.txt" \
+      READING1_USD=7.16 MOCK_PYTEST_PASSED=504 MOCK_PULLED="$SANDBOX/pulled.txt" \
       bash "$SCRIPT" 2>&1); }
   runit >/dev/null; rc1=$?
   pulls1="$(wc -l < "$SANDBOX/pulled.txt")"

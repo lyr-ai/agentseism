@@ -444,3 +444,87 @@ agent commit, resolve the image digests, verify the model and serving stack,
 enter the billing baseline, and hold a final review.
 
 **No real pilot run is produced until all six are done.**
+
+---
+
+# Amendment P.3 — repository diversity in the task draw
+
+**2026-09-21, before any instance is launched, with zero pilot runs in
+existence and no pilot outcome of any kind.** `pilot_runs = 0` at the time of
+writing, and the only hosts ever rented produced no cell.
+
+## What was found
+
+§1's rule was:
+
+1. restrict to instances whose official image pulls on the host;
+2. sort by instance id, ascending, lexicographically;
+3. take the first three that are not `pytest-dev__pytest-10051`.
+
+Resolving it against SWE-bench Verified **before launch** showed what it
+mechanically produces: the ids sort ascending, `astropy__astropy-*` occupies
+the head of the list, and all three slots are filled from that one repository.
+
+That is not a bad draw because of what the tasks are. It is a bad draw because
+the pilot reports three scenarios and treats the scenario as the independent
+unit (§4). Three instances of one repository share a codebase, a test runner,
+a dependency set and a failure vocabulary, so the extrapolation the design
+assumes is narrower than the design claims. The defect is in the rule, not in
+any result.
+
+## Why this is a pre-run amendment and not a post-hoc one
+
+No pilot outcome exists to have influenced it. Nothing about the drawn tasks'
+difficulty, success rate or effect size is known, and no run has been scored.
+What was inspected is the **shape of the candidate list**, which is a property
+of the universe and the sorting rule alone. Fixing it now costs nothing; the
+same fix after the run would be selecting tasks with knowledge of results, and
+would be inadmissible.
+
+## The rule, as amended
+
+1. exclude `pytest-dev__pytest-10051`;
+2. sort all candidates by instance id, ascending;
+3. walk the sorted list in order;
+4. a candidate is selected only if its image pulls **and** its repository is
+   not already represented;
+5. stop at three tasks from three distinct repositories;
+6. every candidate examined is written down with why it was skipped —
+   `excluded_registered`, `duplicate_repository`, `pull_failed`, or `selected`;
+7. if the list is exhausted with fewer than three distinct repositories,
+   preflight **stops**. The rule is not relaxed to finish the draw.
+
+**Ordering note.** In the implementation the repository check runs *before* the
+pull, and that ordering is an efficiency decision with no effect on the result:
+a candidate whose repository is already represented is never selected under
+either ordering, so the drawn set is identical. `select_tasks` is tested
+against a pull-first implementation to prove it. Pulling first would fetch
+every remaining instance of an already-selected repository — on this universe
+more than a hundred multi-gigabyte images — only to discard them.
+
+**Nothing else may move a draw.** The rule is given the ascending id order, the
+exclusion list, the repository derived from the id, and whether a pull
+succeeded. It is not given how long a pull took, how hard a task looks, or
+anyone's preference among instances.
+
+## What moves, and what does not
+
+| | |
+|---|---|
+| `protocol_hash` | **`3ee68b88bb99894d` → `e1f786939faeb9ea`** |
+| `ORDER_HASH` | **`cfe8856c9c9167b5`, unchanged** |
+
+How the tasks are drawn is part of the experimental design, so
+`TASK_SELECTION` is now inside `protocol_hash` and the hash moves with it. The
+18-cell order does **not** move: it binds the *positions* `task_1..task_3`, and
+never the ids that fill them. A test asserts the order hash is identical for
+`["task_1", "task_2", "task_3"]`, for real instance ids, and for arbitrary
+strings.
+
+## Scope
+
+Arms, step limits, the recovery-hint variant, task count, replicates, the
+1200 s cap, the budget stops and the block order are all untouched. This
+amendment changes which three tasks are drawn and nothing else.
+
+`study_mode: feasibility` · `verdict_authority: descriptive_only`.
