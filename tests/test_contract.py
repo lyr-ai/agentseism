@@ -368,10 +368,16 @@ def test_the_demo_reports_are_reproducible_from_frozen_data():
     """The two shipped demos regenerate byte-identically, so the README cannot
     drift from the artifacts it claims to be computed from."""
     import subprocess
+    import sys
     before = {p: p.read_text() for p in
               [Path("docs/demo/pr-report-pass-with-change.md"),
                Path("docs/demo/pr-report-incomparable.md")]}
-    r = subprocess.run([".venv-eval/bin/python",
+    # `sys.executable`, not a hardcoded `.venv-eval/bin/python`: that path
+    # exists only in this working copy. A fresh clone -- which is what runs on
+    # the pilot host -- has no venv inside the checkout, so the subprocess
+    # failed there and this test turned an environment difference into a
+    # reproducibility failure.
+    r = subprocess.run([sys.executable,
                         "experiments/coding/make_demo_reports.py"],
                        capture_output=True, text=True,
                        env={"PYTHONPATH": "src:.", "PATH": "/usr/bin:/bin"})
