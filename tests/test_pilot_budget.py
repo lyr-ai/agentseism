@@ -140,3 +140,98 @@ def test_a_checkpoint_past_the_ceiling_stops(tmp_path):
                "--checkpoint", "after_setup", "--not-before", "@setup_started"])
     assert rc == 1
     assert [r for r in log.read() if r["kind"] == "budget_stop"]
+
+
+# ── the runner reads its authorisation, it does not spend it ──
+def _pilot_log(tmp_path):
+    log = RunLog(tmp_path / "run.jsonl")
+    b = Budget(log, PILOT_THRESHOLDS)
+    b.record_baseline(0.0, billing_period="t", currency="USD")
+    return log, b
+
+
+def test_the_runner_refuses_without_an_after_setup_authorisation(tmp_path):
+    from agentseism.pilot import PilotStop, fake_backend, run_pilot
+    log, b = _pilot_log(tmp_path)
+    b.record_reading(0.0, billing_period="t")
+    with pytest.raises(PilotStop) as e:
+        run_pilot(tmp_path, fake_backend, None, True, log, b)
+    assert "no un-superseded after_setup authorisation" in str(e.value)
+
+
+def test_a_superseded_authorisation_does_not_authorise(tmp_path):
+    from agentseism.pilot import PilotStop, fake_backend, run_pilot
+    log, b = _pilot_log(tmp_path)
+    b.record_reading(0.0, billing_period="t")
+    b.check("after_setup")
+    main(["--log", str(tmp_path / "run.jsonl"),
+          "--supersede-checkpoint", "after_setup", "--reason", "stale"])
+    with pytest.raises(PilotStop):
+        run_pilot(tmp_path, fake_backend, None, True, RunLog(tmp_path / "run.jsonl"),
+                  Budget(RunLog(tmp_path / "run.jsonl"), PILOT_THRESHOLDS))
+
+
+def test_the_runner_does_not_consume_the_first_blocks_reading(tmp_path):
+    """The regression. `check("after_setup")` inside the runner burned the
+    reading entered for block 0, so the block then demanded another one."""
+    from agentseism.pilot import fake_backend, run_pilot
+    log, b = _pilot_log(tmp_path)
+    b.record_reading(0.0, billing_period="t")       # seq 1, for after_setup
+    b.check("after_setup")                          # consumes seq 1
+    b.record_reading(0.0, billing_period="t")       # seq 2, for block 0
+
+    # No on_block hook: block 0 must be authorised by the reading already
+    # entered for it. Under the old code the runner had spent seq 2 and this
+    # raised stale_reading.
+    rep = run_pilot(tmp_path, fake_backend, None, True, log, b,
+                    on_block=lambda blk: b.record_reading(0.0, billing_period="t")
+                    if blk != (0, "task_1") else None)
+    assert rep["cells_done"] == 18
+    reads = [r for r in log.read() if r["kind"] == "authorisation_read"]
+    assert len(reads) == 1 and reads[0]["checkpoint"] == "after_setup"
+    # exactly one after_setup budget_ok: the runner added none
+    assert len([r for r in log.read()
+                if r["kind"] == "budget_ok"
+                and r.get("checkpoint") == "after_setup"]) == 1
+
+
+def test_authorisation_returns_the_latest_un_superseded(tmp_path):
+    log, b = _pilot_log(tmp_path)
+    b.record_reading(1.0, billing_period="t")
+    b.check("after_setup")
+    main(["--log", str(tmp_path / "run.jsonl"),
+          "--supersede-checkpoint", "after_setup", "--reason", "first was wrong"])
+    b2 = Budget(RunLog(tmp_path / "run.jsonl"), PILOT_THRESHOLDS)
+    assert b2.authorisation("after_setup") is None
+    b2.record_reading(2.0, billing_period="t")
+    b2.check("after_setup")
+    got = Budget(RunLog(tmp_path / "run.jsonl"), PILOT_THRESHOLDS).authorisation("after_setup")
+    assert got is not None and got["usd"] == 2.0
+
+
+def test_two_records_in_one_second_are_still_distinguishable(tmp_path):
+    """`ts` has second resolution. It was the supersede key, so a checkpoint
+    written in the same second as the annotation's target was swept up with
+    it -- and an authorisation vanished that nobody had superseded."""
+    log = RunLog(tmp_path / "run.jsonl")
+    a = log.append("budget_ok", checkpoint="after_setup", usd=1.0)
+    b = log.append("budget_ok", checkpoint="after_setup", usd=2.0)
+    assert a["ts"] == b["ts"], "this test is only meaningful within one second"
+    assert a["n"] != b["n"]
+    log.append("budget_superseded", checkpoint="after_setup",
+               supersedes_n=a["n"], supersedes_ts=a["ts"], reason="x")
+    got = Budget(RunLog(tmp_path / "run.jsonl"), PILOT_THRESHOLDS) \
+        .authorisation("after_setup")
+    assert got is not None and got["usd"] == 2.0
+
+
+def test_records_written_before_n_existed_are_still_honoured(tmp_path):
+    """The host-2 log was written without `n`; its annotations name a ts."""
+    p = tmp_path / "run.jsonl"
+    p.write_text(
+        '{"ts": "2026-09-21T17:45:29Z", "kind": "budget_ok", '
+        '"checkpoint": "after_setup", "usd": 0.18}\n'
+        '{"ts": "2026-09-21T17:47:03Z", "kind": "budget_superseded", '
+        '"checkpoint": "after_setup", "supersedes_ts": "2026-09-21T17:45:29Z", '
+        '"reason": "pre-setup reading"}\n')
+    assert Budget(RunLog(p), PILOT_THRESHOLDS).authorisation("after_setup") is None

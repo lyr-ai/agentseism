@@ -108,7 +108,12 @@ class RunLog:
         self.path.parent.mkdir(parents=True, exist_ok=True)
 
     def append(self, kind: str, **fields) -> dict:
-        rec = {"ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        # `n` is the record's identity. `ts` is not: it has second resolution,
+        # and two records written in the same second are indistinguishable by
+        # it -- which matters the moment one record has to name another, as a
+        # supersede annotation does.
+        rec = {"n": len(self.read()),
+               "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                "kind": kind, **fields}
         with self.path.open("a") as f:
             f.write(json.dumps(rec, sort_keys=True) + "\n")
@@ -186,6 +191,33 @@ class Budget:
     def _consumed_seq(self) -> int:
         return max([r.get("consumed_seq", 0) for r in self.log.read()
                     if r["kind"] == "budget_ok"] or [0])
+
+    def authorisation(self, checkpoint: str) -> dict | None:
+        """The latest un-superseded `budget_ok` for `checkpoint`, or None.
+
+        A **read**, not a check. `run_pilot` used to call
+        `check("after_setup")` at startup, which re-evaluated the checkpoint on
+        whatever reading happened to be last and -- the part that actually
+        breaks the accounting -- consumed it through `consumed_seq`, so the
+        block that followed demanded a reading that should have been its own.
+        A runner verifying that it was authorised must not spend the
+        authorisation of the next thing.
+        """
+        rows = self.log.read()
+        by_n = {r["supersedes_n"] for r in rows
+                if r["kind"] == "budget_superseded" and "supersedes_n" in r}
+        # Records written before `n` existed are still named by timestamp.
+        by_ts = {r.get("supersedes_ts") for r in rows
+                 if r["kind"] == "budget_superseded" and "supersedes_n" not in r}
+
+        def gone(r):
+            return r.get("n") in by_n or (r.get("n") is None and r["ts"] in by_ts)
+
+        ok = [r for r in rows
+              if r["kind"] == "budget_ok"
+              and r.get("checkpoint") == checkpoint
+              and not gone(r)]
+        return ok[-1] if ok else None
 
     def check(self, checkpoint: str, block_index: int | None = None,
               not_before: str | None = None) -> dict:

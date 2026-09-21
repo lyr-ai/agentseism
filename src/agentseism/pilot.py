@@ -124,7 +124,20 @@ def run_pilot(out: Path, backend, task_ids: list[str], synthetic: bool,
     log.append("plan", protocol_hash=P.protocol_hash(), order_hash=P.ORDER_HASH,
                cells=len(cells), tasks=task_ids, synthetic=synthetic)
 
-    budget.check("after_setup")
+    # Read the authorisation; do not take it. Calling `check("after_setup")`
+    # here consumed the reading that the first block needs, and re-authorised
+    # the checkpoint on whatever number happened to be last -- which on host 2
+    # would have been the reading entered for block 0.
+    auth = budget.authorisation("after_setup")
+    if auth is None:
+        raise PilotStop(
+            "no un-superseded after_setup authorisation in the run log. Take "
+            "it with a reading from now:  python -m agentseism.pilot_budget "
+            "--reading <page total> --checkpoint after_setup --not-before "
+            "@setup_started")
+    log.append("authorisation_read", checkpoint="after_setup",
+               authorised_at=auth["ts"], usd=auth["usd"],
+               reading_seq=auth.get("reading_seq"))
     done = completed_cells(out)
     last_block = None
     for cell in cells:
@@ -233,6 +246,11 @@ def main(argv=None) -> int:
         budget.record_baseline(0.0, billing_period="synthetic",
                                note="fake backend; no real spend")
     budget.record_reading(0.0, billing_period="synthetic")
+    # Taking the checkpoint is the caller's job; `run_pilot` only verifies that
+    # someone took it. On a real host that caller is a human with the billing
+    # page open.
+    if budget.authorisation("after_setup") is None:
+        budget.check("after_setup")
     try:
         rep = run_pilot(out, fake_backend, args.tasks or None, True, log,
                         budget,

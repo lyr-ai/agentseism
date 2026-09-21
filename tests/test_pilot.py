@@ -23,6 +23,7 @@ def _budget(out: Path):
     b = Budget(log, PILOT_THRESHOLDS)
     b.record_baseline(0.0, billing_period="t")
     b.record_reading(0.0, billing_period="t")     # the after-setup reading
+    b.check("after_setup")                        # taken by the caller, not the runner
     return log, b
 
 

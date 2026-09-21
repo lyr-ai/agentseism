@@ -40,8 +40,11 @@ def status(log: RunLog) -> int:
     readings = [r for r in log.read() if r["kind"] == "billing_reading"]
     checks = [r for r in log.read() if r["kind"] in ("budget_ok", "budget_stop",
                                                      "budget_refused")]
-    superseded = {r.get("supersedes_ts") for r in log.read()
-                  if r["kind"] == "budget_superseded"}
+    rows = log.read()
+    sup_n = {r["supersedes_n"] for r in rows
+             if r["kind"] == "budget_superseded" and r.get("supersedes_n") is not None}
+    sup_ts = {r.get("supersedes_ts") for r in rows
+              if r["kind"] == "budget_superseded" and r.get("supersedes_n") is None}
     if base:
         b = base[0]
         print(f"baseline    ${b['current_total']:.2f}  {b['billing_period']}  "
@@ -50,7 +53,9 @@ def status(log: RunLog) -> int:
         print(f"reading #{r.get('seq', 0)}  ${r['current_total']:.2f}  "
               f"{r['source']}  {r['ts']}")
     for r in checks:
-        mark = "  SUPERSEDED" if r["ts"] in superseded else ""
+        mark = ("  SUPERSEDED"
+                if (r.get("n") in sup_n
+                    or (r.get("n") is None and r["ts"] in sup_ts)) else "")
         print(f"{r['kind']:<15} {r.get('checkpoint', '-'):<13} "
               f"spend ${r.get('usd', 0):.2f}  {r['ts']}{mark}")
     return 0
@@ -92,6 +97,7 @@ def main(argv=None) -> int:
         target = hits[-1]
         rec = log.append("budget_superseded",
                          checkpoint=args.supersede_checkpoint,
+                         supersedes_n=target.get("n"),
                          supersedes_ts=target["ts"],
                          supersedes_kind=target["kind"],
                          supersedes_reading_seq=target.get("reading_seq"),
