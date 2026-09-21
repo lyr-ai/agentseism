@@ -629,18 +629,22 @@ run_smoke_test() {
   local smoke_img
   smoke_img="$(PYTHONPATH=src:. "$WORK/.venv-eval/bin/python" -c \
     "from agentseism.task_draw import image_for; from agentseism.smoke import SMOKE_TASK; print(image_for(SMOKE_TASK))")"
-  if ! grep -q "^pytest-dev__pytest-10051" "$STATE/image_digests.tsv"; then
+  # Kept out of image_digests.tsv: that file is the draw's record, and the
+  # smoke task is deliberately not in the draw. The two are concatenated only
+  # to hand the runner one file.
+  if [ ! -s "$STATE/smoke_image.tsv" ]; then
     docker pull --platform linux/amd64 --quiet "$smoke_img" </dev/null >/dev/null \
       || die "the smoke task's image did not pull"
     local dig
     dig="$(docker image inspect "$smoke_img" --format '{{index .RepoDigests 0}}')"
     [ -n "$dig" ] || die "no repo digest for the smoke image"
-    printf 'pytest-dev__pytest-10051\t%s\n' "$dig" >> "$STATE/image_digests.tsv"
+    printf 'pytest-dev__pytest-10051\t%s\n' "$dig" > "$STATE/smoke_image.tsv"
     ok "smoke image" "$dig"
   fi
+  cat "$STATE/image_digests.tsv" "$STATE/smoke_image.tsv" > "$STATE/smoke_digests.tsv"
   cd "$REPO"
   PYTHONPATH=src:. HF_HOME="$WORK/hf" "$WORK/.venv-eval/bin/python" \
-    -m agentseism.smoke --digests "$STATE/image_digests.tsv" \
+    -m agentseism.smoke --digests "$STATE/smoke_digests.tsv" \
     --out "$WORK/smoke" --work-dir "$WORK/smoke-work" \
     --model-name "$EXPECTED_MODEL" --model-revision "$EXPECTED_REVISION" \
     || die "the registered smoke test failed; the chain is not connected and no pilot run follows"

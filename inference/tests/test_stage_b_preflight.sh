@@ -105,10 +105,13 @@ if [ "$(grep -c "docker_pull" "$DRAW")" -eq 2 ]; then
 else
   bad "docker_pull appears $(grep -c "docker_pull" "$DRAW") times, expected 2"
 fi
-if [ "$(grep -cE "^ *(if docker pull|docker pull)" "$SCRIPT")" -eq 0 ]; then
-  ok "the shell does not pull images itself"
+# The shell pulls exactly one image: the smoke task's, which is registered and
+# deliberately outside the draw. The draw's pulls belong to task_draw.py.
+if [ "$(grep -cE "^ *docker pull" "$SCRIPT")" -eq 1 ] \
+   && [ "$(sed -n '/run_smoke_test()/,/^}/p' "$SCRIPT" | grep -cE "docker pull")" -eq 1 ]; then
+  ok "the shell pulls only the registered smoke image"
 else
-  bad "the shell still pulls images"
+  bad "the shell pulls images outside the smoke step"
 fi
 
 printf '\n──── 1. happy path (real pytest, real resolve-only) ────\n'
