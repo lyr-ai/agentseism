@@ -28,10 +28,10 @@
 set -euo pipefail
 
 # ── frozen values. Changing one here is changing the experiment. ──
-PROTOCOL_HASH="8706c5300ea8e065"   # moved by P.3, P.5, P.6 and P.7
+PROTOCOL_HASH="7ae0ef31676ee555"   # moved by P.3, P.5, P.6, P.7, P.8
 ORDER_HASH="cfe8856c9c9167b5"
 EXPECTED_CELLS=18
-EXPECTED_TESTS=675
+EXPECTED_TESTS=694
 BASELINE_USD="7.16"
 BASELINE_CURRENCY="USD"
 BASELINE_PERIOD="September 2026"
@@ -482,16 +482,26 @@ PY
 verify_backend_images() {
   step "8b. backend binds the frozen digests"
   cd "$REPO"
-  DIGESTS="$STATE/image_digests.tsv" PYTHONPATH=src:. \
-  "$WORK/.venv-eval/bin/python" - <<'PY' || die "the backend cannot bind the frozen image digests"
+  DIGESTS="$STATE/image_digests.tsv" MODEL="$EXPECTED_MODEL" \
+  BASE_URL="http://127.0.0.1:$VLLM_PORT/v1" PYTHONPATH=src:. \
+  "$WORK/.venv-eval/bin/python" - <<'PY' || die "the backend cannot bind the frozen image digests or address the model"
 import os
 from pathlib import Path
-from agentseism.real_backend import BackendConfig, _check_images
+from agentseism.real_backend import BackendConfig, _check_images, _check_transport
 rows = [l.split("\t") for l in
         Path(os.environ["DIGESTS"]).read_text().splitlines() if l.strip()]
 cfg = BackendConfig(image_digests={t: d for t, d in rows}, work_dir=Path("."),
-                    model_base_url="http://127.0.0.1:8000/v1",
-                    model_name="", model_revision="")
+                    model_base_url=os.environ["BASE_URL"],
+                    model_name=os.environ["MODEL"], model_revision="")
+# The address and the retry policy, checked without sending a request. Host 3
+# reached the container and then failed on the first model call.
+t = _check_transport(cfg)
+assert t["requests_sent"] == 0
+print(f"  registered_model_id                ok  {t['registered_model_id']}")
+print(f"  transport_model                    ok  {t['transport_model']}")
+print(f"  api_base                           ok  {t['api_base']}")
+print(f"  transport attempts                 ok  {t['attempts']}  "
+      f"retries {t['retry_knobs']}")
 out = _check_images(cfg)
 assert out["pulled"] is False
 for t, d in sorted(out["images"].items()):

@@ -209,6 +209,49 @@ def verify_hints() -> None:
             "text is not adapted to it")
 
 
+# ── transport policy (amendment P.8) ──
+LITELLM_PROVIDER = "openai"
+"""How the client addresses the server, not what the server serves.
+
+`mini-swe-agent` routes through LiteLLM, which needs a provider prefix to know
+where to send a request. Host 3 passed the registered model id bare and got
+`LLM Provider NOT provided` after the container had already started. The
+registered value is unchanged: the server still serves
+`Qwen/Qwen3.6-27B-FP8`, and `--model` on its command line still says so. This
+is the address on the envelope, not the contents."""
+
+TRANSPORT_ATTEMPTS = 1
+"""One logical request enters the transport exactly once.
+
+LiteLLM retried a failing call **nine times** inside what the pilot counts as
+one execution, backing off 4 s to 60 s. `run_cell` did not retry; the
+transport did. P.4 registers one agent execution per cell, and an unregistered
+retry underneath a registered no-retry rule makes `transport_attempts`
+unreadable and a wall-clock cap mean something different per run.
+
+Every retry knob the stack exposes is pinned to zero, and the number of
+attempts actually made is recorded in the artifact rather than assumed."""
+
+RETRY_KNOBS = {
+    "num_retries": 0,          # litellm.completion
+    "max_retries": 0,          # the underlying OpenAI client
+    "request_timeout": None,   # left to the registered wall-clock cap
+}
+"""Pinned at every layer that has one. A knob left at its default is a policy
+nobody registered."""
+
+
+def transport_model(registered_model_id: str) -> str:
+    """`Qwen/Qwen3.6-27B-FP8` -> `openai/Qwen/Qwen3.6-27B-FP8`."""
+    if not registered_model_id:
+        raise ValueError("no registered model id")
+    if registered_model_id.startswith(f"{LITELLM_PROVIDER}/"):
+        raise ValueError(
+            f"{registered_model_id!r} already carries the provider prefix; "
+            "the registered id is the bare one and the prefix is added once")
+    return f"{LITELLM_PROVIDER}/{registered_model_id}"
+
+
 # ── cost-model check after a block (amendment P.7) ──
 COST_EXPECTATION_PER_RUN = 1.17
 """~$21 for 18 runs plus the smoke test, i.e. about $3.50 for a three-cell
@@ -343,6 +386,11 @@ def protocol_hash() -> str:
          # The post-block cost check is a stopping rule (amendment P.7).
          "cost_check": {"expectation_per_run": COST_EXPECTATION_PER_RUN,
                         "anchor": "ABSOLUTE_LIMIT_USD"},
+         # How the client addresses the server, and how many times one
+         # logical request may enter the transport (amendment P.8).
+         "transport": {"provider": LITELLM_PROVIDER,
+                       "attempts": TRANSPORT_ATTEMPTS,
+                       "retry_knobs": RETRY_KNOBS},
          "scorable": list(SCORABLE),
          "schema": SCHEMA_VERSION}, sort_keys=True).encode()).hexdigest()[:16]
 

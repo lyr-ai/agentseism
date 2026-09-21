@@ -964,3 +964,100 @@ the P.6 exit mapping are all untouched. This amendment adds one check between
 blocks and changes nothing the pilot measures.
 
 `study_mode: feasibility` · `verdict_authority: descriptive_only`.
+
+---
+
+# Amendment P.8 — provider addressing and the transport retry policy
+
+**2026-09-21, after Host 3's registered smoke failure, before Host 4 is
+rented.** `pilot_runs = 0`; no pilot cell has ever executed and no pilot
+evidence of any kind exists. The failure that prompted this was a
+`BACKEND_ERROR` in the smoke test, which by P.4 is a chain failure and not an
+outcome.
+
+## What happened
+
+Host 3's preflight passed every step through vLLM. The smoke test started its
+container and then failed on the first model call:
+
+```
+litellm.BadRequestError: LLM Provider NOT provided.
+  You passed model=Qwen/Qwen3.6-27B-FP8
+```
+
+`mini-swe-agent` routes through LiteLLM, which needs a provider prefix to know
+where to send a request. The registered model id was passed bare.
+
+**The registered value is not at fault and does not change.** The server
+serves `Qwen/Qwen3.6-27B-FP8`; `--model` on its command line says so; the
+weights at revision `e89b16eb…eb09` are the registered ones. What was missing
+is the address on the envelope, not the contents.
+
+## The addressing rule
+
+```
+registered_model_id  Qwen/Qwen3.6-27B-FP8          what the server serves
+transport_model      openai/Qwen/Qwen3.6-27B-FP8   how the client addresses it
+api_base             http://127.0.0.1:8000/v1      where
+api_key              a dummy; a local vLLM needs no credential
+```
+
+`transport_model()` adds the prefix **once** and refuses an id that already
+carries one. All four facts are recorded separately in every artifact, so the
+registered id can never be confused with how it was reached.
+
+## The retry rule
+
+LiteLLM retried the failing call **nine times** inside what the pilot counts
+as one execution, backing off 4 s to 60 s. `run_cell` did not retry; the
+transport did.
+
+P.4 registers one agent execution per cell. An unregistered retry underneath a
+registered no-retry rule makes `transport_attempts` unreadable and gives the
+1200 s wall-clock cap a different meaning per run.
+
+```
+TRANSPORT_ATTEMPTS = 1
+RETRY_KNOBS        = {'num_retries': 0, 'max_retries': 0, 'request_timeout': None}
+```
+
+Every knob the stack exposes is pinned to zero, at every layer that has one. A
+knob left at its default is a policy nobody registered. `request_timeout`
+stays `None` deliberately: the registered wall-clock cap is the time bound,
+and a second one would compete with it.
+
+The attempts actually made are **recorded in the artifact**, not assumed.
+
+## Checked before a machine is rented
+
+`build(dry_run=True)` now verifies the provider prefix resolves, that the
+configured id is **not** already prefixed, that the endpoint is an endpoint,
+that an api_key field exists, and that every registered retry knob is zero and
+still exists on the installed LiteLLM — **without sending a request**. The
+dry-run report carries `requests_sent: 0`, asserted.
+
+Preflight step 8b prints all four addressing facts beside the image digests.
+
+The regression that matters: *a bare model id must be rejected before a host
+is rented.* Host 3 spent a GPU and 31 GB of weights to discover it. It is now
+reachable in a unit test, for nothing.
+
+## What moves
+
+| | |
+|---|---|
+| `protocol_hash` | **`8706c5300ea8e065` → `7ae0ef31676ee555`** |
+| `ORDER_HASH` | **`cfe8856c9c9167b5`, unchanged** |
+
+The provider and the retry policy are inside `protocol_hash`: how many times
+one logical request may enter the transport is part of the design, and the
+address is part of what "the same serving stack" means.
+
+## Scope
+
+Arms, step limits, the hint text, task count, replicates, the 1200 s cap, the
+budget stops, the block order, the P.3 draw, the P.4 smoke test, the P.6 exit
+mapping and the P.7 cost check are untouched. The model, its revision and the
+serving configuration are unchanged.
+
+`study_mode: feasibility` · `verdict_authority: descriptive_only`.

@@ -189,9 +189,10 @@ def test_the_protocol_hash_is_the_registered_one():
     the design. P.5 moved it again to `a23ff8975a04f627` by putting the two
     recovery-hint templates inside: the hint text *is* M2's mutation. P.6 moved
     it again by registering the exit-status mapping and the scorable set. P.7
-    moved it again by registering the post-block cost check.
+    moved it again by registering the post-block cost check, and P.8 by
+    registering the provider address and the transport retry policy.
     """
-    assert P.protocol_hash() == "8706c5300ea8e065"
+    assert P.protocol_hash() == "7ae0ef31676ee555"
 
 
 def test_no_new_block_after_the_threshold(tmp_path):

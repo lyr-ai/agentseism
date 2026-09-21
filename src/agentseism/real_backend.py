@@ -110,7 +110,9 @@ REQUIRED_RESULT_FIELDS = (
     "outcome_state", "enters_pilot_outcome", "termination",
     "challenge_status", "challenge_record", "recovered",
     "hint_sha256", "step_limit", "image_digest", "model_revision",
-    "evaluator_report_path", "n_calls", "elapsed_seconds",
+    "registered_model_id", "transport_model", "api_base",
+    "transport_attempts", "evaluator_report_path", "n_calls",
+    "elapsed_seconds",
 )
 
 
@@ -185,6 +187,8 @@ class BackendConfig:
     timeout_seconds: int = P.RUN_TIMEOUT_SECONDS
     evaluator_dataset: str = "SWE-bench/SWE-bench_Verified"
     evaluator_split: str = "test"
+    api_key: str = "not-needed"
+    """A local vLLM needs no credential; LiteLLM needs the field present."""
 
 
 # ── constructibility ──
@@ -259,6 +263,60 @@ def _check_evaluator() -> dict:
             "invoked": False}
 
 
+def _check_transport(cfg: BackendConfig) -> dict:
+    """The address and the retry policy, verified **without sending anything**.
+
+    Host 3 reached the container and failed on the first model call because
+    the registered id went to LiteLLM bare. That was only reachable past a
+    GPU and 31 GB of weights; it is checked here for free.
+    """
+    if not cfg.model_name:
+        raise BackendUnavailable("no registered model id in the config")
+    if "/" in cfg.model_name and cfg.model_name.split("/", 1)[0] in (
+            "openai", "hosted_vllm", "huggingface", "azure"):
+        raise BackendUnavailable(
+            f"model_name {cfg.model_name!r} already carries a provider "
+            "prefix. The registered id is the bare one; the prefix is added "
+            "once, by transport_model()")
+    try:
+        addressed = P.transport_model(cfg.model_name)
+    except ValueError as e:
+        raise BackendUnavailable(str(e)) from e
+    if not addressed.startswith(f"{P.LITELLM_PROVIDER}/"):
+        raise BackendUnavailable(f"{addressed!r} carries no provider prefix")
+    if not str(cfg.model_base_url).startswith("http"):
+        raise BackendUnavailable(
+            f"api_base {cfg.model_base_url!r} is not an endpoint")
+    if not cfg.api_key:
+        raise BackendUnavailable("LiteLLM needs an api_key field, even a dummy")
+
+    try:
+        import litellm
+    except Exception as e:                                  # noqa: BLE001
+        raise BackendUnavailable(f"litellm is not importable: {e}") from e
+    sig = inspect.signature(litellm.completion)
+    params = set(sig.parameters)
+    # Any **kwargs accepts the knob, whatever it is named.
+    takes_kwargs = any(p.kind is inspect.Parameter.VAR_KEYWORD
+                       for p in sig.parameters.values())
+    for knob, value in P.RETRY_KNOBS.items():
+        if value is None:
+            continue
+        if knob not in params and not takes_kwargs:
+            raise BackendUnavailable(
+                f"litellm.completion has no {knob!r}; the registered retry "
+                "policy cannot be applied on this version")
+        if value != 0:
+            raise BackendUnavailable(
+                f"retry knob {knob} is registered as {value}, not 0")
+    return {"registered_model_id": cfg.model_name,
+            "transport_model": addressed,
+            "api_base": cfg.model_base_url,
+            "attempts": P.TRANSPORT_ATTEMPTS,
+            "retry_knobs": {k: v for k, v in P.RETRY_KNOBS.items()},
+            "requests_sent": 0}
+
+
 def _check_images(cfg: BackendConfig) -> dict:
     """Confirm each frozen digest against **local** image metadata.
 
@@ -326,6 +384,7 @@ def build(config: BackendConfig | None = None, *, dry_run: bool = False):
         "evaluator_invocations": 0,
     }
     if config is not None:
+        report["transport"] = _check_transport(config)
         report["images"] = _check_images(config)
     if dry_run:
         report["dry_run"] = True
@@ -414,8 +473,18 @@ def _agent_result(cell: dict, config: BackendConfig, hint: str, image: str):
     base = _swebench_base()
     model_cfg = dict(base["model"])
     model_cfg["format_error_template"] = hint          # the M2 axis, exactly
-    model_cfg["model_kwargs"] = {**model_cfg.get("model_kwargs", {}),
-                                 "api_base": config.model_base_url}
+    # The registered id is what the server serves; the prefix is how the
+    # client addresses it. Host 3 reached the container and then failed on
+    # `LLM Provider NOT provided` because the bare id went to LiteLLM.
+    model_cfg["model_name"] = P.transport_model(config.model_name)
+    model_cfg["model_kwargs"] = {
+        **model_cfg.get("model_kwargs", {}),
+        "api_base": config.model_base_url,
+        "api_key": config.api_key,
+        # One logical request, one transport attempt (P.8). A knob left at its
+        # default is a policy nobody registered.
+        **{k: v for k, v in P.RETRY_KNOBS.items() if v is not None},
+    }
     env_cfg = dict(base["environment"])
     env_cfg["image"] = image                           # digest-pinned
     agent_cfg = dict(base["agent"])
@@ -423,7 +492,7 @@ def _agent_result(cell: dict, config: BackendConfig, hint: str, image: str):
     agent_cfg["cost_limit"] = P.COST_LIMIT_DISABLED    # makes LimitsExceeded
     agent_cfg["wall_time_limit_seconds"] = config.timeout_seconds
 
-    model = get_model(config.model_name, config=model_cfg)
+    model = get_model(model_cfg["model_name"], config=model_cfg)
     env = get_environment(env_cfg, default_type="docker")
     agent = challenging(DefaultAgent)(model, env, **agent_cfg)
     info = agent.run(task=_problem_statement(cell["task"], config))
@@ -565,6 +634,12 @@ def _result(cell, hint_sha, image, config, t0, agent, *,
         "hint_sha256": hint_sha,
         "step_limit": cell["step_limit"],
         "image_digest": image,
+        # Three separate fields so the registered id is never confused with
+        # how it was addressed.
+        "registered_model_id": config.model_name,
+        "transport_model": P.transport_model(config.model_name),
+        "api_base": config.model_base_url,
+        "transport_attempts": P.TRANSPORT_ATTEMPTS,
         "model_revision": config.model_revision,
         "evaluator_report_path": report_path,
         "n_calls": int(getattr(agent, "n_calls", 0)),
@@ -596,6 +671,11 @@ def _error_result(cell, hint_sha, image, config, t0, detail, agent) -> dict:
         "hint_sha256": hint_sha,
         "step_limit": cell["step_limit"],
         "image_digest": image,
+        "registered_model_id": config.model_name,
+        "transport_model": P.transport_model(config.model_name)
+                           if config.model_name else "",
+        "api_base": config.model_base_url,
+        "transport_attempts": P.TRANSPORT_ATTEMPTS,
         "model_revision": config.model_revision,
         "evaluator_report_path": "",
         "n_calls": int(getattr(agent, "n_calls", 0)),
