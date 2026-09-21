@@ -164,6 +164,13 @@ printf '\n──── 5. arguments ────\n'
   expect_rc 64 "a non-numeric reading is refused" )
 ( export SCENARIO_COMMIT="0000000000000000000000000000000000000000"; run_scenario
   expect_rc 65 "an unknown commit stops" )
+# A short sha is what a human copies out of `git log`, and it must be accepted:
+# the first real host run failed here against a tree that was correct.
+( SCENARIO_COMMIT="$(git -C "$ROOT" rev-parse --short HEAD)"; export SCENARIO_COMMIT
+  export MOCK_PYTEST_PASSED=504
+  run_scenario
+  expect_rc 0 "a short commit sha is accepted"
+  expect_out "$COMMIT" "the record carries the resolved full sha" )
 
 printf '\n──── 6. the frozen counts ────\n'
 ( export MOCK_PYTEST_PASSED=503; run_scenario

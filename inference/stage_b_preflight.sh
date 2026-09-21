@@ -209,8 +209,19 @@ check_repo() {
   fi
   git -C "$REPO" checkout --quiet --detach "$EXPECTED_COMMIT" \
     || die "commit $EXPECTED_COMMIT is not in $BRANCH"
-  local head; head="$(git -C "$REPO" rev-parse HEAD)"
-  [ "$head" = "$EXPECTED_COMMIT" ] || die "HEAD is $head, expected $EXPECTED_COMMIT"
+  # Resolve before comparing. A short sha is what a human copies out of `git
+  # log`, and comparing it against a 40-character HEAD fails on a tree that is
+  # in fact correct -- which is a check that rejects the right answer.
+  # `--verify` refuses an unknown or ambiguous abbreviation, so this is not a
+  # loosening.
+  local want head
+  want="$(git -C "$REPO" rev-parse --verify --quiet "${EXPECTED_COMMIT}^{commit}")" \
+    || die "$EXPECTED_COMMIT does not resolve to a commit here (unknown, or an ambiguous abbreviation)"
+  head="$(git -C "$REPO" rev-parse HEAD)"
+  [ "$head" = "$want" ] \
+    || die "HEAD is $head, expected $want (from $EXPECTED_COMMIT)"
+  # Everything downstream -- the fingerprint, the report -- records the full sha.
+  EXPECTED_COMMIT="$head"
   [ -z "$(git -C "$REPO" status --porcelain)" ] \
     || die "worktree is dirty; the pilot must run from a clean frozen tree"
   ok "commit" "$head"
