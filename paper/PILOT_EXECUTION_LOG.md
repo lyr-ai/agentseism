@@ -77,3 +77,49 @@ instance cost. Two real defects found during this preflight were fixed and
 committed separately: the registered `$20` warning was documented but inert
 (`c1813be`), and the CLI regression test was seeded with `hash()`, hence
 salted per process and failing about one run in eight (`1874833`).
+
+---
+
+## billing_baseline — frozen 2026-09-21T00:49:52Z
+
+Read from the Lambda Usage dashboard with **no instance running**, after both
+earlier hosts had been terminated and taken up by the page.
+
+```yaml
+cumulative_total:    7.16
+currency:            USD
+billing_period:      September 2026
+source:              manual
+source_page:         Lambda Usage Dashboard
+observed_at_utc:     2026-09-21T00:49:18Z
+screenshot_retained: true
+```
+
+The page total is authoritative. It is **not** recomputed from the two line
+items it covers — Gate 9's host (2026-09-20 01:47–03:17 UTC, 1.50 hr) and
+`preflight_host_1` (2026-09-21 00:00–00:41 UTC, 0.68 hr) — because a
+`duration × rate` reconstruction is an estimate, and this value is the origin
+every later difference is measured against.
+
+Frozen as entry 1 of `data/runs/pilot/run.jsonl`, with
+`paper/manifests/pilot_billing_baseline.json` as the committed sidecar
+(`sha256:176db393b3a2f353…`). Re-entry is refused by `baseline_already_set`,
+verified against the real log.
+
+`pilot_spend = current_total − 7.16`, checked end to end:
+
+| page total | pilot spend | result |
+|---|---|---|
+| $7.16 | $0.00 | proceeds |
+| $9.40 | $2.24 | proceeds — the actual difference, not zeroed |
+| $27.16 | $20.00 | `budget_warning`, proceeds |
+| $32.16 | $25.00 | `no_new_block` |
+| $37.16 | $30.00 | `absolute` |
+
+Reading #1 is entered immediately after host 2 launches. If the page still
+reads $7.16 the initial spend is $0.00; if host 2's charges have already
+appeared, the actual difference stands and is not reset to zero.
+
+**Local gate for host 2: met.** Full suite 483 passed, 0 failed, three
+consecutive runs, after `mini-swe-agent==2.4.6` was pinned into dev extras
+(`2c7cc21`) and the unseeded CLI test was made deterministic (`1874833`).
