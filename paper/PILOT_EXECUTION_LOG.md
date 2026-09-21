@@ -336,3 +336,31 @@ host launched, which already contains what it had billed. Correct names:
 Appended as `billing_provenance_note #14`. Everything before it is
 byte-identical — the same SHA-256 before and after the append. Fixed
 prospectively in `fd163ea`, which host 3 deliberately did not take.
+
+## host_3 closed
+
+```text
+terminated_at        = 2026-09-21T23:34:00Z
+instance_interval    = 22:56–23:34 UTC
+billed_hours         = 0.65
+page_total_at_close  = $12.27 USD
+host_3_cost          = $2.12   ($12.27 − $10.15)
+cumulative_pilot_spend = $5.11 ($12.27 − $7.16)
+pilot_runs           = 0
+smoke_outcome        = BACKEND_ERROR
+pilot_evidence       = none
+```
+
+| stop | page total | remaining |
+|---|---|---|
+| `$20` warning | $27.16 | $14.89 |
+| `$25` no new block | $32.16 | $19.89 |
+| `$30` absolute | $37.16 | $24.89 |
+
+`$5.11` of a `$30` ceiling across three hosts, none of which produced a pilot
+run. The closing reading authorises nothing and no checkpoint is taken on it.
+
+What the three hosts bought: a preflight that fails closed on a missing runner,
+a budget machine that cannot be restarted by a new machine, and a smoke test
+that stopped an eighteen-run batch before a single cell ran against a chain
+that could not make a model call. None of that was reachable from a mock.
