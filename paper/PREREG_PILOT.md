@@ -871,3 +871,96 @@ budget stops, the block order, the P.3 draw and the P.4 smoke test are
 untouched.
 
 `study_mode: feasibility` · `verdict_authority: descriptive_only`.
+
+---
+
+# Amendment P.7 — the post-block cost check
+
+**2026-09-21, before Host 3 is rented, before any block has been executed and
+before any block cost exists.** `pilot_runs = 0`.
+
+## Why it is registered rather than applied
+
+The cost model says roughly `$21` for 18 runs plus the smoke test — about
+`$1.17` a run, so about `$3.50` for a three-cell block. It would be easy to
+treat "block 0 cost more than `$3.50`, stop" as an operational judgement.
+
+It is not one. It is a **stopping rule**, and a stopping rule adopted while
+looking at the number it applies to is the thing this registration exists to
+prevent. It is written here, before Host 3 exists, so that it cannot be.
+
+## The rule
+
+> After Block 0, use the pre-specified bracketing billing readings to compute
+> marginal cost per run and project the remaining 15 runs. If the resulting
+> projected cumulative pilot spend would exceed the already-registered `$30`
+> absolute stop, halt before releasing subsequent blocks and re-model the
+> remaining execution.
+
+The bracketing readings are already required by the budget machine and are not
+new instrumentation: the reading that authorised Block 0, and the reading
+taken after it — which is the same reading that would authorise Block 1. The
+block is therefore judged by the number that would release the next one.
+
+```
+block_cost    = spend_after_block − spend_before_block
+marginal      = block_cost ÷ cells_in_block
+projected     = spend_after_block + marginal × cells_remaining
+halt          = projected > ABSOLUTE_LIMIT_USD
+```
+
+## `$3.50` is an expectation, not a threshold
+
+`COST_EXPECTATION_PER_RUN = 1.17` is **reported** beside every
+projection and decides nothing. The decision boundary is the `$30` absolute
+stop that was registered before any of this existed.
+
+This matters in both directions, and both are tested:
+
+- a block costing `$3.60` is **above** the expectation and changes nothing,
+  because the projection still lands at `$23.69`, inside the stop;
+- a block costing `$6.00` halts, because finishing at that rate reaches
+  `$38.09`.
+
+Anchoring to `$30` also means the rule cannot be gamed by arguing about
+whether `$3.50` was the right sanity number.
+
+## The projection is optimistic on purpose
+
+It charges the remaining runs at the marginal rate and adds **nothing** for
+idle time between blocks, for teardown, or for the fixed cost of a session
+that stays up. So it is a lower bound on what finishing would cost, and a
+projection that already exceeds the limit cannot be rescued by arguing the
+estimate was harsh.
+
+Exactly at the limit is not past it: `halt` is strictly `>`.
+
+## What a halt means
+
+Not a failed experiment. The run becomes what §3 already provides for — a
+**censored feasibility run**, with its artifacts kept and its cost model
+recorded as the thing that failed. Blocks are not released at a rate already
+observed to break the budget the registration set.
+
+Nothing about the analysis changes: `study_mode: feasibility`,
+`verdict_authority: descriptive_only`, and a halt yields fewer interpretable
+cells, which §4 already handles.
+
+## What moves
+
+| | |
+|---|---|
+| `protocol_hash` | **`5f4b95c9a250fccf` → `8706c5300ea8e065`** |
+| `ORDER_HASH` | **`cfe8856c9c9167b5`, unchanged** |
+
+The check is a stopping rule, so it is inside `protocol_hash`. The order binds
+positions and is untouched.
+
+## Scope
+
+Arms, step limits, the hint text, task count, replicates, the 1200 s cap, the
+`$20`/`$25`/`$30` stops, the block order, the P.3 draw, the P.4 smoke test and
+the P.6 exit mapping are all untouched. This amendment adds one check between
+blocks and changes nothing the pilot measures.
+
+`study_mode: feasibility` · `verdict_authority: descriptive_only`.

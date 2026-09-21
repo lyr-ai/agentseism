@@ -188,9 +188,10 @@ def test_the_protocol_hash_is_the_registered_one():
     rule inside, which is the point of P.3: how the tasks are drawn is part of
     the design. P.5 moved it again to `a23ff8975a04f627` by putting the two
     recovery-hint templates inside: the hint text *is* M2's mutation. P.6 moved
-    it again by registering the exit-status mapping and the scorable set.
+    it again by registering the exit-status mapping and the scorable set. P.7
+    moved it again by registering the post-block cost check.
     """
-    assert P.protocol_hash() == "5f4b95c9a250fccf"
+    assert P.protocol_hash() == "8706c5300ea8e065"
 
 
 def test_no_new_block_after_the_threshold(tmp_path):

@@ -209,6 +209,53 @@ def verify_hints() -> None:
             "text is not adapted to it")
 
 
+# ── cost-model check after a block (amendment P.7) ──
+COST_EXPECTATION_PER_RUN = 1.17
+"""~$21 for 18 runs plus the smoke test, i.e. about $3.50 for a three-cell
+block. **Reported, never a stop.** A number said aloud in a conversation is not
+a registered threshold, and this one exists so the projection below can be read
+against something."""
+
+
+def project_after_block(spend_before: float, spend_after: float,
+                        cells_in_block: int, cells_remaining: int) -> dict:
+    """Project cumulative spend from what a finished block actually cost.
+
+    The decision boundary is the **already-registered** `ABSOLUTE_LIMIT_USD`,
+    not a new number: if finishing the plan at the observed rate would breach
+    the stop that was registered before any of this existed, continuing would
+    extrapolate a cost assumption already observed to fail.
+
+    The projection is deliberately **optimistic**: it charges the remaining
+    runs at the marginal rate and adds nothing for the idle time between
+    blocks or for teardown. So it is a lower bound on what finishing would
+    cost, and a projection that already exceeds the limit cannot be rescued by
+    arguing the estimate was harsh.
+    """
+    if cells_in_block <= 0:
+        raise ValueError("a block with no cells has no marginal cost")
+    if spend_after < spend_before:
+        raise ValueError("cumulative spend cannot fall")
+    block_cost = round(spend_after - spend_before, 2)
+    marginal = block_cost / cells_in_block
+    projected = round(spend_after + marginal * cells_remaining, 2)
+    return {
+        "spend_before_block": round(spend_before, 2),
+        "spend_after_block": round(spend_after, 2),
+        "block_cost": block_cost,
+        "cells_in_block": cells_in_block,
+        "marginal_cost_per_run": round(marginal, 4),
+        "cells_remaining": cells_remaining,
+        "projected_cumulative_spend": projected,
+        "absolute_limit": ABSOLUTE_LIMIT_USD,
+        "halt": projected > ABSOLUTE_LIMIT_USD,
+        "expectation_per_run": COST_EXPECTATION_PER_RUN,
+        "within_expectation": marginal <= COST_EXPECTATION_PER_RUN,
+        "basis": "optimistic: the remaining runs are charged at the marginal "
+                 "rate with nothing added for idle time or teardown",
+    }
+
+
 ORDER_SEED = 20260920
 ORDER_HASH = "cfe8856c9c9167b5"
 CELLS = TASK_COUNT * len(ARMS) * REPLICATES      # 18
@@ -293,6 +340,9 @@ def protocol_hash() -> str:
          # How an agent exit becomes a termination is part of the design
          # (amendment P.6).
          "exit_status_map": EXIT_STATUS_MAP,
+         # The post-block cost check is a stopping rule (amendment P.7).
+         "cost_check": {"expectation_per_run": COST_EXPECTATION_PER_RUN,
+                        "anchor": "ABSOLUTE_LIMIT_USD"},
          "scorable": list(SCORABLE),
          "schema": SCHEMA_VERSION}, sort_keys=True).encode()).hexdigest()[:16]
 

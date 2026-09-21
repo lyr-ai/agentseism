@@ -19,6 +19,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+from agentseism import pilot_protocol as P  # noqa: E402
 from agentseism.budget import Budget, BudgetStop, RunLog  # noqa: E402
 from agentseism.pilot import PILOT_THRESHOLDS  # noqa: E402
 
@@ -74,10 +75,14 @@ def main(argv=None) -> int:
                     help="an ISO-8601 ...Z timestamp, or @<phase> to use when "
                          "that phase marker was written")
     ap.add_argument("--note", default="")
+    ap.add_argument("--project-after-block", type=int,
+                    help="compute the P.7 cost projection from the readings "
+                         "that bracket this block index")
     ap.add_argument("--supersede-checkpoint",
                     help="mark the last checkpoint record with this name as "
                          "superseded; requires --reason")
     ap.add_argument("--reason", default="")
+    ap.add_argument("--cells-in-block", type=int, default=0)
     args = ap.parse_args(argv)
 
     log = RunLog(Path(args.log))
@@ -85,6 +90,41 @@ def main(argv=None) -> int:
 
     if args.status:
         return status(log)
+
+    if args.project_after_block is not None:
+        rows = log.read()
+        auth = [r for r in rows if r["kind"] == "budget_ok"
+                and r.get("checkpoint") == "before_block"
+                and r.get("block_index") == args.project_after_block]
+        if not auth:
+            return _fail(f"no before_block authorisation for block "
+                         f"{args.project_after_block}; the projection needs the "
+                         "reading that opened it")
+        last = log.last_billing()
+        if last is None or last["source"] != "manual":
+            return _fail("the projection needs a manual reading taken after "
+                         "the block finished")
+        base = budget.baseline()
+        after = round(last["current_total"] - base["current_total"], 2)
+        done = len([r for r in rows if r["kind"] == "run"])
+        # A block is one (replicate, task): three cells, one per arm.
+        cells_in_block = args.cells_in_block or len(P.ARMS)
+        proj = P.project_after_block(auth[-1]["usd"], after, cells_in_block,
+                                     P.CELLS - done)
+        print(json.dumps(proj, indent=2, sort_keys=True))
+        log.append("cost_projection", block_index=args.project_after_block,
+                   **proj)
+        if proj["halt"]:
+            print("\n  HALT — finishing the plan at the observed rate would "
+                  f"reach ${proj['projected_cumulative_spend']:.2f}, past the "
+                  f"registered ${proj['absolute_limit']:.0f} stop. Re-model "
+                  "before releasing another block.", file=sys.stderr)
+            return 1
+        print(f"\n  projection ${proj['projected_cumulative_spend']:.2f} is "
+              f"within the registered ${proj['absolute_limit']:.0f} stop; "
+              f"marginal ${proj['marginal_cost_per_run']:.2f}/run against an "
+              f"expectation of ${proj['expectation_per_run']:.2f}")
+        return 0
 
     if args.supersede_checkpoint:
         if not args.reason:

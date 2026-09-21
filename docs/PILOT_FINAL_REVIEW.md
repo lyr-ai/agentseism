@@ -5,9 +5,9 @@
 Reviewed at `HEAD` of `eval/pilot-outcome-grounded-ci`.
 
 ```
-protocol_hash   5f4b95c9a250fccf
+protocol_hash   8706c5300ea8e065
 order_hash      cfe8856c9c9167b5     18 cells
-pytest          648 passed
+pytest          663 passed
 mock harness    108 passed
 shellcheck      clean
 ```
@@ -105,6 +105,7 @@ starting a new machine.
 | P.4 | registered smoke test | `smoke.py`, six chain criteria, output confined to a `smoke` directory |
 | P.5 | the recovery hint frozen as text | `HINTS` with both templates in full, `verify_hints()` failing closed both ways |
 | P.6 | `FORMAT_ERROR_LIMIT_REACHED` + exit mapping | `EXIT_STATUS_MAP`, `SCORABLE`, and the `LimitsExceeded` assertion |
+| P.7 | the post-block cost check | `project_after_block`, anchored to `ABSOLUTE_LIMIT_USD`; `$3.50` is reported and decides nothing |
 
 Every registered value that can drift is checked against its source by
 `tests/test_preflight_constants.py`: the protocol hash, the order hash, the
@@ -181,7 +182,10 @@ No step is skipped and none is reordered.
 10. read a **new** billing total and authorise `after_setup`
     (`--not-before @smoke_completed`);
 11. read **another** new total and authorise block 0;
-12. execute the first three-cell block.
+12. execute the first three-cell block;
+13. read a new total, and apply the **P.7 projection** before releasing block 1:
+    `pilot_budget --project-after-block 0`. If finishing at the observed
+    marginal rate would exceed the registered `$30`, halt and re-model.
 
 Reading #1 is entered at launch and authorises nothing but the early budget
 check. One reading authorises one block, and a reading older than the work it
