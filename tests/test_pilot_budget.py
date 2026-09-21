@@ -330,7 +330,8 @@ def test_observe_computes_spend_against_the_frozen_baseline(tmp_path, capsys):
     import shutil
     p = tmp_path / "run.jsonl"
     shutil.copy(REAL_LOG, p)
-    assert main(["--log", str(p), "--observe", "10.15"]) == 0
+    assert main(["--log", str(p), "--observe", "10.15", "--period",
+                 "September 2026", "--currency", "USD"]) == 0
     out = capsys.readouterr().out
     assert "cumulative_pilot_spend       $2.99" in out
     assert "$7.16" in out and "$37.16" in out
@@ -342,7 +343,8 @@ def test_observe_reflects_late_charges_rather_than_a_fixed_number(tmp_path, caps
     import shutil
     p = tmp_path / "run.jsonl"
     shutil.copy(REAL_LOG, p)
-    main(["--log", str(p), "--observe", "10.62"])
+    main(["--log", str(p), "--observe", "10.62", "--period",
+         "September 2026", "--currency", "USD"])
     assert "cumulative_pilot_spend       $3.46" in capsys.readouterr().out
 
 
@@ -350,7 +352,8 @@ def test_observe_authorises_nothing(tmp_path):
     import shutil
     p = tmp_path / "run.jsonl"
     shutil.copy(REAL_LOG, p)
-    main(["--log", str(p), "--observe", "10.15"])
+    main(["--log", str(p), "--observe", "10.15", "--period",
+         "September 2026", "--currency", "USD"])
     log = RunLog(p)
     obs = [r for r in log.read() if r["kind"] == "billing_observation"]
     assert obs and obs[-1]["instances_running"] == 0
@@ -368,7 +371,8 @@ def test_observe_refuses_a_total_below_the_baseline(tmp_path):
     import shutil
     p = tmp_path / "run.jsonl"
     shutil.copy(REAL_LOG, p)
-    assert main(["--log", str(p), "--observe", "5.00"]) == 2
+    assert main(["--log", str(p), "--observe", "5.00", "--period",
+                 "September 2026", "--currency", "USD"]) == 2
 
 
 @pytest.mark.parametrize("total,rc", [(27.16, 0), (32.16, 1), (37.16, 1)])
@@ -376,4 +380,38 @@ def test_observe_stops_before_renting_when_the_budget_is_spent(tmp_path, total, 
     import shutil
     p = tmp_path / "run.jsonl"
     shutil.copy(REAL_LOG, p)
-    assert main(["--log", str(p), "--observe", str(total)]) == rc
+    assert main(["--log", str(p), "--observe", str(total), "--period",
+                 "September 2026", "--currency", "USD"]) == rc
+
+
+def _real(tmp_path):
+    import shutil
+    p = tmp_path / "run.jsonl"
+    shutil.copy(REAL_LOG, p)
+    return p
+
+
+def test_observe_requires_the_period_and_currency_from_the_page(tmp_path):
+    """Copying them from the baseline would make the check unable to notice
+    the one thing it exists to notice."""
+    assert main(["--log", str(_real(tmp_path)), "--observe", "10.15"]) == 2
+
+
+def test_observe_refuses_a_drifted_period(tmp_path):
+    assert main(["--log", str(_real(tmp_path)), "--observe", "10.15",
+                 "--period", "October 2026", "--currency", "USD"]) == 2
+
+
+def test_observe_refuses_a_drifted_currency(tmp_path):
+    assert main(["--log", str(_real(tmp_path)), "--observe", "10.15",
+                 "--period", "September 2026", "--currency", "EUR"]) == 2
+
+
+def test_observe_records_the_page_values_it_was_given(tmp_path):
+    p = _real(tmp_path)
+    assert main(["--log", str(p), "--observe", "10.15",
+                 "--period", "September 2026", "--currency", "USD"]) == 0
+    obs = [r for r in RunLog(p).read() if r["kind"] == "billing_observation"][-1]
+    assert obs["billing_period"] == "September 2026"
+    assert obs["currency"] == "USD"
+    assert obs["observed_period_matches_baseline"] is True

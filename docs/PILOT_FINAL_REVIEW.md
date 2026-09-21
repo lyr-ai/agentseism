@@ -190,10 +190,13 @@ be landing.
 Steps 3 to 5 are executable, not arithmetic done by hand:
 
 ```
-python -m agentseism.pilot_budget --observe <settled total>
+python -m agentseism.pilot_budget --observe <settled total> \
+    --period '<as the page shows it>' --currency '<as the page shows it>'
 ```
 
-It verifies the period and currency against the frozen baseline, prints the
+The period and currency are **required**, and are the page's own values:
+reading them out of the baseline would make the check unable to notice the one
+thing it is for. It compares them against the frozen baseline, prints the
 cumulative spend and each threshold as a page total with the distance to it,
 records a `billing_observation` — which authorises nothing and is not a
 baseline — and **exits non-zero if the budget is already spent**, before a

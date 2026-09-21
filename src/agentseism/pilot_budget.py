@@ -75,6 +75,10 @@ def main(argv=None) -> int:
                     help="an ISO-8601 ...Z timestamp, or @<phase> to use when "
                          "that phase marker was written")
     ap.add_argument("--note", default="")
+    ap.add_argument("--period", help="the billing period exactly as the page "
+                                     "displays it (required with --observe)")
+    ap.add_argument("--currency", help="the currency exactly as the page "
+                                       "displays it (required with --observe)")
     ap.add_argument("--observe", type=float,
                     help="a settled page total read with NOTHING running, "
                          "before renting the next host. Verifies the period, "
@@ -100,6 +104,22 @@ def main(argv=None) -> int:
         base = budget.baseline()
         if base is None:
             return _fail(f"no frozen baseline in {args.log}")
+        # Verified against what the page shows, not copied from the
+        # baseline. Reading the period out of the record we are comparing
+        # against cannot detect that the page has moved to a new one, and a
+        # difference against the wrong period is not this experiment's spend.
+        if not args.period or not args.currency:
+            return _fail(
+                "--observe requires --period and --currency, as the page "
+                "displays them. Carrying them over from the baseline would "
+                "make the check unable to notice the thing it is for")
+        if args.period != base["billing_period"]:
+            return _fail(f"the page shows period {args.period!r}, the baseline "
+                         f"is {base['billing_period']!r}; the difference "
+                         "between them is not this experiment's spend")
+        if args.currency != base.get("currency"):
+            return _fail(f"the page shows currency {args.currency!r}, the "
+                         f"baseline is {base.get('currency')!r}")
         usd = round(args.observe - base["current_total"], 2)
         if usd < 0:
             return _fail(f"${args.observe:.2f} is below the frozen baseline of "
@@ -119,8 +139,8 @@ def main(argv=None) -> int:
         rec = log.append(
             "billing_observation", current_total=float(args.observe),
             usd=usd, source="manual", instances_running=0,
-            billing_period=base["billing_period"],
-            currency=base.get("currency"),
+            billing_period=args.period, currency=args.currency,
+            observed_period_matches_baseline=True,
             note=args.note or "settled page total read with nothing running, "
                               "before renting the next host. An observation: "
                               "it authorises nothing and is not a baseline")
