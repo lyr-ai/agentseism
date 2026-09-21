@@ -26,6 +26,11 @@ BRANCH_UNDER_TEST="${BRANCH_UNDER_TEST:-$(git -C "$ROOT" rev-parse --abbrev-ref 
 # the next one -- which means a shell variable counter would not survive it.
 # Results go to a file instead.
 # shellcheck disable=SC2030,SC2031  # the subshell isolation is the point
+# A driver below MIN_DRIVER. Named rather than inline: blunt numeric
+# replaces while bumping the frozen test count silently rewrote this
+# fixture 570 -> 574 -> 588 -> 614, and a "too old" driver quietly became
+# a new enough one. The scenario passed while testing nothing.
+OLD_DRIVER="570.195.03"
 RESULTS="$(mktemp)"
 ok()   { printf '  \033[32mPASS\033[0m  %s\n' "$1"; echo PASS >> "$RESULTS"; }
 bad()  { printf '  \033[31mFAIL\033[0m  %s\n' "$1"; echo FAIL >> "$RESULTS"; }
@@ -150,7 +155,7 @@ printf '\n──── 3. host checks stop the run ────\n'
   expect_rc 65 "wrong GPU stops"; expect_out "not an H100" "says which card it found" )
 ( export MOCK_DISK_GB=40; run_scenario
   expect_rc 65 "small disk stops"; expect_out "need >= 100" "states the requirement" )
-( export MOCK_DRIVER="614.195.03"; run_scenario
+( export MOCK_DRIVER="$OLD_DRIVER"; run_scenario
   expect_rc 65 "old driver stops"; expect_out "< 580" "states the requirement" )
 
 printf '\n──── 4. docker group: stop, never bypass ────\n'

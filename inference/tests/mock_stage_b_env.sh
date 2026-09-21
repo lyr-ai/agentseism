@@ -57,10 +57,19 @@ case "${1:-}" in
     case "$img" in ${MOCK_PULL_FAIL_GLOB:-__never__}) exit 1 ;; esac
     echo "$img" >> "${MOCK_PULLED:-/dev/null}"; exit 0 ;;
   image)
-    # image inspect <img> --format ...
+    # `docker image inspect <img> --format <fmt>`. Two formats are used: the
+    # digest itself, and the whole RepoDigests list as JSON.
     img="$3"
     [ -n "${MOCK_NO_DIGEST:-}" ] && exit 1
-    short="${img##*/}"; echo "docker.io/swebench/${short%%:*}@sha256:$(printf '%s' "$img" | cksum | cut -d' ' -f1)0000" ;;
+    # The digest must depend only on the repository name: step 8 inspects
+    # `repo:latest` and step 8b inspects `repo`, and a real registry gives the
+    # same digest for both.
+    short="${img##*/}"; name="${short%%[:@]*}"
+    digest="docker.io/swebench/${name}@sha256:$(printf '%s' "$name" | cksum | cut -d' ' -f1)0000"
+    case "${*}" in
+      *"json .RepoDigests"*) printf '["%s"]\n' "$digest" ;;
+      *) printf '%s\n' "$digest" ;;
+    esac ;;
   run) exit 0 ;;
   *) exit 0 ;;
 esac

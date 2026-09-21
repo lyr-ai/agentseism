@@ -189,7 +189,13 @@ class BackendConfig:
 
 # ── constructibility ──
 def _check_hints() -> dict:
-    P.verify_hints()
+    try:
+        P.verify_hints()
+    except Exception as e:                                  # noqa: BLE001
+        # verify_hints reads the installed package, so it fails for the same
+        # reasons the backend does. Surface it as unconstructible rather than
+        # as a bare traceback.
+        raise BackendUnavailable(f"hints cannot be verified: {e}") from e
     for arm, spec in P.ARMS.items():
         if spec["hint"] not in P.HINTS:
             raise BackendUnavailable(f"arm {arm} names unfrozen hint "
