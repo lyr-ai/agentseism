@@ -123,3 +123,93 @@ appeared, the actual difference stands and is not reset to zero.
 **Local gate for host 2: met.** Full suite 483 passed, 0 failed, three
 consecutive runs, after `mini-swe-agent==2.4.6` was pinned into dev extras
 (`2c7cc21`) and the unseeded CLI test was made deterministic (`1874833`).
+
+---
+
+## preflight_host_2 — 2026-09-21
+
+```text
+status               = preflight_complete_pilot_not_started
+reason               = registered real backend absent
+instance_started_at  = 2026-09-21T17:18:03Z
+pilot_runs           = 0
+model_requests       = 0
+```
+
+Lambda, 1× H100 80 GB PCIe, x86_64, us-west-3. Stage B was executed by
+`inference/stage_b_preflight.sh` rather than by hand.
+
+**Preflight reached `READY_FOR_MANUAL_PILOT_CONFIRMATION` twice**, once at
+`2d31b54` and again, re-bound, at `491dc12`. Only the second authorises
+anything; the first is setup evidence.
+
+| | |
+|---|---|
+| binding commit | `491dc12e3ac9a12eedb8048a585e8a45955f673c` |
+| report sha256 | `0e1fb1aa06ea56e95f3093e97c87315c58017268726a7ad3561deaad5ec0faf6` |
+| vLLM | pid 6262, started 17:45:22Z, ready after 590 s |
+| `max_model_len` | **131072 accepted** — KV cache 40.12 GiB, 631,254 tokens. The registered 65536 fallback was never approached |
+| GPU | `GPU-b488b89e-6d66-b334-f320-cc9cd777ef38`, driver 580.105.08, CUDA 13.0 |
+| vLLM / lock | 0.28.0 · `ba6a0feebbadd55c…` |
+| parser flags | `--enable-auto-tool-choice`, `--tool-call-parser qwen3_coder`, `--reasoning-parser qwen3` all verified on the live command line |
+
+**The draw (amendment P.3).** 254 candidates examined, 251
+`duplicate_repository`, 3 `selected`, 0 `pull_failed`. The registered exclusion
+never arose because `pytest-dev` sorts after `matplotlib`.
+
+```
+astropy__astropy-12907        @sha256:e082963099ed7d5a5f75a0be46e338be36faae33b2cba5289a9ddbd505997f1f
+django__django-10097          @sha256:faf07f1d70370e9a4f76dac2cab0758300018f0eb4346b28aa55ac13630b873a
+matplotlib__matplotlib-13989  @sha256:c84876a26e80d717b571a98a4bb339d0645ed601190c2078658788f0c9cc66ae
+```
+
+Identical across both runs, which is the determinism of the rule observed
+rather than assumed.
+
+## Why no cell ran
+
+`agentseism.pilot` refuses `--backend real` with *"the real backend is wired on
+the instance, after the six deployment checks"*. It never was. The only backend
+in the tree is `fake_backend`, and nothing connects a cell to a task image, to
+`mini-swe-agent`, to the `challenging()` wrapper or to the SWE-bench evaluator.
+
+**The preflight verified the environment and never once verified that a cell
+could execute.** That is the defect: a preflight able to report READY while the
+runner does not exist. The next version must construct the real backend as a
+check.
+
+No backend was improvised on the billed instance. A runner written at run 0 is
+not a frozen runner.
+
+## Budget — the audit chain, kept whole
+
+```text
+baseline           $7.16   September 2026      frozen 2026-09-21T00:49:52Z
+reading #1         $7.34   manual              17:27:21Z
+budget_ok          after_setup   $0.18         17:45:29Z   SUPERSEDED
+budget_superseded  + reason                    17:47:03Z
+reading #2         $9.16   manual              17:56:43Z
+budget_ok          after_setup   $2.00         17:56:43Z
+reading #3         $9.25   manual              17:57:33Z
+budget_ok          before_block  $2.09         17:57:33Z   SUPERSEDED
+budget_superseded  + reason                    18:0x
+```
+
+Two checkpoints were superseded and neither was deleted. The first because it
+was authorised by a launch reading taken before setup spent anything — the
+defect that produced `Budget.check(not_before=...)`. The second because it
+authorised a block that could not run. The invalid judgements, the reasons they
+were invalid, and the valid judgement between them all stand.
+
+Final pilot spend **$2.09** against a $30 ceiling, all of it setup.
+
+## Retrieved and verified
+
+`data/runs/pilot/preflight_host_2/` — bundle
+`ea71feb889b35b3645ba6e1d725f81e44d2c61863d78d7b4ae6ac532ec338d30`, matched
+host to local, and `preflight_report.json`, `serving_fingerprint.json` and
+`retrieval_rehearsal.tgz` each re-verified against their own `.sha256` after
+transfer. `data/runs/pilot/run.jsonl` carries the ten budget records above.
+
+The retrieval path was rehearsed on an empty artifact tree during preflight and
+then used for real here, which is the only reason it worked first time.

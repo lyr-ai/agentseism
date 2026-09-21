@@ -1,0 +1,22 @@
+protocol e1f786939faeb9ea   order cfe8856c9c9167b5   cells 18
+   0  rep0  task_1    baseline   step_limit=250  hint=full        challenge=True
+   1  rep0  task_1    M1         step_limit=40   hint=full        challenge=True
+   2  rep0  task_1    M2         step_limit=250  hint=error_only  challenge=True
+   3  rep0  task_2    M2         step_limit=250  hint=error_only  challenge=True
+   4  rep0  task_2    M1         step_limit=40   hint=full        challenge=True
+   5  rep0  task_2    baseline   step_limit=250  hint=full        challenge=True
+   6  rep0  task_3    baseline   step_limit=250  hint=full        challenge=True
+   7  rep0  task_3    M2         step_limit=250  hint=error_only  challenge=True
+   8  rep0  task_3    M1         step_limit=40   hint=full        challenge=True
+   9  rep1  task_1    M2         step_limit=250  hint=error_only  challenge=True
+  10  rep1  task_1    M1         step_limit=40   hint=full        challenge=True
+  11  rep1  task_1    baseline   step_limit=250  hint=full        challenge=True
+  12  rep1  task_2    M2         step_limit=250  hint=error_only  challenge=True
+  13  rep1  task_2    baseline   step_limit=250  hint=full        challenge=True
+  14  rep1  task_2    M1         step_limit=40   hint=full        challenge=True
+  15  rep1  task_3    M2         step_limit=250  hint=error_only  challenge=True
+  16  rep1  task_3    M1         step_limit=40   hint=full        challenge=True
+  17  rep1  task_3    baseline   step_limit=250  hint=full        challenge=True
+
+cap 1200s   stops $20/$25/$30 on pilot spend (current total - frozen baseline)
+RESOLVE-ONLY: PASS

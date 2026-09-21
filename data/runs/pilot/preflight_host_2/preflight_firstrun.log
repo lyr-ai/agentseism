@@ -1,0 +1,115 @@
+
+──── 0. arguments ────
+  expected commit                    ok  2d31b54
+  reading #1                         ok  $7.34 (manual, from the Usage page)
+
+──── 1. host ────
+  arch                               ok  x86_64
+  gpu                                ok  NVIDIA H100 PCIe  81559 MiB  driver 580.105.08
+  disk                               ok  968 GB free
+  docker client                      ok  Docker version 29.2.1, build a5c7197
+
+──── 2. docker without sudo ────
+  docker daemon                      ok  reachable as ubuntu
+  groups                             ok  ubuntu users admin docker
+
+──── 3. repository ────
+  commit                             ok  2d31b54ed084fad6466e3a2bd523a0b412062097
+  worktree                           ok  clean
+  run log                            ok  seeded from the frozen tree into /home/ubuntu/agentseism-stageb/pilot
+  serving config                     ok  afed51104d5d25be…  inference/configs/model_h2.yaml
+
+──── 3b. billing reading #1 ────
+  baseline      $7.16  September 2026
+  reading #1    $7.34
+  pilot_spend   $0.18
+
+──── 4. environments from frozen locks ────
+  uv                                 installing 0.12.9
+downloading uv 0.12.9 x86_64-unknown-linux-gnu
+  uv                                 ok  uv 0.12.9 (x86_64-unknown-linux-gnu)
+  eval env                           ok  Python 3.13.15
+  vllm env                           ok  Python 3.10.12
+  vllm                               ok  0.28.0
+  ninja                              ok  present
+
+──── 5. full test suite ────
+  pytest                             ok  504 passed
+
+──── 6. frozen plan ────
+  protocol hash                      ok  e1f786939faeb9ea
+  order hash                         ok  cfe8856c9c9167b5
+  cells                              ok  18
+
+──── 7. task draw ────
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Generating test split:   0%|          | 0/500 [00:00<?, ? examples/s]Generating test split: 100%|██████████| 500/500 [00:00<00:00, 8920.18 examples/s]
+  universe                           ok  500 instances  sha a6b0fd7c8c2969a0…
+  drawn  astropy__astropy-12907             astropy__astropy
+  drawn  django__django-10097               django__django
+  drawn  matplotlib__matplotlib-13989       matplotlib__matplotlib
+  3 tasks across 3 repositories; 3 pulls attempted
+  drawn                              astropy__astropy-12907 django__django-10097 matplotlib__matplotlib-13989 
+  distinct repositories              ok  3
+  examined                           254 candidates recorded in /home/ubuntu/agentseism-stageb/state/task_draw.tsv
+  skip reasons                           251 duplicate_repository 
+  repositories seen                  3
+
+──── 8. image digests ────
+  astropy__astropy-12907             ok  swebench/sweb.eval.x86_64.astropy_1776_astropy-12907@sha256:e082963099ed7d5a5f75a0be46e338be36faae33b2cba5289a9ddbd505997f1f
+  django__django-10097               ok  swebench/sweb.eval.x86_64.django_1776_django-10097@sha256:faf07f1d70370e9a4f76dac2cab0758300018f0eb4346b28aa55ac13630b873a
+  matplotlib__matplotlib-13989       ok  swebench/sweb.eval.x86_64.matplotlib_1776_matplotlib-13989@sha256:c84876a26e80d717b571a98a4bb339d0645ed601190c2078658788f0c9cc66ae
+
+──── 9. model weights ────
+Fetching 80 files:   0%|          | 0/80 [00:00<?, ?it/s]Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Fetching 80 files:   1%|▏         | 1/80 [00:00<00:21,  3.71it/s]Fetching 80 files:   9%|▉         | 7/80 [00:00<00:03, 23.10it/s]Fetching 80 files:  14%|█▍        | 11/80 [00:09<01:10,  1.02s/it]Fetching 80 files:  18%|█▊        | 14/80 [00:10<00:52,  1.25it/s]Fetching 80 files:  20%|██        | 16/80 [00:14<01:12,  1.13s/it]Fetching 80 files:  24%|██▍       | 19/80 [00:15<00:50,  1.21it/s]Fetching 80 files:  25%|██▌       | 20/80 [00:16<00:55,  1.08it/s]Fetching 80 files:  26%|██▋       | 21/80 [00:17<00:55,  1.06it/s]Fetching 80 files:  28%|██▊       | 22/80 [00:17<00:46,  1.25it/s]Fetching 80 files:  29%|██▉       | 23/80 [00:18<00:44,  1.28it/s]Fetching 80 files:  30%|███       | 24/80 [00:20<00:59,  1.06s/it]Fetching 80 files:  32%|███▎      | 26/80 [00:21<00:39,  1.37it/s]Fetching 80 files:  34%|███▍      | 27/80 [00:22<00:51,  1.03it/s]Fetching 80 files:  35%|███▌      | 28/80 [00:28<01:54,  2.19s/it]Fetching 80 files:  36%|███▋      | 29/80 [00:30<01:37,  1.91s/it]Fetching 80 files:  38%|███▊      | 30/80 [00:30<01:18,  1.58s/it]Fetching 80 files:  39%|███▉      | 31/80 [00:31<01:06,  1.36s/it]Fetching 80 files:  40%|████      | 32/80 [00:31<00:49,  1.02s/it]Fetching 80 files:  44%|████▍     | 35/80 [00:34<00:46,  1.04s/it]Fetching 80 files:  45%|████▌     | 36/80 [00:35<00:47,  1.07s/it]Fetching 80 files:  46%|████▋     | 37/80 [00:38<00:57,  1.33s/it]Fetching 80 files:  48%|████▊     | 38/80 [00:39<00:51,  1.24s/it]Fetching 80 files:  49%|████▉     | 39/80 [00:41<01:06,  1.61s/it]Fetching 80 files:  51%|█████▏    | 41/80 [00:42<00:42,  1.09s/it]Fetching 80 files:  54%|█████▍    | 43/80 [00:43<00:28,  1.32it/s]Fetching 80 files:  55%|█████▌    | 44/80 [00:45<00:37,  1.05s/it]Fetching 80 files:  56%|█████▋    | 45/80 [00:46<00:42,  1.22s/it]Fetching 80 files:  57%|█████▊    | 46/80 [00:47<00:34,  1.01s/it]Fetching 80 files:  59%|█████▉    | 47/80 [00:49<00:41,  1.27s/it]Fetching 80 files:  60%|██████    | 48/80 [00:52<00:59,  1.86s/it]Fetching 80 files:  61%|██████▏   | 49/80 [00:54<00:54,  1.77s/it]Fetching 80 files:  65%|██████▌   | 52/80 [00:55<00:28,  1.01s/it]Fetching 80 files:  66%|██████▋   | 53/80 [00:56<00:25,  1.05it/s]Fetching 80 files:  68%|██████▊   | 54/80 [00:58<00:32,  1.26s/it]Fetching 80 files:  69%|██████▉   | 55/80 [00:59<00:28,  1.13s/it]Fetching 80 files:  70%|███████   | 56/80 [01:02<00:42,  1.79s/it]Fetching 80 files:  71%|███████▏  | 57/80 [01:03<00:33,  1.46s/it]Fetching 80 files:  72%|███████▎  | 58/80 [01:05<00:34,  1.58s/it]Fetching 80 files:  75%|███████▌  | 60/80 [01:05<00:19,  1.01it/s]Fetching 80 files:  76%|███████▋  | 61/80 [01:06<00:16,  1.12it/s]Fetching 80 files:  78%|███████▊  | 62/80 [01:09<00:26,  1.46s/it]Fetching 80 files:  79%|███████▉  | 63/80 [01:10<00:23,  1.39s/it]Fetching 80 files:  80%|████████  | 64/80 [01:12<00:25,  1.58s/it]Fetching 80 files:  81%|████████▏ | 65/80 [01:13<00:18,  1.21s/it]Fetching 80 files:  84%|████████▍ | 67/80 [01:13<00:09,  1.40it/s]Fetching 80 files:  88%|████████▊ | 70/80 [01:13<00:03,  2.55it/s]Fetching 80 files:  89%|████████▉ | 71/80 [01:13<00:03,  2.78it/s]Fetching 80 files:  90%|█████████ | 72/80 [01:13<00:02,  3.15it/s]Fetching 80 files:  91%|█████████▏| 73/80 [01:14<00:02,  3.47it/s]Fetching 80 files:  92%|█████████▎| 74/80 [01:14<00:01,  3.90it/s]Fetching 80 files:  94%|█████████▍| 75/80 [01:14<00:01,  2.80it/s]Fetching 80 files:  95%|█████████▌| 76/80 [01:15<00:02,  1.81it/s]Fetching 80 files:  96%|█████████▋| 77/80 [01:18<00:03,  1.01s/it]Fetching 80 files:  99%|█████████▉| 79/80 [01:30<00:03,  3.42s/it]Fetching 80 files: 100%|██████████| 80/80 [01:33<00:00,  3.23s/it]Fetching 80 files: 100%|██████████| 80/80 [01:33<00:00,  1.17s/it]
+  snapshot /home/ubuntu/agentseism-stageb/hf/hub/models--Qwen--Qwen3.6-27B-FP8/snapshots/e89b16ebf1988b3d6befa7de50abc2d76f26eb09
+  model                              ok  Qwen/Qwen3.6-27B-FP8 @ e89b16ebf1988b3d6befa7de50abc2d76f26eb09
+
+──── 10. vLLM ────
+  card                               ok  81559 MiB free
+  vllm                               started, pid 6262, waiting up to 1800s
+  vllm                               ok  ready after 590s, pid 6262
+
+──── 11. serving fingerprint ────
+  launch arg                         ok  --enable-auto-tool-choice
+  launch arg                         ok  --tool-call-parser qwen3_coder
+  launch arg                         ok  --reasoning-parser qwen3
+  launch arg                         ok  --max-model-len 131072
+  launch arg                         ok  --revision e89b16ebf1988b3d6befa7de50abc2d76f26eb09
+  launch arg                         ok  --model Qwen/Qwen3.6-27B-FP8
+{
+  "vllm_pid": 6262,
+  "gpu_uuid": "GPU-b488b89e-6d66-b334-f320-cc9cd777ef38",
+  "driver_version": "580.105.08",
+  "cuda_version": "13.0",
+  "vllm_version": "0.28.0",
+  "dependency_lock_sha256": "ba6a0feebbadd55cbad92a784e40dcb5744dcf0eec65105a15b71da958c395dc"
+}
+  fingerprint                        ok  /home/ubuntu/agentseism-stageb/state/serving_fingerprint.json
+
+──── 12. retrieval rehearsal ────
+  artifact dir                       ok  empty, as it must be before run 0
+  bundle                             ok  763d78bca4e895d0…  packs, digests and unpacks
+  retrieval command for the operator, after the run:
+    scp ubuntu@<host>:/home/ubuntu/agentseism-stageb/state/retrieval_rehearsal.tgz .
+    sha256sum -c retrieval_rehearsal.tgz.sha256
+
+──── 13. preflight report ────
+  after_setup   pilot_spend $0.18   warning=False
+  report  /home/ubuntu/agentseism-stageb/state/preflight_report.json
+  sha256  db2cc8ce03680a5129a4f6e09452aa30626576fb603a03614f709174c864d491
+
+════════════════════════════════════════════════════════════
+READY_FOR_MANUAL_PILOT_CONFIRMATION
+pilot_runs = 0
+════════════════════════════════════════════════════════════
+
+Nothing further happens automatically. The registered runner is
+started by a human, with the drawn ids from /home/ubuntu/agentseism-stageb/state/drawn.txt.
+
+Before that, confirm by hand:
+  * the drawn ids and every recorded pull attempt look right;
+  * the serving fingerprint names the pid that is serving now;
+  * a fresh billing reading is entered -- one reading authorises
+    one block, and the reading from 3b has been used by after_setup.

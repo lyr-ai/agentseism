@@ -1,0 +1,121 @@
+
+──── 0. arguments ────
+  expected commit                    ok  491dc12
+  reading #1                         ok  $7.34 (manual, from the Usage page)
+
+──── 1. host ────
+  arch                               ok  x86_64
+  gpu                                ok  NVIDIA H100 PCIe  81559 MiB  driver 580.105.08
+  disk                               ok  916 GB free
+  docker client                      ok  Docker version 29.2.1, build a5c7197
+
+──── 2. docker without sudo ────
+  docker daemon                      ok  reachable as ubuntu
+  groups                             ok  ubuntu users admin docker
+
+──── 3. repository ────
+  commit                             ok  491dc12e3ac9a12eedb8048a585e8a45955f673c
+  worktree                           ok  clean
+  run log                            ok  /home/ubuntu/agentseism-stageb/pilot/run.jsonl (resumed, baseline not re-entered)
+  serving config                     ok  afed51104d5d25be…  inference/configs/model_h2.yaml
+
+──── 3b. billing reading #1 ────
+  reading already recorded; not entering a second one for this launch
+  baseline      $7.16  September 2026
+  reading #1    $7.34
+  pilot_spend   $0.18
+
+──── 4. environments from frozen locks ────
+  setup_started                       2026-09-21T17:49:43Z
+  uv                                 installing 0.12.9
+downloading uv 0.12.9 x86_64-unknown-linux-gnu
+  uv                                 ok  uv 0.12.9 (x86_64-unknown-linux-gnu)
+  eval env                           already done -- skipping (resumable step)
+  eval env                           ok  Python 3.13.15
+  vllm env                           already done -- skipping (resumable step)
+  vllm env                           ok  Python 3.10.12
+  vllm                               ok  0.28.0
+  ninja                              ok  present
+
+──── 5. full test suite ────
+  pytest                             ok  524 passed
+
+──── 6. frozen plan ────
+  protocol hash                      ok  e1f786939faeb9ea
+  order hash                         ok  cfe8856c9c9167b5
+  cells                              ok  18
+
+──── 7. task draw ────
+  instance universe                  already done -- skipping (resumable step)
+  universe                           ok  500 instances  sha a6b0fd7c8c2969a0…
+  draw                               already done -- skipping (resumable step)
+  drawn                              astropy__astropy-12907 django__django-10097 matplotlib__matplotlib-13989 
+  distinct repositories              ok  3
+  examined                           254 candidates recorded in /home/ubuntu/agentseism-stageb/state/task_draw.tsv
+  skip reasons                           251 duplicate_repository 
+  repositories seen                  3
+
+──── 8. image digests ────
+  astropy__astropy-12907             ok  swebench/sweb.eval.x86_64.astropy_1776_astropy-12907@sha256:e082963099ed7d5a5f75a0be46e338be36faae33b2cba5289a9ddbd505997f1f
+  django__django-10097               ok  swebench/sweb.eval.x86_64.django_1776_django-10097@sha256:faf07f1d70370e9a4f76dac2cab0758300018f0eb4346b28aa55ac13630b873a
+  matplotlib__matplotlib-13989       ok  swebench/sweb.eval.x86_64.matplotlib_1776_matplotlib-13989@sha256:c84876a26e80d717b571a98a4bb339d0645ed601190c2078658788f0c9cc66ae
+
+──── 9. model weights ────
+  weights                            already done -- skipping (resumable step)
+  model                              ok  Qwen/Qwen3.6-27B-FP8 @ e89b16ebf1988b3d6befa7de50abc2d76f26eb09
+
+──── 10. vLLM ────
+  vllm                               ok  already serving, pid 6262
+
+──── 11. serving fingerprint ────
+  launch arg                         ok  --enable-auto-tool-choice
+  launch arg                         ok  --tool-call-parser qwen3_coder
+  launch arg                         ok  --reasoning-parser qwen3
+  launch arg                         ok  --max-model-len 131072
+  launch arg                         ok  --revision e89b16ebf1988b3d6befa7de50abc2d76f26eb09
+  launch arg                         ok  --model Qwen/Qwen3.6-27B-FP8
+{
+  "vllm_pid": 6262,
+  "gpu_uuid": "GPU-b488b89e-6d66-b334-f320-cc9cd777ef38",
+  "driver_version": "580.105.08",
+  "cuda_version": "13.0",
+  "vllm_version": "0.28.0",
+  "dependency_lock_sha256": "ba6a0feebbadd55cbad92a784e40dcb5744dcf0eec65105a15b71da958c395dc"
+}
+  fingerprint                        ok  /home/ubuntu/agentseism-stageb/state/serving_fingerprint.json
+
+──── 12. retrieval rehearsal ────
+  artifact dir                       ok  empty, as it must be before run 0
+  bundle                             ok  2c0f1ff93fd4b4dc…  packs, digests and unpacks
+  retrieval command for the operator, after the run:
+    scp ubuntu@<host>:/home/ubuntu/agentseism-stageb/state/retrieval_rehearsal.tgz .
+    sha256sum -c retrieval_rehearsal.tgz.sha256
+
+──── 13. preflight report ────
+  baseline      $7.16
+  last reading  $7.34   entered 2026-09-21T17:27:21Z
+  setup began   2026-09-21T17:49:43Z
+  after_setup   DEFERRED -- the only reading predates setup; it cannot
+                authorise a checkpoint covering setup's cost
+  report  /home/ubuntu/agentseism-stageb/state/preflight_report.json
+  sha256  0e1fb1aa06ea56e95f3093e97c87315c58017268726a7ad3561deaad5ec0faf6
+
+════════════════════════════════════════════════════════════
+READY_FOR_MANUAL_PILOT_CONFIRMATION
+pilot_runs = 0
+════════════════════════════════════════════════════════════
+
+Nothing further happens automatically. The registered runner is
+started by a human, with the drawn ids from /home/ubuntu/agentseism-stageb/state/drawn.txt.
+
+Before that, confirm by hand:
+  * the drawn ids and every recorded pull attempt look right;
+  * the serving fingerprint names the pid that is serving now;
+  * the after_setup checkpoint is taken with a reading from NOW:
+      python -m agentseism.pilot_budget --log /home/ubuntu/agentseism-stageb/pilot/run.jsonl \
+        --reading <page total> --checkpoint after_setup \
+        --not-before @setup_started
+    The launch reading cannot authorise it: setup spent money the
+    page had not seen when that number was read.
+  * then a further fresh reading before block 1 -- one reading
+    authorises one block.
