@@ -215,7 +215,14 @@ def test_the_driver_fails_closed_and_still_writes_the_record(tmp_path, monkeypat
                "--drawn", str(tmp_path / "drawn.txt")])
     assert rc == 1
     assert (tmp_path / "drawn.txt").read_text() == ""
-    assert "draw_failed" in (tmp_path / "d.tsv").read_text()
+    body = (tmp_path / "d.tsv").read_text()
+    assert "draw_failed" in body
+    # The reasons survive the failure: without them the record cannot say why
+    # three repositories were not found.
+    rows = [l.split("\t") for l in body.splitlines()[1:] if not l.startswith("#")]
+    assert len(rows) == len(candidates), "every candidate examined is recorded"
+    assert [r[3] for r in rows].count("duplicate_repository") == 6
+    assert [r[3] for r in rows].count("selected") == 2
 
 
 def test_the_driver_issues_one_pull_per_candidate_it_asks_about(tmp_path, monkeypatch):

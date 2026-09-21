@@ -129,8 +129,8 @@ printf '\n──── 2. the registered exclusion is exercised, not assumed ─
 ( export MOCK_UNIVERSE_INCLUDES_EXCLUDED=1
   run_scenario
   expect_rc 0 "still ready"
-  expect_out "excluded by the registration" "pytest-dev__pytest-10051 is excluded"
-  grep -q "excluded_by_registration" "$SANDBOX/work/state/task_draw.tsv"
+  expect_out "excluded_registered" "pytest-dev__pytest-10051 is excluded"
+  grep -q "excluded_registered" "$SANDBOX/work/state/task_draw.tsv"
   assert_true $? "the exclusion is recorded in the draw log"
   grep -q "pytest-dev__pytest-10051" "$SANDBOX/work/state/drawn.txt"
   assert_false $? "the excluded instance is not drawn"
@@ -197,10 +197,12 @@ printf '\n──── 6b. repository diversity (amendment P.3) ────\n'
     bad "second drawn is $(sed -n 2p "$DRAWN"), expected django__django-00001"
   fi
   DUP="$(awk -F'\t' '$4=="duplicate_repository"' "$TSV" | wc -l | tr -d ' ')"
-  if [ "$DUP" -eq 199 ]; then
+  # 199 astropy after the first, then 99 django after the first, then the
+  # matplotlib head completes the draw.
+  if [ "$DUP" -eq 298 ]; then
     ok "every duplicate is written to the record ($DUP rows)"
   else
-    bad "expected 199 duplicate_repository rows, found $DUP"
+    bad "expected 298 duplicate_repository rows, found $DUP"
   fi
   expect_out "duplicate_repository" "the skip reasons are reported"
   # Nothing but order, exclusion, repository and pull success may move a draw.

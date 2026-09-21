@@ -86,7 +86,7 @@ def repository_of(instance_id: str) -> str:
 
 
 def select_tasks(candidates, pull, wanted: int = TASK_COUNT,
-                 exclude=EXCLUDED_INSTANCES):
+                 exclude=EXCLUDED_INSTANCES, rows: list | None = None):
     """The registered draw. Returns `(drawn, rows)`; every candidate examined
     appears in `rows` with why it was skipped.
 
@@ -102,11 +102,13 @@ def select_tasks(candidates, pull, wanted: int = TASK_COUNT,
 
     Exhaustion is a stop, not a relaxation: if the candidates run out before
     `wanted` distinct repositories are found, the caller gets `ProtocolMismatch`
-    and no draw.
+    and no draw. Pass `rows` -- a list the caller owns -- to keep the record of
+    a draw that failed: raising with the reasons still inside this function
+    would throw away exactly the evidence that says why it failed.
     """
     drawn: list[str] = []
     repos: set[str] = set()
-    rows: list[tuple[str, str]] = []
+    rows = [] if rows is None else rows
     for iid in candidates:
         if len(drawn) == wanted:
             break

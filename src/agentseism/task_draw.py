@@ -81,12 +81,14 @@ def main(argv=None) -> int:
                          "pulled" if got else "-", ""))
         return got
 
+    rows: list = []
     try:
-        drawn, rows = P.select_tasks(candidates, pull)
+        drawn, rows = P.select_tasks(candidates, pull, rows=rows)
     except (P.ProtocolMismatch, DiskExhausted, ValueError) as e:
-        # Everything examined is still written: the record of a draw that
-        # failed is worth as much as the record of one that succeeded.
-        _write(args, [], rows_out, partial=str(e))
+        # Everything examined is still written. A failed draw's record is worth
+        # as much as a successful one's -- more, since it is the evidence for
+        # why the rule could not be satisfied.
+        _write(args, [], rows_out, rows=rows, partial=str(e))
         print(f"task draw failed: {e}", file=sys.stderr)
         return 1
 
