@@ -391,8 +391,8 @@ printf '\n──── 9. resume is idempotent ────\n'
   if [ "$pulls1" -eq "$pulls2" ]; then ok "no image is pulled twice ($pulls1 -> $pulls2)"; else bad "no image is pulled twice ($pulls1 -> $pulls2)"; fi
   printf '%s' "$second" | grep -q "resumed, baseline not re-entered"
   assert_true $? "the baseline is not re-entered"
-  printf '%s' "$second" | grep -q "reading already recorded"
-  assert_true $? "reading #1 is not entered twice"
+  printf '%s' "$second" | grep -q "host_start    already recorded for this host"
+  assert_true $? "the launch reading is not entered twice on the same host"
   printf '%s' "$second" | grep -q "11. serving fingerprint"
   assert_true $? "the fingerprint is regenerated on every run"
   if [ -f "$SANDBOX/work/state/vllm.pid" ]; then ok "a restart produces a new session"; else bad "a restart produces a new session"; fi
