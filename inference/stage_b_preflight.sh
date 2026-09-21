@@ -294,6 +294,20 @@ PY
 build_envs() {
   step "4. environments from frozen locks"
   cd "$REPO"
+  # From here on the instance starts spending on things the billing page has
+  # not seen yet: wheels, images, 31 GB of weights. The moment is recorded so
+  # `after_setup` can refuse any reading older than it.
+  PYTHONPATH=src RUN_LOG="$PILOT_DIR/run.jsonl" python3 - <<'PY' || die "could not mark setup_started"
+import os
+from pathlib import Path
+from agentseism.budget import RunLog
+log = RunLog(Path(os.environ["RUN_LOG"]))
+if not [r for r in log.read() if r["kind"] == "phase" and r.get("name") == "setup_started"]:
+    r = log.append("phase", name="setup_started")
+    print(f"  setup_started                       {r['ts']}")
+else:
+    print("  setup_started                       already marked (resumed run)")
+PY
 
   if ! command -v uv >/dev/null; then
     note "uv" "installing $UV_VERSION"
@@ -668,17 +682,31 @@ rehearse_retrieval() {
 write_report() {
   step "13. preflight report"
   cd "$REPO"
-  # A registered checkpoint, on the reading entered in 3b. `after_setup` does
-  # not consume the reading; the first block will need its own.
+  # `after_setup` is deliberately NOT taken here. The only reading in the log
+  # is the one entered at launch, and everything since -- wheels, images,
+  # weights, serving -- is not on the billing page yet. Authorising the
+  # checkpoint with it would pass the state machine while missing the entire
+  # cost of setup. It is taken separately, with a number read now:
+  #
+  #   python -m agentseism.pilot_budget --log <run.jsonl> \
+  #     --reading <page total> --checkpoint after_setup --not-before @setup_started
+  #
+  # which refuses any reading older than the setup_started marker.
   PYTHONPATH=src RUN_LOG="$PILOT_DIR/run.jsonl" \
-  "$WORK/.venv-eval/bin/python" - <<'PY' || die "the budget refused at after_setup"
+  "$WORK/.venv-eval/bin/python" - <<'PY' || die "could not read the budget state"
 import os
 from pathlib import Path
 from agentseism.budget import Budget, RunLog
 from agentseism.pilot import PILOT_THRESHOLDS
 b = Budget(RunLog(Path(os.environ["RUN_LOG"])), PILOT_THRESHOLDS)
-s = b.check("after_setup")
-print(f"  after_setup   pilot_spend ${s['usd']:.2f}   warning={s['warning']}")
+log = b.log
+base, last = b.baseline(), log.last_billing()
+mark = [r for r in log.read() if r["kind"] == "phase" and r.get("name") == "setup_started"]
+print(f"  baseline      ${base['current_total']:.2f}")
+print(f"  last reading  ${last['current_total']:.2f}   entered {last['ts']}")
+print(f"  setup began   {mark[-1]['ts'] if mark else '(unmarked)'}")
+print("  after_setup   DEFERRED -- the only reading predates setup; it cannot")
+print("                authorise a checkpoint covering setup's cost")
 PY
   cd - >/dev/null
 
@@ -702,6 +730,8 @@ rep = {
     "run_log": os.environ["RUN_LOG"],
     "pilot_runs": 0,
     "model_requests": 0,
+    "after_setup_checkpoint": "deferred: requires a billing reading taken "
+                              "after the setup_started marker",
     "unverified": [
         "tool-call parsing was not exercised: that needs a completion request, "
         "and preflight issues none. The three parser flags are verified on the "
@@ -728,8 +758,14 @@ PY
   printf 'Before that, confirm by hand:\n'
   printf '  * the drawn ids and every recorded pull attempt look right;\n'
   printf '  * the serving fingerprint names the pid that is serving now;\n'
-  printf '  * a fresh billing reading is entered -- one reading authorises\n'
-  printf '    one block, and the reading from 3b has been used by after_setup.\n'
+  printf '  * the after_setup checkpoint is taken with a reading from NOW:\n'
+  printf '      python -m agentseism.pilot_budget --log %s \\\n' "$PILOT_DIR/run.jsonl"
+  printf '        --reading <page total> --checkpoint after_setup \\\n'
+  printf '        --not-before @setup_started\n'
+  printf '    The launch reading cannot authorise it: setup spent money the\n'
+  printf '    page had not seen when that number was read.\n'
+  printf '  * then a further fresh reading before block 1 -- one reading\n'
+  printf '    authorises one block.\n'
 }
 
 main() {

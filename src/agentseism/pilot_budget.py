@@ -1,0 +1,142 @@
+"""Budget operations on the pilot run log, from the command line.
+
+Exists because a checkpoint is a *reading*, not a moment. `after_setup` run on
+the launch reading passes while the entire cost of setup is still absent from
+the billing page, so the checkpoint has to be taken separately, after setup,
+with a number read then.
+
+The log is append-only. A checkpoint that turned out to be meaningless is
+annotated as superseded, never deleted or rewritten: what was believed at the
+time is part of the record.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from agentseism.budget import Budget, BudgetStop, RunLog  # noqa: E402
+from agentseism.pilot import PILOT_THRESHOLDS  # noqa: E402
+
+DEFAULT_LOG = "data/runs/pilot/run.jsonl"
+
+
+def phase_ts(log: RunLog, name: str) -> str:
+    """When a named phase marker was written. Raises if it never was."""
+    hits = [r for r in log.read() if r["kind"] == "phase" and r.get("name") == name]
+    if not hits:
+        raise SystemExit(f"no phase marker {name!r} in the log; the reading "
+                         "cannot be checked against a moment that was never "
+                         "recorded")
+    return str(hits[-1]["ts"])
+
+
+def status(log: RunLog) -> int:
+    base = [r for r in log.read() if r["kind"] == "billing_baseline"]
+    readings = [r for r in log.read() if r["kind"] == "billing_reading"]
+    checks = [r for r in log.read() if r["kind"] in ("budget_ok", "budget_stop",
+                                                     "budget_refused")]
+    superseded = {r.get("supersedes_ts") for r in log.read()
+                  if r["kind"] == "budget_superseded"}
+    if base:
+        b = base[0]
+        print(f"baseline    ${b['current_total']:.2f}  {b['billing_period']}  "
+              f"{b.get('currency')}  frozen {b['ts']}")
+    for r in readings:
+        print(f"reading #{r.get('seq', 0)}  ${r['current_total']:.2f}  "
+              f"{r['source']}  {r['ts']}")
+    for r in checks:
+        mark = "  SUPERSEDED" if r["ts"] in superseded else ""
+        print(f"{r['kind']:<15} {r.get('checkpoint', '-'):<13} "
+              f"spend ${r.get('usd', 0):.2f}  {r['ts']}{mark}")
+    return 0
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--log", default=DEFAULT_LOG)
+    ap.add_argument("--status", action="store_true")
+    ap.add_argument("--reading", type=float,
+                    help="cumulative account total, read from the billing page now")
+    ap.add_argument("--checkpoint", choices=("after_setup", "after_donors",
+                                             "before_block"))
+    ap.add_argument("--block", type=int)
+    ap.add_argument("--not-before",
+                    help="an ISO-8601 ...Z timestamp, or @<phase> to use when "
+                         "that phase marker was written")
+    ap.add_argument("--note", default="")
+    ap.add_argument("--supersede-checkpoint",
+                    help="mark the last checkpoint record with this name as "
+                         "superseded; requires --reason")
+    ap.add_argument("--reason", default="")
+    args = ap.parse_args(argv)
+
+    log = RunLog(Path(args.log))
+    budget = Budget(log, PILOT_THRESHOLDS)
+
+    if args.status:
+        return status(log)
+
+    if args.supersede_checkpoint:
+        if not args.reason:
+            return _fail("--supersede-checkpoint requires --reason")
+        hits = [r for r in log.read()
+                if r["kind"] in ("budget_ok", "budget_stop")
+                and r.get("checkpoint") == args.supersede_checkpoint]
+        if not hits:
+            return _fail(f"no checkpoint record for {args.supersede_checkpoint!r}")
+        target = hits[-1]
+        rec = log.append("budget_superseded",
+                         checkpoint=args.supersede_checkpoint,
+                         supersedes_ts=target["ts"],
+                         supersedes_kind=target["kind"],
+                         supersedes_reading_seq=target.get("reading_seq"),
+                         supersedes_usd=target.get("usd"),
+                         reason=args.reason)
+        print(json.dumps(rec, indent=2, sort_keys=True))
+        print("\nthe original record is left exactly as written; this annotation "
+              "sits after it")
+        return 0
+
+    if args.reading is None or not args.checkpoint:
+        return _fail("give --status, or --reading with --checkpoint, or "
+                     "--supersede-checkpoint with --reason")
+
+    not_before = args.not_before
+    if not_before and not_before.startswith("@"):
+        not_before = phase_ts(log, not_before[1:])
+
+    base = budget.baseline()
+    if base is None:
+        return _fail(f"no frozen baseline in {args.log}")
+    budget.record_reading(args.reading, source="manual",
+                          billing_period=base["billing_period"],
+                          currency=base.get("currency"),
+                          note=args.note or f"reading for {args.checkpoint}")
+    try:
+        s = budget.check(args.checkpoint, args.block, not_before=not_before)
+    except BudgetStop as e:
+        print(f"STOP  {e.kind}\n  {e.detail}", file=sys.stderr)
+        return 1
+    print(f"  baseline      ${base['current_total']:.2f}")
+    print(f"  reading       ${args.reading:.2f}   ({s['reading_ts']})")
+    print(f"  pilot_spend   ${s['usd']:.2f}")
+    print(f"  checkpoint    {args.checkpoint}: PASS")
+    if s["warning"]:
+        print(f"  WARNING       spend has reached ${s['warning_at']:.0f}")
+    print(f"  stops         ${PILOT_THRESHOLDS['no_new_block']:.0f} no new block "
+          f"· ${PILOT_THRESHOLDS['absolute']:.0f} absolute")
+    return 0
+
+
+def _fail(msg: str) -> int:
+    print(msg, file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

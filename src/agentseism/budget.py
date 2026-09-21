@@ -187,8 +187,19 @@ class Budget:
         return max([r.get("consumed_seq", 0) for r in self.log.read()
                     if r["kind"] == "budget_ok"] or [0])
 
-    def check(self, checkpoint: str, block_index: int | None = None) -> dict:
-        """Evaluate the registered thresholds. Only at a registered checkpoint."""
+    def check(self, checkpoint: str, block_index: int | None = None,
+              not_before: str | None = None) -> dict:
+        """Evaluate the registered thresholds. Only at a registered checkpoint.
+
+        `not_before` is an ISO-8601 `...Z` timestamp the reading must be newer
+        than. Without it a checkpoint can be satisfied by a number read hours
+        before the spend it is supposed to cover: the launch reading passes
+        `after_setup` while the whole of setup -- dependency installs, image
+        pulls, tens of gigabytes of weights -- is still invisible on the page.
+        The state machine then reports a pass while missing the entire cost.
+        Timestamps here are always `%Y-%m-%dT%H:%M:%SZ`, so a string compare is
+        a time compare.
+        """
         if checkpoint not in P.CHECKPOINTS:
             raise ValueError(f"{checkpoint!r} is not one of {P.CHECKPOINTS}; "
                              "§6.1 fixes when a forecast is re-estimated")
@@ -240,6 +251,18 @@ class Budget:
                  "currency": base.get("currency", "USD"),
                  "reading_ts": last["ts"], "estimate_only": stale,
                  "reading_seq": last.get("seq", 0)}
+
+        # A reading older than the work it is meant to cover authorises
+        # nothing, however recently it was typed in.
+        if not_before and str(last["ts"]) < str(not_before):
+            self.log.append("budget_refused", reason="reading_predates_spend",
+                            not_before=not_before, **state)
+            raise BudgetStop(
+                "reading_predates_spend",
+                f"the latest reading was entered at {last['ts']}, before "
+                f"{not_before}; a checkpoint covering the work since then "
+                "cannot be authorised by a number read before it started",
+                dict(state, not_before=not_before))
 
         # An estimate is information, never authority.
         if stale:

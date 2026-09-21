@@ -81,6 +81,12 @@ grep -qE "^[[:space:]]*(newgrp|sg)[[:space:]]" "$SCRIPT"
 assert_false $? "no newgrp/sg bypass"
 grep -q "Not retrying at a smaller length" "$SCRIPT"
 assert_true $? "refuses the smaller-max_model_len fallback in so many words"
+# A checkpoint is a reading, not a moment: preflight must not take after_setup
+# on the number that was read before setup spent anything.
+grep -qF 'b.check("after_setup")' "$SCRIPT"
+assert_false $? "preflight never authorises after_setup itself"
+grep -q "setup_started" "$SCRIPT"
+assert_true $? "preflight marks when setup began"
 # The draw is executed by src/agentseism/task_draw.py, which is the only place
 # that touches Docker for an image.
 DRAW="$ROOT/src/agentseism/task_draw.py"
@@ -109,6 +115,8 @@ printf '\n──── 1. happy path (real pytest, real resolve-only) ───�
   expect_out "cfe8856c9c9167b5" "verifies the order hash"
   expect_out "e1f786939faeb9ea" "verifies the protocol hash (moved by P.3)"
   expect_out "pilot_spend   \$0.00" "computes spend against the frozen baseline"
+  expect_out "after_setup   DEFERRED" "does not authorise after_setup with the launch reading"
+  expect_out "setup began" "records when setup started"
   expect_out "--tool-call-parser qwen3_coder" "checks the parser flags on the live command line"
   REPORT="$SANDBOX/work/state/preflight_report.json"
   "$REAL_PYTHON" - "$REPORT" <<'REPORTCHECK'
@@ -121,6 +129,7 @@ assert len(r["drawn_repositories"]) == 3, r["drawn_repositories"]
 assert len(r["image_digests"]) == 3, r["image_digests"]
 assert r["serving_fingerprint"]["vllm_version"] == "0.28.0"
 assert r["serving_fingerprint"]["model_revision"].startswith("e89b16eb")
+assert r["after_setup_checkpoint"].startswith("deferred")
 REPORTCHECK
   assert_true $? "report is well formed: 3 tasks, 3 digests, 0 runs"
 ) 
