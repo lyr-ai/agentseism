@@ -7,8 +7,8 @@ Reviewed at `HEAD` of `eval/pilot-outcome-grounded-ci`.
 ```
 protocol_hash   5f4b95c9a250fccf
 order_hash      cfe8856c9c9167b5     18 cells
-pytest          642 passed
-mock harness    100 passed
+pytest          648 passed
+mock harness    108 passed
 shellcheck      clean
 ```
 
@@ -60,6 +60,39 @@ inspect` metadata; a missing image fails and is never fetched, because a
 digest that arrives during preflight was not the digest that was frozen. The
 draw's pulls belong to `task_draw.py`, one per candidate, never retried.
 
+### 1.5 The budget survives the host — **not a blocker, but a defect beside it**
+
+Host 3 cannot re-base on its own start total. Nothing in the preflight path
+calls `record_baseline`, and `record_baseline` refuses when a baseline exists.
+Proven against the **real host-2 log**, not a fixture: a `$10.15` reading
+yields `$2.99`, and re-basing raises `baseline_already_set`.
+
+The defect sitting next to it: the launch-reading guard asked whether *any*
+`billing_reading` existed in the log — and the log is carried from host to
+host, which is what keeps the baseline frozen. Every host after the first
+would have skipped its own launch reading entirely. The guard is now per host,
+keyed on hostname plus boot time.
+
+Two concepts are now distinct in the log:
+
+| | |
+|---|---|
+| `experiment_billing_baseline` | `$7.16`, frozen, the only origin for every budget decision, **never reset** |
+| `host_start` | the settled page total when a host launched. Records what that machine adds; authorises nothing, moves no threshold, and its own note says so |
+
+Because the origin never moves, the stops correspond to **fixed page totals**,
+and step 3b prints them so the operator reads numbers rather than doing
+arithmetic:
+
+| pilot state | page total |
+|---|---|
+| `$20` warning | **$27.16** |
+| `$25` no new block | **$32.16** |
+| `$30` absolute stop | **$37.16** |
+
+Host 2's `$2.99` is inside every one of those figures and is not forgiven by
+starting a new machine.
+
 ---
 
 ## 2. Amendments against the code
@@ -103,13 +136,15 @@ Three implementation defects, all fixed, none a design change:
 
 1. the vLLM session was not re-verified across the smoke run (1.1);
 2. the smoke report recorded no serving stack (1.2);
-3. `after_setup` did not have to postdate the smoke run (1.3).
+3. `after_setup` did not have to postdate the smoke run (1.3);
+4. the launch-reading guard was global, so every host after the first would
+   have skipped its own reading (1.5).
 
 Two more found while fixing them:
 
-4. a restarted vLLM kept a stale `smoke.done` marker; a new session now
+5. a restarted vLLM kept a stale `smoke.done` marker; a new session now
    invalidates it;
-5. the phase-ordering check read an `n` field that records written before `n`
+6. the phase-ordering check read an `n` field that records written before `n`
    existed do not carry.
 
 **No new amendment is required.** None of these changed a registered value;
@@ -128,8 +163,10 @@ bumping now uses targeted regexes and the fixture is a named constant.
 
 No step is skipped and none is reordered.
 
-1. wait for the `$10.15` page total to settle; read it with **nothing
-   running** and freeze it as the new pre-launch baseline;
+1. wait for the `$10.15` page total to settle and read it with **nothing
+   running**. It is recorded as `host_start`, **not** as a baseline: the
+   experiment's origin stays `$7.16` and the cumulative spend opens at
+   `$2.99`;
 2. launch Host 3, `1× H100 80 GB PCIe`;
 3. environment and dependency checks (steps 1–5: host, docker group, repo at a
    verified commit, environments from the frozen locks, the full suite);
