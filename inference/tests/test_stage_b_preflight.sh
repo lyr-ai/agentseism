@@ -124,7 +124,7 @@ printf '\n──── 1. happy path (real pytest, real resolve-only) ───�
   expect_out "5f4b95c9a250fccf" "verifies the protocol hash (moved by P.3)"
   expect_out "pilot_spend   \$0.00" "computes spend against the frozen baseline"
   expect_out "after_setup   DEFERRED" "does not authorise after_setup with the launch reading"
-  expect_out "setup began" "records when setup started"
+  expect_out "smoke ended" "records when the smoke test finished"
   expect_out "--tool-call-parser qwen3_coder" "checks the parser flags on the live command line"
   REPORT="$SANDBOX/work/state/preflight_report.json"
   "$REAL_PYTHON" - "$REPORT" <<'REPORTCHECK'
@@ -339,9 +339,8 @@ import json, sys
 rows = [json.loads(l) for l in open(sys.argv[1]) if l.strip()]
 names = [r.get("name") for r in rows if r["kind"] == "phase"]
 assert "smoke_completed" in names, names
-setup = next(r for r in rows if r.get("name") == "setup_started")
-smoke = next(r for r in rows if r.get("name") == "smoke_completed")
-assert smoke["n"] > setup["n"], "smoke_completed must follow setup_started"
+names = [r.get("name") for r in rows]
+assert names.index("smoke_completed") > names.index("setup_started")
 PHASECHECK
   assert_true $? "smoke_completed is recorded after setup_started" )
 

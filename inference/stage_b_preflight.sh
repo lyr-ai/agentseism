@@ -618,7 +618,15 @@ start_serving() {
   done
   ok "vllm" "ready after ${waited}s, pid $(cat "$pidfile")"
   date -u +%FT%TZ > "$STATE/vllm.started_at"
-  vllm_identity "$(cat "$pidfile")" > "$STATE/vllm.identity"
+  local ident; ident="$(vllm_identity "$(cat "$pidfile")")"
+  # A new session invalidates the smoke test. The smoke run binds to the
+  # server that answered it, so a restarted server has not been smoke tested
+  # and the marker must not carry over.
+  if [ -f "$STATE/vllm.identity" ] && [ "$ident" != "$(cat "$STATE/vllm.identity")" ]; then
+    rm -f "$STEPS/smoke.done"
+    note "vllm session" "new session -- the smoke test will be re-run against it"
+  fi
+  printf '%s' "$ident" > "$STATE/vllm.identity"
 }
 
 # ════════════════════════════════════════════════════════════════════════
