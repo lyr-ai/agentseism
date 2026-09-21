@@ -141,6 +141,48 @@ def test_budget_thresholds_on_pilot_spend(tmp_path, usd, kind):
         assert e.value.kind == kind
 
 
+# The registration says $20 warning / $25 no new block / $30 absolute, and $20
+# was registered and then left out of the code, so a run crossing it said
+# nothing. These three pin the boundary and, more importantly, pin that the
+# warning refuses nothing: $20.00 must still return a state, not raise.
+@pytest.mark.parametrize("usd,warn,kind", [(19.99, False, None),
+                                           (20.00, True, None),
+                                           (24.99, True, None),
+                                           (25.00, True, "no_new_block")])
+def test_warning_reports_without_stopping(tmp_path, usd, warn, kind):
+    from agentseism.pilot import PILOT_THRESHOLDS
+    log = RunLog(tmp_path / "l.jsonl"); b = Budget(log, PILOT_THRESHOLDS)
+    b.record_baseline(500.0, billing_period="t")       # account history
+    b.record_reading(500.0 + usd, billing_period="t")
+    if kind is None:
+        state = b.check("before_block", 0)
+        assert state["usd"] == usd
+        assert state["warning"] is warn
+        assert state["warning_at"] == P.WARNING_USD
+        logged = [r for r in log.read() if r["kind"] == "budget_warning"]
+        assert len(logged) == (1 if warn else 0)
+        assert [r for r in log.read() if r["kind"] == "budget_ok"]
+    else:
+        with pytest.raises(BudgetStop) as e:
+            b.check("before_block", 0)
+        assert e.value.kind == kind
+
+
+def test_warning_is_optional_and_absent_for_c2h(tmp_path):
+    """C2-H registered no warning level, and an absent one must not read as 0."""
+    log = RunLog(tmp_path / "l.jsonl"); b = Budget(log)     # falls back to P.BUDGET
+    b.record_baseline(0.0, billing_period="t")
+    b.record_reading(50.0, billing_period="t")
+    state = b.check("before_block", 0)
+    assert state["warning"] is False and state["warning_at"] is None
+    assert not [r for r in log.read() if r["kind"] == "budget_warning"]
+
+
+def test_naming_the_warning_did_not_move_the_protocol_hash():
+    """WARNING_USD was already inside protocol_hash before it was wired up."""
+    assert P.protocol_hash() == "3ee68b88bb99894d"
+
+
 def test_no_new_block_after_the_threshold(tmp_path):
     from agentseism.pilot import PILOT_THRESHOLDS
     log = RunLog(tmp_path / "l.jsonl"); b = Budget(log, PILOT_THRESHOLDS)

@@ -28,7 +28,8 @@ from agentseism.budget import (  # noqa: E402
 )
 
 
-PILOT_THRESHOLDS = {"no_new_block": P.NO_NEW_BLOCK_USD,
+PILOT_THRESHOLDS = {"warning": P.WARNING_USD,
+                    "no_new_block": P.NO_NEW_BLOCK_USD,
                     "stop_stage": float("inf"),
                     "absolute": P.ABSOLUTE_LIMIT_USD}
 """The registered pilot stops, mapped honestly onto the machine's three slots.
@@ -39,7 +40,11 @@ rather than aliased to $25 — aliasing would turn "do not start another block"
 into "abandon the block you are in", which is stricter than what was
 registered and would truncate work already paid for.
 
-$20 is a warning: it is reported, and it starts nothing on its own."""
+$20 is a warning: it is reported, and it starts nothing on its own. It was
+registered and then left out of the implementation, so a run passing $20 said
+nothing at all; `warning` now carries it, and `check` logs `budget_warning`
+beside `budget_ok` without refusing anything. `WARNING_USD` was already inside
+`protocol_hash`, so naming it here changes no hash."""
 
 
 class PilotStop(RuntimeError):

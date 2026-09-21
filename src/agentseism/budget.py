@@ -227,8 +227,14 @@ class Budget:
                              {"baseline": base, "reading": last})
 
         usd = round(total - base["current_total"], 2)     # this run's spend
+        # A warning level is optional: C2-H registered none, the pilot registered
+        # $20. It never refuses, so it is evaluated as a fact about `usd` and
+        # carried on every record the checkpoint writes.
+        warn_at = self.thresholds.get("warning")
         state = {"checkpoint": checkpoint, "block_index": block_index,
                  "usd": usd, "current_total": total,
+                 "warning": warn_at is not None and usd >= warn_at,
+                 "warning_at": warn_at,
                  "billing_baseline": base["current_total"],
                  "billing_period": base["billing_period"],
                  "currency": base.get("currency", "USD"),
@@ -269,6 +275,8 @@ class Budget:
                              f"this run has spent ${usd:.2f} (total ${total:.2f} - baseline "
                              f"${base['current_total']:.2f}) >= ${self.thresholds['no_new_block']}: start no "
                              "new block", state)
+        if state["warning"]:
+            self.log.append("budget_warning", **state)
         self.log.append("budget_ok", consumed_seq=state["reading_seq"], **state)
         return state
 
