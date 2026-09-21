@@ -233,3 +233,106 @@ the pilot's registered cost, so the next host's baseline must be read after
 this one settles, not before.
 
 Nothing experimental was lost. The pilot has never produced a run.
+
+---
+
+## host_3 — 2026-09-21
+
+```text
+status               = registered_smoke_failure
+reason               = LiteLLM provider address missing; no valid model call
+instance_started_at  = 2026-09-21T22:55:03Z
+bound_commit         = f911ed0   (unchanged throughout; fd163ea was NOT taken)
+pilot_runs           = 0
+pilot_evidence       = none
+```
+
+> Registered smoke failure; the backend reached the container but failed before
+> a valid model call because the LiteLLM provider address was missing. Internal
+> retries were observed and are being eliminated prospectively.
+
+## What the smoke test proved, by failing
+
+Preflight passed every step up to and including vLLM: the host checks, the
+docker group, the repo at the verified commit, both environments from the
+frozen locks, 674 tests, the frozen plan, **backend constructibility**, the
+P.3 draw, the image digests and their binding, the weights, and vLLM ready
+after 575 s.
+
+Then the chain broke where nothing offline could have caught it.
+`mini-swe-agent` routes through LiteLLM, which needs a provider prefix to know
+where to send a request. The registered model id was passed bare:
+
+```
+litellm.BadRequestError: LLM Provider NOT provided.
+  You passed model=Qwen/Qwen3.6-27B-FP8
+```
+
+The container **started** — `docker run` succeeded and the image is recorded
+at `sha256:e38365e835d4ba57…`. What failed was the first model call.
+
+| criterion | result |
+|---|---|
+| `image_started` | **fail** — the container ran but the agent never executed in it |
+| `valid_tool_call` | **fail** |
+| `challenge_injected_once` | **fail** — nothing to inject into |
+| `termination_registered` | pass |
+| `evaluator_decided` | **fail** — `evaluator_resolved: null` |
+| `artifact_frozen` | pass |
+
+`outcome_state: BACKEND_ERROR`. **No `RESOLVED_FALSE` was produced.** A broken
+chain did not become a task failure, which is the property the six criteria
+exist to hold.
+
+`smoke_completed` was never marked, so `after_setup` could not be taken.
+`serving_fingerprint.json` was never written, so nothing was bound. There was
+no session to preserve.
+
+## Why it was not fixed in place
+
+P.4 freezes it: *a smoke failure stops the host and is not re-run with adjusted
+parameters.* The root cause is client addressing and the fix is one line, the
+weights and images were already local, vLLM was warm on pid 6714, and redoing
+the setup costs roughly `$2`. None of that matters. "The cause was small" is
+exactly the argument that turns a stop rule into *adjust until it passes*, and
+the rule was registered before anyone knew what the failure would look like.
+
+The host was terminated with the artifacts retrieved and verified.
+
+## A second finding, recorded for P.8
+
+LiteLLM retried the failing call **nine times** internally, backing off 4s →
+60s, all inside what the pilot counts as one execution. `run_cell` did not
+retry; the transport did. P.4 says one agent execution per cell and C2-H had a
+*registered* transport policy; the pilot inherited LiteLLM's defaults instead.
+An unregistered retry sitting underneath a registered no-retry rule is a gap,
+and it is closed prospectively rather than argued about after the fact.
+
+## Retrieved and verified
+
+`data/runs/pilot/host_3_smoke_failure/` — bundle
+`d08f327456c28315862b6f6e08722d31a96301662f9901ffed3ce3d8078722ad`, matched
+host to local; `smoke_run.json` and `smoke_report.json` each re-verified
+against their own `.sha256` after transfer.
+
+Recorded serving context at the moment of failure: vLLM pid **6714**, started
+`Mon Sep 21 23:10:09 2026`, ready `23:19:47Z`, endpoint
+`http://127.0.0.1:8000/v1`, revision `e89b16eb…eb09`, dependency lock
+`fe76ffa6…`, serving config `afed5110…`.
+
+## Naming correction, appended not overwritten
+
+The log's `host_start` record named `$10.47`, a reading taken **after** this
+host launched, which already contains what it had billed. Correct names:
+
+| | |
+|---|---|
+| `experiment_billing_baseline` | `$7.16` — frozen, never reset |
+| `host_start_total` | `$10.15` — settled, nothing running, before launch |
+| `launch_reading` | `$10.47` — after launch |
+| `cumulative_pilot_spend` | `$3.31` |
+| billed between the two readings | `$0.32` — a direction, not a duration; the page lags |
+
+Appended as `billing_provenance_note #14`. Everything before it is
+byte-identical — the same SHA-256 before and after the append. Fixed
+prospectively in `fd163ea`, which host 3 deliberately did not take.

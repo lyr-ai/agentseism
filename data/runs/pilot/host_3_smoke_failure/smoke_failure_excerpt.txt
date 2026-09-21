@@ -1,0 +1,11 @@
+105:minisweagent.environment: INFO: Started container minisweagent-57615767 with ID 
+108:Retrying <unknown> in 4 seconds as it raised BadRequestError: litellm.BadRequestError: LLM Provider NOT provided. Pass in the LLM provider you are trying to call. You passed model=Qwen/Qwen3.6-27B-FP8
+110:Retrying <unknown> in 4 seconds as it raised BadRequestError: litellm.BadRequestError: LLM Provider NOT provided. Pass in the LLM provider you are trying to call. You passed model=Qwen/Qwen3.6-27B-FP8
+112:Retrying <unknown> in 4 seconds as it raised BadRequestError: litellm.BadRequestError: LLM Provider NOT provided. Pass in the LLM provider you are trying to call. You passed model=Qwen/Qwen3.6-27B-FP8
+114:Retrying <unknown> in 8 seconds as it raised BadRequestError: litellm.BadRequestError: LLM Provider NOT provided. Pass in the LLM provider you are trying to call. You passed model=Qwen/Qwen3.6-27B-FP8
+116:Retrying <unknown> in 16 seconds as it raised BadRequestError: litellm.BadRequestError: LLM Provider NOT provided. Pass in the LLM provider you are trying to call. You passed model=Qwen/Qwen3.6-27B-FP8
+118:Retrying <unknown> in 32 seconds as it raised BadRequestError: litellm.BadRequestError: LLM Provider NOT provided. Pass in the LLM provider you are trying to call. You passed model=Qwen/Qwen3.6-27B-FP8
+120:Retrying <unknown> in 60 seconds as it raised BadRequestError: litellm.BadRequestError: LLM Provider NOT provided. Pass in the LLM provider you are trying to call. You passed model=Qwen/Qwen3.6-27B-FP8
+122:Retrying <unknown> in 60 seconds as it raised BadRequestError: litellm.BadRequestError: LLM Provider NOT provided. Pass in the LLM provider you are trying to call. You passed model=Qwen/Qwen3.6-27B-FP8
+124:Retrying <unknown> in 60 seconds as it raised BadRequestError: litellm.BadRequestError: LLM Provider NOT provided. Pass in the LLM provider you are trying to call. You passed model=Qwen/Qwen3.6-27B-FP8
+126:  SMOKE FAILED: challenge_injected_once, evaluator_decided, image_started, valid_tool_call

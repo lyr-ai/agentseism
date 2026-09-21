@@ -1,0 +1,7 @@
+timestamp=2026-09-21T23:10:09Z
+model=Qwen/Qwen3.6-27B-FP8
+revision=e89b16ebf1988b3d6befa7de50abc2d76f26eb09
+vllm=0.28.0
+torch=2.13.0+cu130
+cuda=13.0
+gpu=NVIDIA H100 PCIe, 81559 MiB, 580.105.08
