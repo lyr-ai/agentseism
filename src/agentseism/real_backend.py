@@ -53,7 +53,11 @@ ENTERS_PILOT_OUTCOME = {
 }
 """Which terminal states may enter a pilot outcome.
 
-`STEP_LIMIT_REACHED` is deliberately **not** an outcome state. It is an
+`STEP_LIMIT_REACHED` is deliberately **not** an outcome state.
+
+`STEP_LIMIT_REACHED` with `RESOLVED_TRUE` is legal and must stay legal: an
+agent can make the fix on its last step and then exhaust its budget before
+emitting a submission signal. A termination code may not overrule the grader. It is an
 `agent_termination_code`, and it is scorable (`P.SCORABLE`): a step-limited run
 is still graded, and its verdict is `RESOLVED_TRUE` or `RESOLVED_FALSE` like
 any other. Making it a sixth mutually exclusive state would discard the
@@ -124,6 +128,43 @@ def validate_result(r: dict) -> dict:
         raise ValueError("enters_pilot_outcome contradicts the registered table")
     if r["termination"] not in P.TERMINATIONS:
         raise ValueError(f"unknown termination {r['termination']!r}")
+
+    # ── four invariants: a termination code may never overrule a verdict,
+    #    and a verdict may never be carried by a run whose machinery failed ──
+
+    # 1. a RESOLVED_* state requires a real boolean from the grader
+    if r["outcome_state"] in (RESOLVED_TRUE, RESOLVED_FALSE) \
+            and not isinstance(r["evaluator_resolved"], bool):
+        raise ValueError(f"{r['outcome_state']} requires evaluator_resolved to "
+                         "be true or false, not "
+                         f"{r['evaluator_resolved']!r}")
+
+    # 2. a censored run carries no verdict and enters nothing
+    if r["infrastructure_status"] == INFRA_TIMEOUT_1200S:
+        if r["evaluator_resolved"] is not None:
+            raise ValueError(
+                "a run censored at the cap carries no verdict: it was stopped "
+                "for cost, not graded, and a verdict attached to it would let "
+                "the budget cap manufacture an outcome")
+        if r["enters_pilot_outcome"]:
+            raise ValueError("a censored run does not enter the pilot outcome")
+
+    # 3. a step-limited run must actually have been graded
+    if r["agent_termination_code"] == P.STEP_LIMIT_REACHED \
+            and r["infrastructure_status"] == "OK" \
+            and not r.get("evaluator_report_path"):
+        raise ValueError(
+            "STEP_LIMIT_REACHED with healthy infrastructure must carry an "
+            "evaluator report: the run exhausted its steps, which is M1's "
+            "mechanism, and it is graded like any other. It may still be "
+            "undecided -- it may not be ungraded")
+
+    # 4. broken machinery never carries a verdict
+    if r["infrastructure_status"] != "OK" and r["evaluator_resolved"] is not None:
+        raise ValueError(
+            f"infrastructure_status {r['infrastructure_status']} with "
+            f"evaluator_resolved {r['evaluator_resolved']!r}: a run whose "
+            "machinery failed has no verdict to report")
     if "success" in r:
         raise ValueError("a single `success` field merges the three axes; "
                          "record agent_termination_code, "

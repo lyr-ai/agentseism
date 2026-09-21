@@ -57,7 +57,6 @@ def _ok_result(**over):
     ("OK", False, RB.RESOLVED_FALSE, True),
     ("OK", None, RB.EVALUATOR_UNDECIDED, False),
     (RB.INFRA_TIMEOUT_1200S, None, RB.INFRA_TIMEOUT_1200S, False),
-    (RB.INFRA_TIMEOUT_1200S, True, RB.INFRA_TIMEOUT_1200S, False),
     (RB.BACKEND_ERROR, None, RB.BACKEND_ERROR, False),
 ])
 def test_the_registered_state_table(infra, resolved, state, enters):
@@ -67,10 +66,10 @@ def test_the_registered_state_table(infra, resolved, state, enters):
 
 def test_a_timeout_never_becomes_a_resolved_verdict():
     """A budget cap must not be able to manufacture a regression."""
-    s = RB.outcome_state(RB.INFRA_TIMEOUT_1200S, False)
+    s = RB.outcome_state(RB.INFRA_TIMEOUT_1200S, None)
     assert s == RB.INFRA_TIMEOUT_1200S and not RB.ENTERS_PILOT_OUTCOME[s]
     assert RB.registered_termination(P.COMPLETED, RB.INFRA_TIMEOUT_1200S,
-                                     False) == P.INFRA_TIMEOUT_1200S
+                                     None) == P.INFRA_TIMEOUT_1200S
 
 
 def test_step_limit_reached_is_scored_not_discarded():
@@ -251,3 +250,60 @@ def test_no_digests_supplied_is_a_failure(tmp_path, monkeypatch):
     monkeypatch.setattr(RB.shutil, "which", lambda x: "/usr/bin/docker")
     with pytest.raises(RB.BackendUnavailable):
         RB._check_images(_cfg(tmp_path, {}))
+
+
+# ── the four invariants ──
+def test_a_resolved_state_needs_a_real_boolean():
+    """Two lines of defence: the derivation never produces RESOLVED_* from a
+    non-boolean, and validate_result refuses one that arrives anyway."""
+    assert RB.outcome_state("OK", "true") == RB.EVALUATOR_UNDECIDED
+    r = _ok_result()
+    r["evaluator_resolved"] = "true"
+    r["outcome_state"] = RB.RESOLVED_TRUE
+    r["enters_pilot_outcome"] = True
+    with pytest.raises(ValueError):
+        RB.validate_result(r)
+    # and with the derivation bypassed entirely, invariant 1 still fires
+    import unittest.mock as m
+    with m.patch.object(RB, "outcome_state", lambda *a: RB.RESOLVED_TRUE):
+        with pytest.raises(ValueError) as e:
+            RB.validate_result(r)
+    assert "true or false" in str(e.value)
+
+
+def test_a_censored_run_may_not_carry_a_verdict():
+    r = _ok_result(infrastructure_status=RB.INFRA_TIMEOUT_1200S,
+                   evaluator_resolved=None)
+    r["evaluator_resolved"] = False          # smuggled back in
+    with pytest.raises(ValueError) as e:
+        RB.validate_result(r)
+    assert "manufacture an outcome" in str(e.value)
+
+
+def test_a_step_limited_run_must_have_been_graded():
+    r = _ok_result(agent_termination_code=P.STEP_LIMIT_REACHED,
+                   evaluator_resolved=False)
+    r["evaluator_report_path"] = ""
+    with pytest.raises(ValueError) as e:
+        RB.validate_result(r)
+    assert "graded like any other" in str(e.value)
+
+
+def test_step_limit_reached_with_a_true_verdict_is_legal():
+    """The fix lands on the last step and the budget runs out before the
+    submission signal. A termination code may not overrule the grader."""
+    r = _ok_result(agent_termination_code=P.STEP_LIMIT_REACHED,
+                   evaluator_resolved=True)
+    RB.validate_result(r)
+    assert r["outcome_state"] == RB.RESOLVED_TRUE
+    assert r["enters_pilot_outcome"] is True
+    assert r["termination"] == P.STEP_LIMIT_REACHED
+
+
+def test_broken_machinery_carries_no_verdict():
+    r = _ok_result(infrastructure_status=RB.BACKEND_ERROR,
+                   evaluator_resolved=None)
+    r["evaluator_resolved"] = True
+    with pytest.raises(ValueError) as e:
+        RB.validate_result(r)
+    assert "no verdict to report" in str(e.value)
