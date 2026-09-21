@@ -131,7 +131,9 @@ printf '\n──── 1. happy path (real pytest, real resolve-only) ───�
 import json, sys
 r = json.load(open(sys.argv[1]))
 assert r["status"] == "READY_FOR_MANUAL_PILOT_CONFIRMATION", r["status"]
-assert r["pilot_runs"] == 0 and r["model_requests"] == 0
+assert r["pilot_runs"] == 0 and r["pilot_model_requests"] == 0
+# the only model requests made belong to the smoke test, and it says so
+assert r["smoke"]["pilot_evidence"] is False
 assert len(r["drawn_tasks"]) == 3, r["drawn_tasks"]
 assert len(r["drawn_repositories"]) == 3, r["drawn_repositories"]
 assert len(r["image_digests"]) == 3, r["image_digests"]
