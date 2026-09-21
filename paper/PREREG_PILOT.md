@@ -528,3 +528,110 @@ Arms, step limits, the recovery-hint variant, task count, replicates, the
 amendment changes which three tasks are drawn and nothing else.
 
 `study_mode: feasibility` · `verdict_authority: descriptive_only`.
+
+---
+
+# Amendment P.4 — a pre-registered infrastructure smoke test
+
+**2026-09-21, written before the next machine is rented, with `pilot_runs = 0`
+and `model_requests = 0`.** No pilot cell has ever executed, so nothing about
+the drawn tasks' behaviour is known and nothing here can have been chosen with
+knowledge of a result.
+
+## What this fixes
+
+Host 2 passed every environment check and reported
+`READY_FOR_MANUAL_PILOT_CONFIRMATION` while the component that executes a cell
+did not exist. `agentseism.pilot` refused `--backend real` with a placeholder,
+and the only backend in the tree was `fake_backend`. **Preflight verified the
+environment and never verified that a cell could run.**
+
+Two answers, and they are different in kind. A *construction* check belongs in
+preflight: the real backend must be importable and constructible, or preflight
+fails. A *path* check cannot be done by construction, because a container that
+starts, an agent that emits a tool call, a challenge that fires once and an
+evaluator that returns a definite verdict are only demonstrated by running
+something. Hence a smoke test — and a smoke test has to be registered, or it
+becomes the place where the experiment is quietly tuned.
+
+## The smoke test, frozen
+
+| | |
+|---|---|
+| Task | `pytest-dev__pytest-10051`, **one** instance |
+| Arm | `baseline` only — `step_limit` 250, `hint` full, `challenge` True |
+| Replicates | 1 |
+| Cap | 1200 s wall clock, the registered pilot cap |
+| Output | `data/runs/smoke/`, never `data/runs/pilot/` |
+| Marking | every artifact carries `smoke: true` and `pilot_evidence: false` |
+
+**The task is the excluded one on purpose.** `pytest-dev__pytest-10051`
+produced the frozen donors and both counterexamples, and P.3 excludes it from
+the pilot for exactly that reason. That disqualification is what makes it the
+right smoke subject: it cannot enter the pilot's task set, so using it here
+cannot narrow or bias the draw, and prior familiarity with it is an advantage
+when the question is *did the plumbing work* rather than *how hard is this
+task*.
+
+**One arm, no comparison.** The smoke test runs `baseline` and nothing else. It
+does not compare arms, does not estimate an effect, and cannot produce or
+inform a verdict. A smoke test that ran M1 alongside baseline would be a
+one-scenario pilot with an unregistered analysis, whatever it was called.
+
+## Pass criteria — the chain, not the outcome
+
+The smoke test passes if and only if all of these hold:
+
+1. the task image starts and `/testbed` is present at the base commit;
+2. the agent produces at least one **valid** tool call;
+3. the challenge fires **exactly once**, and the original malformed action is
+   **not** executed;
+4. the run terminates with a code in the registered set, with
+   `INFRA_TIMEOUT_1200S` and `STEP_LIMIT_REACHED` distinguishable in the
+   record;
+5. the evaluator returns an explicit `resolved` true **or** false — an
+   infrastructure error is neither, and is not counted as a failure;
+6. the artifact is written atomically and verifies against its own digest.
+
+**Whether the task resolves is not a pass criterion.** A smoke test that
+required success would be a difficulty filter wearing a plumbing test's name,
+and `resolved: false` with the chain intact is a pass.
+
+## If it fails
+
+Stop. No pilot runs. Record which of the six conditions failed and terminate
+the host. The smoke test is not re-run with adjusted parameters to obtain a
+pass: a chain that needs adjusting to work is a chain that was not frozen.
+
+## Cost and ordering
+
+Smoke spend is **inside** the pilot's registered cost — §1 puts launch,
+preparation, download and teardown there, and this is preparation. So the
+order on the next host is fixed:
+
+```
+baseline read with nothing running  →  launch  →  reading #1
+  →  preflight (envs, draw, weights, vLLM)  →  smoke test
+  →  read Usage  →  after_setup checkpoint   ← captures the smoke cost
+  →  read Usage  →  before_block 0           ← one reading, one block
+```
+
+`after_setup` follows the smoke test so that the smoke test's spend is inside
+the checkpoint rather than outside it.
+
+**The smoke test runs on the same vLLM session that will serve the pilot**, and
+the serving fingerprint is taken **after** it. The session that is bound is
+therefore the session that actually served something, which is a stronger
+binding than one taken against a server that has answered nothing. All 18 cells
+already share one session, so a session that has served one extra task before
+cell 0 is not a new kind of variation — it is the variation the design already
+accepts, made uniform at the start.
+
+## Scope
+
+Arms, step limits, the recovery-hint variant, task count, replicates, the
+1200 s cap, the budget stops, the block order and the P.3 draw are all
+untouched. This amendment adds a gate before run 0 and changes nothing the
+pilot measures.
+
+`study_mode: feasibility` · `verdict_authority: descriptive_only`.

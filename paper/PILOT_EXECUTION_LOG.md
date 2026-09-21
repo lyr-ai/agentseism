@@ -213,3 +213,23 @@ transfer. `data/runs/pilot/run.jsonl` carries the ten budget records above.
 
 The retrieval path was rehearsed on an empty artifact tree during preflight and
 then used for real here, which is the only reason it worked first time.
+
+## Closed
+
+```text
+terminated_at        = 2026-09-21T18:13:00Z
+instance_interval    = 17:18–18:13 UTC
+billed_hours         = 0.91
+page_total_at_close  = $10.15 USD
+pilot_spend          = $2.99   ($10.15 − $7.16)
+pilot_runs           = 0
+model_requests       = 0
+```
+
+$2.99 of a $30 ceiling, none of it on an agent. The closing reading is entered
+as reading #4 and **authorises nothing** — no checkpoint is taken on it. The
+spend is recorded because launch, preparation, download and teardown are inside
+the pilot's registered cost, so the next host's baseline must be read after
+this one settles, not before.
+
+Nothing experimental was lost. The pilot has never produced a run.
