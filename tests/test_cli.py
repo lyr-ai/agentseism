@@ -15,10 +15,19 @@ import yaml
 
 from agentseism.cli import main
 
-AGENT = """import sys, json, os, random
+# Seeded on (task stem, trial index) with a stable digest, not `hash()`.
+# `hash()` of a str is salted per process by PYTHONHASHSEED, so every pytest
+# invocation drew a different set of outcomes and
+# `test_regression_when_the_agent_degrades` failed roughly one run in eight --
+# a regression test that intermittently fails to detect a regression. The
+# artifact path also carries a per-run tmp_path, so it cannot be seeded on
+# either. Excluding the arm from the key pairs baseline and candidate on the
+# same draw, so DEGRADED moves only the threshold.
+AGENT = """import sys, json, os, random, hashlib
 task = sys.argv[sys.argv.index("--task")+1]
 out  = sys.argv[sys.argv.index("--out")+1]
-rng = random.Random(hash((task, out)) & 0xffff)
+key = os.path.basename(task) + "|" + os.path.basename(out.rstrip("/"))
+rng = random.Random(int(hashlib.sha256(key.encode()).hexdigest()[:8], 16))
 ok = rng.random() > (0.55 if os.environ.get("DEGRADED") == "1" else 0.15)
 json.dump({"success": int(ok), "cost": rng.uniform(0.3, 0.6)},
           open(os.path.join(out, "result.json"), "w"))
