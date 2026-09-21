@@ -31,7 +31,7 @@ set -euo pipefail
 PROTOCOL_HASH="a23ff8975a04f627"   # P.3 moved it; P.5 moved it again
 ORDER_HASH="cfe8856c9c9167b5"
 EXPECTED_CELLS=18
-EXPECTED_TESTS=544
+EXPECTED_TESTS=570
 BASELINE_USD="7.16"
 BASELINE_CURRENCY="USD"
 BASELINE_PERIOD="September 2026"
@@ -395,6 +395,61 @@ verify_plan() {
 }
 
 # ════════════════════════════════════════════════════════════════════════
+# 6b. can a cell actually run? Host 2 reported READY with no runner, because
+#     preflight verified the environment and never verified the execution
+#     path. This is that check, and it runs before the expensive steps so a
+#     missing backend costs no images and no weights.
+# ════════════════════════════════════════════════════════════════════════
+verify_backend_constructible() {
+  step "6b. real backend constructibility"
+  cd "$REPO"
+  PYTHONPATH=src:. "$WORK/.venv-eval/bin/python" - <<'PY' || die "the real backend is not constructible; preflight does not report READY without a runner"
+import json
+from agentseism.real_backend import build, BackendUnavailable
+try:
+    r = build(dry_run=True)
+except BackendUnavailable as e:
+    raise SystemExit(f"  BackendUnavailable: {e}")
+for k in ("containers_created", "images_pulled", "model_requests",
+          "evaluator_invocations"):
+    if r[k] != 0:
+        raise SystemExit(f"  the dry run performed {r[k]} {k}; it must perform none")
+print(f"  agent                              ok  {r['agent']['wrapped']}")
+print(f"  challenge wrapper                  ok  overrides step, exposes challenge_eligible")
+print(f"  evaluator                          ok  {r['evaluator']['swebench']}  (inspected, not invoked)")
+print(f"  hints                              ok  {', '.join(r['hints']['hints'])}")
+print(f"  execution path                     ok  run_cell present")
+print(f"  side effects                       ok  0 containers, 0 pulls, 0 model requests")
+PY
+  cd - >/dev/null
+}
+
+# ════════════════════════════════════════════════════════════════════════
+# 8b. the frozen digests, against local image metadata only
+# ════════════════════════════════════════════════════════════════════════
+verify_backend_images() {
+  step "8b. backend binds the frozen digests"
+  cd "$REPO"
+  DIGESTS="$STATE/image_digests.tsv" PYTHONPATH=src:. \
+  "$WORK/.venv-eval/bin/python" - <<'PY' || die "the backend cannot bind the frozen image digests"
+import os
+from pathlib import Path
+from agentseism.real_backend import BackendConfig, _check_images
+rows = [l.split("\t") for l in
+        Path(os.environ["DIGESTS"]).read_text().splitlines() if l.strip()]
+cfg = BackendConfig(image_digests={t: d for t, d in rows}, work_dir=Path("."),
+                    model_base_url="http://127.0.0.1:8000/v1",
+                    model_name="", model_revision="")
+out = _check_images(cfg)
+assert out["pulled"] is False
+for t, d in sorted(out["images"].items()):
+    print(f"  {t:<34} ok  {d.split('@')[1][:23]}…")
+print("  pulled                             ok  0 -- local metadata only")
+PY
+  cd - >/dev/null
+}
+
+# ════════════════════════════════════════════════════════════════════════
 # 7. the task draw. Mechanical: sort ascending, walk in order, pull once each,
 #    record every attempt, take the first three that succeed. The rule does not
 #    look at what the tasks are, and neither does this code.
@@ -732,6 +787,7 @@ rep = {
     "model_requests": 0,
     "after_setup_checkpoint": "deferred: requires a billing reading taken "
                               "after the setup_started marker",
+    "backend_constructible": True,
     "unverified": [
         "tool-call parsing was not exercised: that needs a completion request, "
         "and preflight issues none. The three parser flags are verified on the "
@@ -777,8 +833,10 @@ main() {
   build_envs
   run_tests
   verify_plan
+  verify_backend_constructible
   draw_tasks
   freeze_image_digests
+  verify_backend_images
   download_model
   start_serving
   fingerprint
