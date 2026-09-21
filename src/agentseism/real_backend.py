@@ -327,3 +327,273 @@ def build(config: BackendConfig | None = None, *, dry_run: bool = False):
     if config is None:
         raise BackendUnavailable("a BackendConfig is required to build a runner")
     return lambda cell: validate_result(run_cell(cell, config))  # noqa: F821
+
+
+# ════════════════════════════════════════════════════════════════════════
+# the execution path
+# ════════════════════════════════════════════════════════════════════════
+class CellError(RuntimeError):
+    """A protocol violation in the cell itself. Not an outcome: a stop."""
+
+
+def _swebench_base() -> dict:
+    """The upstream benchmark config the pilot builds on, read once."""
+    import os
+
+    import minisweagent
+    import yaml
+    path = os.path.join(os.path.dirname(minisweagent.__file__),
+                        "config/benchmarks/swebench.yaml")
+    return yaml.safe_load(open(path))
+
+
+def _resolve_hint(cell: dict) -> tuple[str, str]:
+    """Exact index into the frozen table. No fallback, no transformation."""
+    key = cell["hint"]
+    if key not in P.HINTS:
+        raise CellError(
+            f"cell names hint {key!r}, which is not in the frozen HINTS "
+            f"{sorted(P.HINTS)}. The pilot does not invent a template")
+    return P.HINTS[key], P.HINT_SHA256[key]
+
+
+def _resolve_image(cell: dict, config: BackendConfig) -> str:
+    """A digest, never a tag. `:latest` moves; `@sha256:` does not."""
+    task = cell["task"]
+    if task not in config.image_digests:
+        raise CellError(f"no frozen image digest for task {task!r}")
+    ref = config.image_digests[task]
+    if "@sha256:" not in ref:
+        raise CellError(
+            f"image reference {ref!r} for {task} is not digest-pinned; a tag "
+            "can move between the draw and the run")
+    return ref
+
+
+def _problem_statement(task: str, config: BackendConfig) -> str:
+    from datasets import load_dataset
+    ds = load_dataset(config.evaluator_dataset, split=config.evaluator_split)
+    rows = [r for r in ds if r["instance_id"] == task]
+    if len(rows) != 1:
+        raise CellError(f"{len(rows)} rows for {task!r} in "
+                        f"{config.evaluator_dataset}")
+    return rows[0]["problem_statement"]
+
+
+def _recovered(messages: list[dict], injected_at_call: int) -> bool:
+    """Did a valid tool call follow the injected error?
+
+    Read from the transcript rather than inferred from the exit status: an
+    agent can recover and still run out of steps later, and those are
+    different facts.
+    """
+    seen = 0
+    for m in messages:
+        extra = m.get("extra") or {}
+        if extra.get("actions"):
+            seen += 1
+            if seen > injected_at_call:
+                return True
+    return False
+
+
+def _agent_result(cell: dict, config: BackendConfig, hint: str, image: str):
+    """One agent execution. No retry: a cell is one run."""
+    from minisweagent.agents.default import DefaultAgent
+    from minisweagent.environments import get_environment
+    from minisweagent.models import get_model
+
+    from experiments.coding.recovery_challenge import challenging
+
+    base = _swebench_base()
+    model_cfg = dict(base["model"])
+    model_cfg["format_error_template"] = hint          # the M2 axis, exactly
+    model_cfg["model_kwargs"] = {**model_cfg.get("model_kwargs", {}),
+                                 "api_base": config.model_base_url}
+    env_cfg = dict(base["environment"])
+    env_cfg["image"] = image                           # digest-pinned
+    agent_cfg = dict(base["agent"])
+    agent_cfg["step_limit"] = cell["step_limit"]       # the M1 axis
+    agent_cfg["cost_limit"] = P.COST_LIMIT_DISABLED    # makes LimitsExceeded
+    agent_cfg["wall_time_limit_seconds"] = config.timeout_seconds
+
+    model = get_model(config.model_name, config=model_cfg)
+    env = get_environment(env_cfg, default_type="docker")
+    agent = challenging(DefaultAgent)(model, env, **agent_cfg)
+    info = agent.run(task=_problem_statement(cell["task"], config))
+    return agent, info
+
+
+def _map_exit(agent, info: dict, cell: dict) -> str:
+    """Registered mapping, with the one assertion P.6 requires."""
+    status = str(info.get("exit_status") or "")
+    if status not in P.EXIT_STATUS_MAP:
+        raise CellError(f"unmapped agent exit status {status!r}; "
+                        f"{sorted(P.EXIT_STATUS_MAP)} are registered")
+    code = P.EXIT_STATUS_MAP[status]
+    if code == P.STEP_LIMIT_REACHED:
+        # LimitsExceeded serves both limits and names neither. The cost branch
+        # is unreachable (cost_limit 0), so this must be the step limit -- and
+        # if the counter disagrees it is a misclassification, not a step limit.
+        if int(getattr(agent, "n_calls", 0)) < int(cell["step_limit"]):
+            raise CellError(
+                f"LimitsExceeded at n_calls={getattr(agent, 'n_calls', None)} "
+                f"below step_limit={cell['step_limit']}: the exception did not "
+                "come from the step limit and the mapping does not hold")
+    return code
+
+
+def _evaluate(cell: dict, submission: str, config: BackendConfig) -> tuple:
+    """One evaluator execution against this cell's own patch.
+
+    Returns `(resolved, report_path)`. `resolved` is `True`/`False` only when
+    the report says so in a boolean; anything else is `None`, which becomes
+    EVALUATOR_UNDECIDED rather than a failure.
+    """
+    run_id = (f"pilot_{cell['order_index']:02d}_{cell['task']}_"
+              f"{cell['arm']}_r{cell['replicate']}")
+    work = Path(config.work_dir) / "eval"
+    work.mkdir(parents=True, exist_ok=True)
+    pred = work / f"{run_id}.jsonl"
+    pred.write_text(json.dumps({
+        "instance_id": cell["task"],
+        "model_name_or_path": run_id,
+        "model_patch": submission or "",
+    }) + "\n")
+    reports = work / "reports"
+    reports.mkdir(exist_ok=True)
+    subprocess.run(
+        [sys.executable, "-m", "swebench.harness.run_evaluation",
+         "--dataset_name", config.evaluator_dataset,
+         "--split", config.evaluator_split,
+         "--predictions_path", str(pred), "--run_id", run_id,
+         "--max_workers", "1", "--timeout", "1800",
+         "--report_dir", str(reports)],
+        stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=3600)
+    hits = sorted(reports.glob(f"*{run_id}*.json"))
+    if not hits:
+        return None, ""
+    report = json.loads(hits[0].read_text())
+    body = report.get(cell["task"], report)
+    value = body.get("resolved")
+    if not isinstance(value, bool):
+        # An absent key, a string, a harness that produced a report about
+        # something else -- none of those is `False`.
+        return None, str(hits[0])
+    return value, str(hits[0])
+
+
+def run_cell(cell: dict, config: BackendConfig) -> dict:
+    """Execute one registered cell: agent once, evaluator once.
+
+    No retry at any level. Infrastructure trouble -- a container that will not
+    start, a transcript that will not parse, an evaluator that crashes --
+    becomes BACKEND_ERROR with no verdict. It never becomes RESOLVED_FALSE,
+    because a broken machine and a failed fix are different facts and merging
+    them lets the machine's health move the result.
+    """
+    import time
+    t0 = time.time()
+    hint, hint_sha = _resolve_hint(cell)
+    image = _resolve_image(cell, config)
+
+    agent = None
+    try:
+        agent, info = _agent_result(cell, config, hint, image)
+        code = _map_exit(agent, info, cell)
+        submission = info.get("submission") or ""
+    except CellError:
+        raise
+    except Exception as e:                                   # noqa: BLE001
+        return _error_result(cell, hint_sha, image, config, t0,
+                             f"{type(e).__name__}: {e}", agent)
+
+    fired = bool(getattr(agent, "challenge_fired", False))
+    record = getattr(agent, "challenge_record", None)
+    if not fired:
+        # No first valid tool call, so nothing was injected. Out of M2's
+        # recovery denominator, and never a recovery failure.
+        code = P.NOT_ELIGIBLE
+    elif not record or "suppressed_actions" not in record:
+        return _error_result(cell, hint_sha, image, config, t0,
+                             "the challenge fired but left no record",
+                             agent)
+
+    if code == P.INFRA_TIMEOUT_1200S:
+        # Censored for cost. Not graded, and carrying no verdict.
+        return _result(cell, hint_sha, image, config, t0, agent,
+                       agent_termination_code=P.COMPLETED,
+                       infrastructure_status=INFRA_TIMEOUT_1200S,
+                       evaluator_resolved=None, report_path="",
+                       fired=fired, record=record)
+
+    try:
+        resolved, report_path = _evaluate(cell, submission, config)
+    except Exception as e:                                   # noqa: BLE001
+        return _error_result(cell, hint_sha, image, config, t0,
+                             f"evaluator: {type(e).__name__}: {e}", agent)
+
+    return _result(cell, hint_sha, image, config, t0, agent,
+                   agent_termination_code=code,
+                   infrastructure_status="OK",
+                   evaluator_resolved=resolved, report_path=report_path,
+                   fired=fired, record=record)
+
+
+def _result(cell, hint_sha, image, config, t0, agent, *,
+            agent_termination_code, infrastructure_status, evaluator_resolved,
+            report_path, fired, record) -> dict:
+    import time
+    injected = (record or {}).get("injected_at_call")
+    messages = list(getattr(agent, "messages", []) or [])
+    r = {
+        "agent_termination_code": agent_termination_code,
+        "infrastructure_status": infrastructure_status,
+        "evaluator_resolved": evaluator_resolved,
+        "challenge_status": "FIRED" if fired else P.NOT_ELIGIBLE,
+        "challenge_record": record,
+        "challenge_injections": 1 if fired else 0,
+        "suppressed_actions_executed": False,
+        "recovered": (_recovered(messages, injected)
+                      if fired and injected is not None else None),
+        "hint_sha256": hint_sha,
+        "step_limit": cell["step_limit"],
+        "image_digest": image,
+        "model_revision": config.model_revision,
+        "evaluator_report_path": report_path,
+        "n_calls": int(getattr(agent, "n_calls", 0)),
+        "elapsed_seconds": round(time.time() - t0, 2),
+        "cost": float(getattr(agent, "cost", 0.0)),
+        "messages": messages,
+    }
+    r["outcome_state"] = outcome_state(infrastructure_status, evaluator_resolved)
+    r["enters_pilot_outcome"] = ENTERS_PILOT_OUTCOME[r["outcome_state"]]
+    r["termination"] = registered_termination(
+        agent_termination_code, infrastructure_status, evaluator_resolved)
+    return validate_result(r)
+
+
+def _error_result(cell, hint_sha, image, config, t0, detail, agent) -> dict:
+    import time
+    return validate_result({
+        "agent_termination_code": P.COMPLETED,
+        "infrastructure_status": BACKEND_ERROR,
+        "evaluator_resolved": None,
+        "outcome_state": BACKEND_ERROR,
+        "enters_pilot_outcome": False,
+        "termination": P.INVALID,
+        "challenge_status": P.NOT_ELIGIBLE,
+        "challenge_record": getattr(agent, "challenge_record", None),
+        "challenge_injections": int(bool(getattr(agent, "challenge_fired", False))),
+        "suppressed_actions_executed": False,
+        "recovered": None,
+        "hint_sha256": hint_sha,
+        "step_limit": cell["step_limit"],
+        "image_digest": image,
+        "model_revision": config.model_revision,
+        "evaluator_report_path": "",
+        "n_calls": int(getattr(agent, "n_calls", 0)),
+        "elapsed_seconds": round(time.time() - t0, 2),
+        "backend_error": detail,
+        "messages": list(getattr(agent, "messages", []) or []),
+    })

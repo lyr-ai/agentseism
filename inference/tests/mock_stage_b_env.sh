@@ -103,13 +103,25 @@ EOF
 
   # The eval interpreter is the real local venv, except that a scenario can
   # dictate the pytest count without paying 20 seconds for a real run.
+  # A dependency the backend needs, made unimportable. This is how the
+  # missing-backend scenario is provoked now that run_cell exists: the gate
+  # must refuse for any reason the backend cannot be constructed, not only
+  # for the one absence that happened to occur on host 2.
+  mkdir -p "$root/broken/minisweagent"
+  printf '%s\n' 'raise ImportError("mock: minisweagent unavailable")' \
+    > "$root/broken/minisweagent/__init__.py"
+
   cat > "$root/work/.venv-eval/bin/python" <<EOF
 #!/usr/bin/env bash
 REAL="$real_python"
+BROKEN="$root/broken"
 if [ "\${1:-}" = "-m" ] && [ "\${2:-}" = "pytest" ] && [ -n "\${MOCK_PYTEST_PASSED:-}" ]; then
   echo "\${MOCK_PYTEST_PASSED} passed in 1.00s"
   [ -n "\${MOCK_PYTEST_FAIL:-}" ] && exit 1
   exit 0
+fi
+if [ -n "\${MOCK_BACKEND_BROKEN:-}" ]; then
+  export PYTHONPATH="\$BROKEN:\${PYTHONPATH:-}"
 fi
 exec "\$REAL" "\$@"
 EOF

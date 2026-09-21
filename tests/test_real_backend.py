@@ -121,11 +121,19 @@ def test_every_required_field_is_required():
 
 
 # ── constructibility ──
-def test_the_missing_execution_path_is_detected():
-    """Host 2's defect, as a test. Delete this only when run_cell exists."""
+def test_the_missing_execution_path_is_detected(monkeypatch):
+    """Host 2's defect, kept as a test now that run_cell exists."""
+    monkeypatch.delitem(RB.__dict__, "run_cell")
     with pytest.raises(RB.BackendUnavailable) as e:
         RB.build(dry_run=True)
     assert "run_cell" in str(e.value)
+
+
+def test_the_gate_passes_now_that_a_runner_exists():
+    r = RB.build(dry_run=True)
+    assert r["execution_path"] == {"run_cell": "present"}
+    assert (r["containers_created"], r["images_pulled"], r["model_requests"],
+            r["evaluator_invocations"]) == (0, 0, 0, 0)
 
 
 def test_a_placeholder_execution_path_is_rejected(monkeypatch):
@@ -146,20 +154,17 @@ def test_a_wrong_signature_is_rejected(monkeypatch):
 
 
 def _with_runner(monkeypatch):
-    monkeypatch.setitem(RB.__dict__, "run_cell",
-                        lambda cell, config: _ok_result())
+    """The real run_cell is present; these only assert the gate's report."""
 
 
-def test_the_dry_run_checks_pass_once_a_runner_exists(monkeypatch):
-    _with_runner(monkeypatch)
+def test_the_dry_run_checks_pass_once_a_runner_exists():
     r = RB.build(dry_run=True)
     assert r["dry_run"] is True
     assert r["agent"]["wrapped"].startswith("Challenged")
     assert r["evaluator"]["invoked"] is False
 
 
-def test_the_dry_run_creates_nothing_and_calls_nothing(monkeypatch):
-    _with_runner(monkeypatch)
+def test_the_dry_run_creates_nothing_and_calls_nothing():
     r = RB.build(dry_run=True)
     assert r["containers_created"] == 0
     assert r["images_pulled"] == 0
