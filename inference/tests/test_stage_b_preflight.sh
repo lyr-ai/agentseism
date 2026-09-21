@@ -119,10 +119,13 @@ printf '\n──── 1. happy path (real pytest, real resolve-only) ───�
   expect_rc 0 "exits 0"
   expect_out "READY_FOR_MANUAL_PILOT_CONFIRMATION" "reaches the ready banner"
   expect_out "pilot_runs = 0" "reports pilot_runs = 0"
-  expect_out "642 passed" "runs the real suite and sees 614"
+  expect_out "648 passed" "runs the real suite and sees 614"
   expect_out "cfe8856c9c9167b5" "verifies the order hash"
   expect_out "5f4b95c9a250fccf" "verifies the protocol hash (moved by P.3)"
-  expect_out "pilot_spend   \$0.00" "computes spend against the frozen baseline"
+  expect_out "cumulative_pilot_spend       \$0.00" "computes spend against the frozen baseline"
+  expect_out "never reset" "names the baseline as the unmovable origin"
+  expect_out "absolute stop                at a page total of \$37.16" \
+    "states the stops as fixed page totals"
   expect_out "after_setup   DEFERRED" "does not authorise after_setup with the launch reading"
   expect_out "smoke ended" "records when the smoke test finished"
   expect_out "--tool-call-parser qwen3_coder" "checks the parser flags on the live command line"
@@ -186,16 +189,16 @@ printf '\n──── 5. arguments ────\n'
 # A short sha is what a human copies out of `git log`, and it must be accepted:
 # the first real host run failed here against a tree that was correct.
 ( SCENARIO_COMMIT="$(git -C "$ROOT" rev-parse --short HEAD)"; export SCENARIO_COMMIT
-  export MOCK_PYTEST_PASSED=642
+  export MOCK_PYTEST_PASSED=648
   run_scenario
   expect_rc 0 "a short commit sha is accepted"
   expect_out "$COMMIT" "the record carries the resolved full sha" )
 
 printf '\n──── 6. the frozen counts ────\n'
-( export MOCK_PYTEST_PASSED=641; run_scenario
-  expect_rc 65 "641 passed is not 642"
-  expect_out "expected exactly 642" "says what it wanted" )
-( export MOCK_PYTEST_PASSED=642 MOCK_UNIVERSE_N=499; run_scenario
+( export MOCK_PYTEST_PASSED=647; run_scenario
+  expect_rc 65 "647 passed is not 648"
+  expect_out "expected exactly 648" "says what it wanted" )
+( export MOCK_PYTEST_PASSED=648 MOCK_UNIVERSE_N=499; run_scenario
   expect_rc 65 "a changed candidate universe stops"
   expect_out "the draw is not the registered one" "explains why" )
 
@@ -203,7 +206,7 @@ printf '\n──── 6a. a missing runner must not report READY ────\n
 # Host 2's defect, as a scenario. run_cell exists now, so the gate is provoked
 # by a dependency the backend needs being unimportable -- which is the general
 # case, not the one absence that happened to occur that day.
-( export MOCK_PYTEST_PASSED=642 MOCK_BACKEND_BROKEN=1
+( export MOCK_PYTEST_PASSED=648 MOCK_BACKEND_BROKEN=1
   run_scenario
   expect_rc 65 "preflight fails when the backend is not constructible"
   expect_out "real backend is not constructible" "says why"
@@ -273,12 +276,12 @@ printf '\n──── 6b. repository diversity (amendment P.3) ────\n'
   fi )
 
 printf '\n──── 7. image pulls are recorded, not retried ────\n'
-( export MOCK_PYTEST_PASSED=642 MOCK_PULL_FAIL_ALL=1; run_scenario
+( export MOCK_PYTEST_PASSED=648 MOCK_PULL_FAIL_ALL=1; run_scenario
   expect_rc 65 "no images means no run"
   expect_out "0 of 3 distinct repositories" "reports the shortfall"
   n="$(grep -c "pull_failed" "$SANDBOX/work/state/task_draw.tsv")"
   if [ "$n" -eq 500 ]; then ok "every failed attempt is recorded ($n)"; else bad "expected 500 pull_failed rows, found $n"; fi )
-( export MOCK_PYTEST_PASSED=642 MOCK_PULL_FAIL_GLOB="*astropy_1776_astropy-0000[12]*"; run_scenario
+( export MOCK_PYTEST_PASSED=648 MOCK_PULL_FAIL_GLOB="*astropy_1776_astropy-0000[12]*"; run_scenario
   expect_rc 0 "walks past failures to the next candidates"
   grep -q "astropy__astropy-00001" "$SANDBOX/work/state/drawn.txt"
   assert_false $? "failed candidates are skipped, in order"
@@ -286,12 +289,12 @@ printf '\n──── 7. image pulls are recorded, not retried ────\n'
   assert_true $? "the first success is the first drawn" )
 
 printf '\n──── 8. vLLM refuses the KV pool: stop, do not shrink ────\n'
-( export MOCK_PYTEST_PASSED=642 MOCK_VLLM_OOM=1; run_scenario
+( export MOCK_PYTEST_PASSED=648 MOCK_VLLM_OOM=1; run_scenario
   expect_rc 65 "an OOM at 131072 stops"
   expect_out "Not retrying at a smaller length" "refuses the automatic fallback"
   expect_not_out "65536" "never tries the smaller length"
   expect_out "pilot_runs = 0" "zero runs" )
-( export MOCK_PYTEST_PASSED=642 MOCK_GPU_USED_MIB=40000; run_scenario
+( export MOCK_PYTEST_PASSED=648 MOCK_GPU_USED_MIB=40000; run_scenario
   expect_rc 65 "a busy card stops before vLLM starts"
   expect_out "leftover process" "names the likely cause" )
 
@@ -329,6 +332,29 @@ SMOKECHECK
   expect_out "did not run against the stack the pilot will use" "says why"
   expect_not_out "READY_FOR_MANUAL_PILOT_CONFIRMATION" "never reports READY" )
 
+printf '\n──── 8e. a later host does not restart the budget ────\n'
+# Host 2 spent $2.99 of the registered cost. A host that re-based on its own
+# start total would get a fresh $30 and push the absolute stop to $67.16.
+( SCENARIO_READING="10.15"; export SCENARIO_READING
+  run_scenario
+  expect_rc 0 "ready"
+  expect_out "experiment_billing_baseline  \$7.16" "the origin is unchanged"
+  expect_out "host_start_total             \$10.15" "this host's start is recorded separately"
+  expect_out "cumulative_pilot_spend       \$2.99" "spend carries forward, it does not reset"
+  expect_not_out "cumulative_pilot_spend       \$0.00" "the budget does not start over"
+  LOG="$SANDBOX/work/pilot/run.jsonl"
+  "$REAL_PYTHON" - "$LOG" <<'HOSTCHECK'
+import json, sys
+rows = [json.loads(l) for l in open(sys.argv[1]) if l.strip()]
+bases = [r for r in rows if r["kind"] == "billing_baseline"]
+assert len(bases) == 1, f"{len(bases)} baselines in the log"
+assert bases[0]["current_total"] == 7.16, bases[0]
+starts = [r for r in rows if r["kind"] == "host_start"]
+assert starts and starts[-1]["page_total"] == 10.15
+assert "NOT a budget baseline" in starts[-1]["note"]
+HOSTCHECK
+  assert_true $? "one baseline, and host_start is not it" )
+
 printf '\n──── 8d. after_setup must postdate the smoke test ────\n'
 ( run_scenario
   expect_rc 0 "ready"
@@ -349,7 +375,7 @@ printf '\n──── 9. resume is idempotent ────\n'
   SANDBOX="$(mktemp -d)"; build_mock_host "$SANDBOX" "$REAL_PYTHON"
   runit() { (cd "$ROOT" && env PATH="$SANDBOX/bin:$PATH" WORK="$SANDBOX/work" \
       REPO_URL="$ROOT" BRANCH="$BRANCH_UNDER_TEST" EXPECTED_COMMIT="$COMMIT" \
-      READING1_USD=7.16 MOCK_PYTEST_PASSED=642 MOCK_PULLED="$SANDBOX/pulled.txt" \
+      READING1_USD=7.16 MOCK_PYTEST_PASSED=648 MOCK_PULLED="$SANDBOX/pulled.txt" \
       bash "$SCRIPT" 2>&1); }
   runit >/dev/null; rc1=$?
   pulls1="$(wc -l < "$SANDBOX/pulled.txt")"

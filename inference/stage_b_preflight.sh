@@ -31,7 +31,7 @@ set -euo pipefail
 PROTOCOL_HASH="5f4b95c9a250fccf"   # moved by P.3, P.5 and P.6
 ORDER_HASH="cfe8856c9c9167b5"
 EXPECTED_CELLS=18
-EXPECTED_TESTS=642
+EXPECTED_TESTS=648
 BASELINE_USD="7.16"
 BASELINE_CURRENCY="USD"
 BASELINE_PERIOD="September 2026"
@@ -254,7 +254,7 @@ record_reading_one() {
   cd "$REPO"
   PYTHONPATH=src READING1_USD="$READING1_USD" BASELINE_USD="$BASELINE_USD" \
   BASELINE_PERIOD="$BASELINE_PERIOD" BASELINE_CURRENCY="$BASELINE_CURRENCY" \
-  RUN_LOG="$PILOT_DIR/run.jsonl" \
+  RUN_LOG="$PILOT_DIR/run.jsonl" HOST_ID="$(hostname)@$(uptime -s 2>/dev/null || echo unknown)" \
   python3 - <<'PY' || die "reading #1 refused -- see the message above"
 import os, sys
 from pathlib import Path
@@ -275,17 +275,44 @@ if base.get("currency") != os.environ["BASELINE_CURRENCY"]:
     sys.exit(f"baseline currency is {base.get('currency')!r}")
 
 usd = float(os.environ["READING1_USD"])
-if any(r["kind"] == "billing_reading" for r in log.read()):
-    print("  reading already recorded; not entering a second one for this launch")
+host_id = os.environ["HOST_ID"]
+
+# The guard is per host, not per log. The run log is carried from host to
+# host -- that is what keeps the baseline frozen -- so "a reading already
+# exists" would have silenced every host after the first, and this host's
+# launch reading would never have been entered at all.
+started = [r for r in log.read()
+           if r["kind"] == "host_start" and r.get("host_id") == host_id]
+if started:
+    print(f"  host_start    already recorded for this host ({started[0]['ts']})")
 else:
+    # `host_start_total` explains what this machine cost. It authorises
+    # nothing and moves no threshold; the baseline is the only origin.
+    log.append("host_start", host_id=host_id, page_total=usd,
+               billing_period=os.environ["BASELINE_PERIOD"],
+               currency=os.environ["BASELINE_CURRENCY"],
+               note="the settled page total when this host launched. Records "
+                    "what this machine adds; it is NOT a budget baseline and "
+                    "does not reset the experiment's origin")
     b.record_reading(usd, source="manual",
                      billing_period=os.environ["BASELINE_PERIOD"],
                      currency=os.environ["BASELINE_CURRENCY"],
-                     note="reading #1, post-launch of host 2, Lambda Usage page")
+                     note=f"launch reading for host {host_id}")
 spend = round(usd - base["current_total"], 2)
-print(f"  baseline      ${base['current_total']:.2f}  {base['billing_period']}")
-print(f"  reading #1    ${usd:.2f}")
-print(f"  pilot_spend   ${spend:.2f}")
+hosts = [r for r in log.read() if r["kind"] == "host_start"]
+print(f"  experiment_billing_baseline  ${base['current_total']:.2f}  "
+      f"{base['billing_period']}  frozen {base['ts']}, never reset")
+print(f"  host_start_total             ${usd:.2f}  ({host_id})")
+print(f"  cumulative_pilot_spend       ${spend:.2f}  "
+      f"= ${usd:.2f} - ${base['current_total']:.2f}")
+if len(hosts) > 1:
+    print(f"  hosts so far                 {len(hosts)}; earlier hosts' cost is "
+          "inside the figure above and is not forgiven")
+for name, level in (("warning", PILOT_THRESHOLDS["warning"]),
+                    ("no new block", PILOT_THRESHOLDS["no_new_block"]),
+                    ("absolute stop", PILOT_THRESHOLDS["absolute"])):
+    print(f"  {name:<28} at a page total of "
+          f"${base['current_total'] + level:.2f}")
 if spend < 0:
     sys.exit("reading is below the baseline; a cumulative total cannot fall")
 w = PILOT_THRESHOLDS["warning"]

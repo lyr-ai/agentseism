@@ -259,3 +259,67 @@ def test_after_setup_can_be_required_to_postdate_the_smoke_test(tmp_path):
     # the same reading would have satisfied the weaker marker
     assert b2.check("after_setup", not_before=phase_ts(
         RunLog(tmp_path / "run.jsonl"), "setup_started"))["usd"] == 0.18
+
+
+# ── the baseline survives the host ──
+REAL_LOG = Path(__file__).resolve().parents[1] / "data/runs/pilot/run.jsonl"
+
+
+def test_host_3_does_not_start_the_budget_over(tmp_path):
+    """The blocking case, checked against the real host-2 log.
+
+    Host 2 spent $2.99 and that is part of the registered experiment cost. A
+    host that re-based on its own start total would get a fresh $30, and the
+    absolute stop would land at $37.16 + $30.
+    """
+    import shutil
+    p = tmp_path / "run.jsonl"
+    shutil.copy(REAL_LOG, p)
+    b = Budget(RunLog(p), PILOT_THRESHOLDS)
+    base = b.baseline()
+    assert base["current_total"] == 7.16, "the origin moved"
+
+    b.record_reading(10.15, source="manual", billing_period="September 2026",
+                     currency="USD", note="host 3 launch")
+    s = b.check("after_setup")
+    assert s["usd"] == 2.99, "host 3 started the budget over"
+    assert s["usd"] != 0.00
+
+
+def test_the_baseline_cannot_be_reset_on_a_later_host(tmp_path):
+    import shutil
+    p = tmp_path / "run.jsonl"
+    shutil.copy(REAL_LOG, p)
+    b = Budget(RunLog(p), PILOT_THRESHOLDS)
+    with pytest.raises(BudgetStop) as e:
+        b.record_baseline(10.15, billing_period="September 2026")
+    assert e.value.kind == "baseline_already_set"
+
+
+@pytest.mark.parametrize("page_total,expect", [
+    (27.16, "warning"), (32.16, "no_new_block"), (37.16, "absolute")])
+def test_the_thresholds_sit_at_fixed_page_totals(tmp_path, page_total, expect):
+    """The page totals the stops correspond to never move, whatever host is
+    running."""
+    import shutil
+    p = tmp_path / "run.jsonl"
+    shutil.copy(REAL_LOG, p)
+    b = Budget(RunLog(p), PILOT_THRESHOLDS)
+    b.record_reading(page_total, source="manual",
+                     billing_period="September 2026", currency="USD")
+    if expect == "warning":
+        assert b.check("after_setup")["warning"] is True
+    else:
+        with pytest.raises(BudgetStop) as e:
+            b.check("before_block", 0)
+        assert e.value.kind == expect
+
+
+def test_host_start_authorises_nothing(tmp_path):
+    """It explains what a machine cost. It is not a checkpoint."""
+    log, b = _pilot_log(tmp_path)
+    log.append("host_start", host_id="h3", page_total=10.15)
+    assert b.authorisation("after_setup") is None
+    with pytest.raises(BudgetStop) as e:
+        b.check("after_setup")
+    assert e.value.kind == "no_billing_reading"
