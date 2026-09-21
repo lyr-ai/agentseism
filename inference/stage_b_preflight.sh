@@ -31,7 +31,7 @@ set -euo pipefail
 PROTOCOL_HASH="8706c5300ea8e065"   # moved by P.3, P.5, P.6 and P.7
 ORDER_HASH="cfe8856c9c9167b5"
 EXPECTED_CELLS=18
-EXPECTED_TESTS=674
+EXPECTED_TESTS=675
 BASELINE_USD="7.16"
 BASELINE_CURRENCY="USD"
 BASELINE_PERIOD="September 2026"
@@ -281,28 +281,46 @@ host_id = os.environ["HOST_ID"]
 # host -- that is what keeps the baseline frozen -- so "a reading already
 # exists" would have silenced every host after the first, and this host's
 # launch reading would never have been entered at all.
+# `host_start` is the older name for the same record; both are honoured so a
+# host that recorded one is not asked for a second.
 started = [r for r in log.read()
-           if r["kind"] == "host_start" and r.get("host_id") == host_id]
+           if r["kind"] in ("host_launch_reading", "host_start")
+           and r.get("host_id") == host_id]
 if started:
-    print(f"  host_start    already recorded for this host ({started[0]['ts']})")
+    print(f"  launch reading already recorded for this host "
+          f"({started[0]['ts']})")
 else:
-    # `host_start_total` explains what this machine cost. It authorises
-    # nothing and moves no threshold; the baseline is the only origin.
-    log.append("host_start", host_id=host_id, page_total=usd,
+    # This is taken **after** the host launched, so it already contains
+    # whatever this machine has billed so far. It is not the pre-launch
+    # settled total -- that is the `billing_observation` read with nothing
+    # running -- and calling it a "host start total" would make it look as
+    # though the launch interval had not been counted. It authorises nothing
+    # and moves no threshold; the baseline is the only origin.
+    log.append("host_launch_reading", host_id=host_id, page_total=usd,
+               taken="after this host launched",
                billing_period=os.environ["BASELINE_PERIOD"],
                currency=os.environ["BASELINE_CURRENCY"],
-               note="the settled page total when this host launched. Records "
-                    "what this machine adds; it is NOT a budget baseline and "
+               note="manual page total read after launch. NOT a budget "
+                    "baseline, NOT the pre-launch settled observation, and it "
                     "does not reset the experiment's origin")
     b.record_reading(usd, source="manual",
                      billing_period=os.environ["BASELINE_PERIOD"],
                      currency=os.environ["BASELINE_CURRENCY"],
                      note=f"launch reading for host {host_id}")
 spend = round(usd - base["current_total"], 2)
-hosts = [r for r in log.read() if r["kind"] == "host_start"]
+hosts = [r for r in log.read()
+         if r["kind"] in ("host_launch_reading", "host_start")]
+obs = [r for r in log.read() if r["kind"] == "billing_observation"]
 print(f"  experiment_billing_baseline  ${base['current_total']:.2f}  "
       f"{base['billing_period']}  frozen {base['ts']}, never reset")
-print(f"  host_start_total             ${usd:.2f}  ({host_id})")
+if obs:
+    o = obs[-1]["current_total"]
+    print(f"  host_start_total             ${o:.2f}  settled, before this host "
+          f"launched, nothing running")
+    print(f"  launch_reading               ${usd:.2f}  after launch  ({host_id})")
+    print(f"  billed since that reading    ${round(usd - o, 2):.2f}")
+else:
+    print(f"  launch_reading               ${usd:.2f}  after launch  ({host_id})")
 print(f"  cumulative_pilot_spend       ${spend:.2f}  "
       f"= ${usd:.2f} - ${base['current_total']:.2f}")
 if len(hosts) > 1:

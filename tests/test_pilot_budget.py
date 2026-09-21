@@ -415,3 +415,24 @@ def test_observe_records_the_page_values_it_was_given(tmp_path):
     assert obs["billing_period"] == "September 2026"
     assert obs["currency"] == "USD"
     assert obs["observed_period_matches_baseline"] is True
+
+
+def test_the_launch_reading_is_not_the_pre_launch_observation(tmp_path):
+    """Two different facts. Calling the post-launch reading a 'host start
+    total' would make the launch interval look uncounted."""
+    p = _real(tmp_path)
+    main(["--log", str(p), "--observe", "10.15",
+          "--period", "September 2026", "--currency", "USD"])
+    log = RunLog(p)
+    log.append("host_launch_reading", host_id="h3", page_total=10.47,
+               taken="after this host launched",
+               note="manual page total read after launch. NOT a budget "
+                    "baseline, NOT the pre-launch settled observation")
+    rows = log.read()
+    obs = [r for r in rows if r["kind"] == "billing_observation"][-1]
+    launch = [r for r in rows if r["kind"] == "host_launch_reading"][-1]
+    assert obs["current_total"] == 10.15 and obs["instances_running"] == 0
+    assert launch["page_total"] == 10.47
+    assert round(launch["page_total"] - obs["current_total"], 2) == 0.32
+    # and neither is the origin
+    assert Budget(log, PILOT_THRESHOLDS).baseline()["current_total"] == 7.16
