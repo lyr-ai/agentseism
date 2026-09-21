@@ -17,7 +17,12 @@ Homepage = "https://github.com/lyr-ai/agentseism"
 Initiative = "https://github.com/canis-minor"
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0", "ruff>=0.5"]
+# `mini-swe-agent` is pinned, not ranged: `tests/test_recovery_challenge.py`
+# and `tests/test_c2h_backend.py` import its agent internals, and without it
+# nine tests error and one module will not collect -- an environment defect
+# that reads exactly like nine product failures. 2.4.6 is the version the eval
+# environment already used.
+dev = ["pytest>=8.0", "ruff>=0.5", "mini-swe-agent==2.4.6"]
 
 [build-system]
 requires = ["hatchling"]
