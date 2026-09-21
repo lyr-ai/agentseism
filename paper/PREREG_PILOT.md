@@ -772,3 +772,102 @@ the block order, the P.3 draw and the P.4 smoke test are untouched. This
 amendment gives M2's registered axis a referent and changes nothing else.
 
 `study_mode: feasibility` · `verdict_authority: descriptive_only`.
+
+---
+
+# Amendment P.6 — `FORMAT_ERROR_LIMIT_REACHED`, and the exit-status mapping
+
+**2026-09-21, before Host 3 is rented, with `pilot_runs = 0` and
+`model_requests = 0`.**
+
+## What was found
+
+Mapping `mini-swe-agent` 2.4.6's exit statuses onto the registered
+terminations left one with nowhere to go: `RepeatedFormatError`, raised when
+the agent hits `max_consecutive_format_errors`.
+
+**That is exactly M2's predicted failure mode.** M2 removes the recovery
+guidance and asks whether recovery gets worse; an agent told nothing about how
+to fix a malformed call is the agent that repeats one until the limit. Mapping
+it to `INVALID` would have made it non-scorable, so the harder the mutation
+bit, the more runs would leave the denominator and the less of the effect would
+remain measurable. That is not a conservative default. It is self-cancelling.
+
+## The registered mapping
+
+| `mini-swe-agent` exit | termination | scored |
+|---|---|---|
+| `Submitted` | `COMPLETED` | yes |
+| `LimitsExceeded` | `STEP_LIMIT_REACHED` | yes |
+| `TimeExceeded` | `INFRA_TIMEOUT_1200S` | **no** — censored, cost control |
+| `RepeatedFormatError` | `FORMAT_ERROR_LIMIT_REACHED` | yes |
+
+`FORMAT_ERROR_LIMIT_REACHED` joins `TERMINATIONS` and `SCORABLE`. It is
+structurally identical to `STEP_LIMIT_REACHED`: an agent-behaviour termination,
+not an infrastructure fault; it keeps its real name; the evaluator runs; and it
+enters the outcome only on an explicit boolean `resolved`.
+
+```text
+agent_termination_code: FORMAT_ERROR_LIMIT_REACHED
+evaluator_resolved:     true | false
+outcome_state:          RESOLVED_TRUE | RESOLVED_FALSE
+enters_pilot_outcome:   true
+```
+
+## Two boundaries
+
+- **The challenge never fired** — no first valid tool call, so nothing was
+  injected: `NOT_ELIGIBLE`. Out of M2's recovery denominator, and never a
+  recovery failure.
+- **The challenge fired once, then the format-error limit was reached**:
+  `FORMAT_ERROR_LIMIT_REACHED`. The evaluator runs and the run counts. This is
+  M2's interpretable mechanism, not an invalid run.
+
+## What the mapping rests on
+
+Two claims about the pinned package, registered because they are not things
+upstream states.
+
+**`cost_limit = 0` disables the cost branch.** From
+`DefaultAgent.query` in 2.4.6:
+
+```python
+if 0 < self.config.step_limit <= self.n_calls \
+        or 0 < self.config.cost_limit <= self.cost:
+    raise LimitsExceeded(...)
+```
+
+`0 < 0` is false, so with `cost_limit = 0` the cost branch is unreachable. Only
+`step_limit` is a registered axis, so it is set to 0 and `LimitsExceeded` can
+then mean only one thing.
+
+**`LimitsExceeded` carries no structured reason.** One exception serves both
+limits, and its payload is the bare string `"LimitsExceeded"` — there is no
+field naming which limit fired. The mapping to `STEP_LIMIT_REACHED` is
+therefore sound *only* because the cost branch is unreachable. The backend
+additionally asserts `n_calls >= step_limit` when it fires; **if that assertion
+fails the run is `BACKEND_ERROR`, not a step limit.**
+
+Both claims are asserted against the installed source by
+`tests/test_exit_mapping.py`, so a later version that adds a reason, renames a
+status, or changes the counting is a visible break rather than a silent
+misclassification.
+
+## What moves
+
+| | |
+|---|---|
+| `protocol_hash` | **`a23ff8975a04f627` → `5f4b95c9a250fccf`** |
+| `ORDER_HASH` | **`cfe8856c9c9167b5`, unchanged** |
+
+`EXIT_STATUS_MAP` and `SCORABLE` are inside `protocol_hash`: how an agent exit
+becomes a termination, and which terminations may be scored, are part of the
+design.
+
+## Scope
+
+Arms, step limits, the hint text, task count, replicates, the 1200 s cap, the
+budget stops, the block order, the P.3 draw and the P.4 smoke test are
+untouched.
+
+`study_mode: feasibility` · `verdict_authority: descriptive_only`.

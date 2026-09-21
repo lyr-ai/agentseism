@@ -98,6 +98,7 @@ def registered_termination(agent_termination_code: str,
     if state in (BACKEND_ERROR, EVALUATOR_UNDECIDED):
         return P.INVALID
     if agent_termination_code not in (P.COMPLETED, P.STEP_LIMIT_REACHED,
+                                      P.FORMAT_ERROR_LIMIT_REACHED,
                                       P.NOT_ELIGIBLE):
         raise ValueError(f"unknown agent_termination_code "
                          f"{agent_termination_code!r}")
@@ -150,14 +151,15 @@ def validate_result(r: dict) -> dict:
             raise ValueError("a censored run does not enter the pilot outcome")
 
     # 3. a step-limited run must actually have been graded
-    if r["agent_termination_code"] == P.STEP_LIMIT_REACHED \
+    if r["agent_termination_code"] in (P.STEP_LIMIT_REACHED,
+                                       P.FORMAT_ERROR_LIMIT_REACHED) \
             and r["infrastructure_status"] == "OK" \
             and not r.get("evaluator_report_path"):
         raise ValueError(
-            "STEP_LIMIT_REACHED with healthy infrastructure must carry an "
-            "evaluator report: the run exhausted its steps, which is M1's "
-            "mechanism, and it is graded like any other. It may still be "
-            "undecided -- it may not be ungraded")
+            f"{r['agent_termination_code']} with healthy infrastructure must "
+            "carry an evaluator report: the run ran out of a registered "
+            "budget, which is M1's and M2's mechanism, and it is graded like "
+            "any other. It may still be undecided -- it may not be ungraded")
 
     # 4. broken machinery never carries a verdict
     if r["infrastructure_status"] != "OK" and r["evaluator_resolved"] is not None:

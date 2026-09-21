@@ -290,6 +290,10 @@ def protocol_hash() -> str:
          # How the tasks are drawn is part of the design, so changing the rule
          # has to move the hash.
          "task_selection": TASK_SELECTION,
+         # How an agent exit becomes a termination is part of the design
+         # (amendment P.6).
+         "exit_status_map": EXIT_STATUS_MAP,
+         "scorable": list(SCORABLE),
          "schema": SCHEMA_VERSION}, sort_keys=True).encode()).hexdigest()[:16]
 
 
@@ -299,18 +303,65 @@ STEP_LIMIT_REACHED = "STEP_LIMIT_REACHED"
 """Part of M1's mechanism. A mutation outcome."""
 INFRA_TIMEOUT_1200S = "INFRA_TIMEOUT_1200S"
 """Cost control. A censored observation, never M1's effect."""
+FORMAT_ERROR_LIMIT_REACHED = "FORMAT_ERROR_LIMIT_REACHED"
+"""The agent hit `max_consecutive_format_errors` (amendment P.6).
+
+Structurally identical to `STEP_LIMIT_REACHED`: an agent-behaviour termination,
+not an infrastructure fault. It is **scorable**, and it must be, because it is
+the failure mode M2 predicts -- an agent given no instructions on how to fix a
+malformed call is the agent that repeats one until the limit. Folding it into
+`INVALID` would delete M2's own mechanism from the denominator, so the harder
+the mutation bit, the less of it would be measurable."""
+
 INVALID = "INVALID"
 """Execution or scoring fault."""
 NOT_ELIGIBLE = "NOT_ELIGIBLE"
 """No first valid tool call, so the challenge never fired. Affects only the
 recovery denominator — never counted as a recovery failure."""
 
-TERMINATIONS = (COMPLETED, STEP_LIMIT_REACHED, INFRA_TIMEOUT_1200S, INVALID,
-                NOT_ELIGIBLE)
+TERMINATIONS = (COMPLETED, STEP_LIMIT_REACHED, FORMAT_ERROR_LIMIT_REACHED,
+                INFRA_TIMEOUT_1200S, INVALID, NOT_ELIGIBLE)
 
-SCORABLE = (COMPLETED, STEP_LIMIT_REACHED)
+SCORABLE = (COMPLETED, STEP_LIMIT_REACHED, FORMAT_ERROR_LIMIT_REACHED)
 """What may enter a task-success rate. A censored or invalid run may not: the
 budget cap must never be able to manufacture a regression."""
+
+
+# ── agent exit status -> registered termination (amendment P.6) ──
+EXIT_STATUS_MAP = {
+    "Submitted": COMPLETED,
+    "LimitsExceeded": STEP_LIMIT_REACHED,
+    "TimeExceeded": INFRA_TIMEOUT_1200S,
+    "RepeatedFormatError": FORMAT_ERROR_LIMIT_REACHED,
+}
+"""`mini-swe-agent` 2.4.6's exit statuses, mapped once and frozen.
+
+Three are scorable and one is not: `TimeExceeded` is the 1200 s cost cap and is
+censored. The other three are things the agent did."""
+
+COST_LIMIT_DISABLED = 0
+"""`cost_limit` is set to 0, which the pinned source proves is off:
+
+    if 0 < self.config.step_limit <= self.n_calls \
+            or 0 < self.config.cost_limit <= self.cost:
+        raise LimitsExceeded(...)
+
+`0 < 0` is false, so the cost branch is unreachable. Only `step_limit` is a
+registered axis, and this is what makes the mapping below sound."""
+
+EXIT_STATUS_DEPENDENCIES = {
+    "LimitsExceeded": (
+        "Upstream raises one exception for the step limit and the cost limit "
+        "and carries no structured reason: exit_status is the bare string "
+        "'LimitsExceeded'. The mapping to STEP_LIMIT_REACHED is therefore "
+        "sound only because cost_limit is 0 and unreachable. The backend "
+        "asserts n_calls >= step_limit when it fires; if that assertion ever "
+        "fails the run is BACKEND_ERROR, not a step limit."),
+}
+"""Where a mapping rests on something upstream does not state. Registered
+rather than assumed, so a later version that adds a reason -- or changes the
+counting -- is a visible break instead of a silent misclassification."""
+
 
 RECOVERY_DENOMINATOR = (COMPLETED, STEP_LIMIT_REACHED)
 """`NOT_ELIGIBLE` is excluded by construction."""
