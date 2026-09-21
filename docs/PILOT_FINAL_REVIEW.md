@@ -162,34 +162,42 @@ bumping now uses targeted regexes and the fixture is a named constant.
 
 ## 5. Host 3 — the frozen sequence
 
-No step is skipped and none is reordered.
+No step is skipped and none is reordered. **The settled total is read before
+Host 3 is rented, not after** — a total read once a machine is running is
+measuring a bill that is still moving, and late charges from Host 2 may still
+be landing.
 
-1. wait for the `$10.15` page total to settle and read it with **nothing
-   running**. It is recorded as `host_start`, **not** as a baseline: the
-   experiment's origin stays `$7.16` and the cumulative spend opens at
-   `$2.99`;
-2. launch Host 3, `1× H100 80 GB PCIe`;
-3. environment and dependency checks (steps 1–5: host, docker group, repo at a
-   verified commit, environments from the frozen locks, the full suite);
-4. **real backend constructibility gate** (6b) — before anything expensive;
-5. restore or fetch the registered images and weights (7–9, 8b binds the
-   digests);
-6. start vLLM (10);
-7. run the registered smoke test **once** (10b);
-8. verify the smoke artifact and its digest (inside 10b; `artifact_frozen` is
-   a pass criterion);
-9. confirm the same vLLM pid is alive and freeze the serving fingerprint (11);
-10. read a **new** billing total and authorise `after_setup`
-    (`--not-before @smoke_completed`);
-11. read **another** new total and authorise block 0;
-12. execute the first three-cell block;
-13. read a new total, and apply the **P.7 projection** before releasing block 1:
-    `pilot_budget --project-after-block 0`. If finishing at the observed
-    marginal rate would exceed the registered `$30`, halt and re-model.
+1. confirm **no instance is running**;
+2. wait for the Usage page total to stop moving;
+3. record `host_start_total`, currency, billing period and the UTC time of the
+   reading;
+4. verify the period and currency are unchanged and compute
+   `cumulative_pilot_spend = settled_total − $7.16` — whatever that is, not a
+   number assumed in advance;
+5. confirm the `$25` and `$30` levels are not already reached;
+6. **only then** rent Host 3 and take its address;
+7. stop before setup and confirm the record is right;
+8. setup → constructibility gate → images and weights → vLLM → the registered
+   smoke test;
+9. verify the smoke artifact and its digest;
+10. confirm the same vLLM pid is alive and freeze the serving fingerprint;
+11. a **new** reading authorises `after_setup` (`--not-before @smoke_completed`);
+12. **another** new reading authorises block 0;
+13. run block 0 only;
+14. a new reading, then the **P.7 projection** decides whether block 1 is
+    released.
 
-Reading #1 is entered at launch and authorises nothing but the early budget
-check. One reading authorises one block, and a reading older than the work it
-covers authorises nothing at all.
+Steps 3 to 5 are executable, not arithmetic done by hand:
+
+```
+python -m agentseism.pilot_budget --observe <settled total>
+```
+
+It verifies the period and currency against the frozen baseline, prints the
+cumulative spend and each threshold as a page total with the distance to it,
+records a `billing_observation` — which authorises nothing and is not a
+baseline — and **exits non-zero if the budget is already spent**, before a
+host is rented rather than after.
 
 **Any failure between 3 and 11 stops the host.** Artifacts are retrieved and
 verified, the instance is terminated, and the record says which condition

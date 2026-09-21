@@ -75,6 +75,11 @@ def main(argv=None) -> int:
                     help="an ISO-8601 ...Z timestamp, or @<phase> to use when "
                          "that phase marker was written")
     ap.add_argument("--note", default="")
+    ap.add_argument("--observe", type=float,
+                    help="a settled page total read with NOTHING running, "
+                         "before renting the next host. Verifies the period, "
+                         "the currency and the thresholds, and records the "
+                         "observation. Authorises nothing.")
     ap.add_argument("--project-after-block", type=int,
                     help="compute the P.7 cost projection from the readings "
                          "that bracket this block index")
@@ -90,6 +95,49 @@ def main(argv=None) -> int:
 
     if args.status:
         return status(log)
+
+    if args.observe is not None:
+        base = budget.baseline()
+        if base is None:
+            return _fail(f"no frozen baseline in {args.log}")
+        usd = round(args.observe - base["current_total"], 2)
+        if usd < 0:
+            return _fail(f"${args.observe:.2f} is below the frozen baseline of "
+                         f"${base['current_total']:.2f}; a cumulative total "
+                         "cannot fall, so one of the two is wrong")
+        t = PILOT_THRESHOLDS
+        print(f"  experiment_billing_baseline  ${base['current_total']:.2f}  "
+              f"{base['billing_period']}  {base.get('currency')}")
+        print(f"  settled page total           ${args.observe:.2f}")
+        print(f"  cumulative_pilot_spend       ${usd:.2f}")
+        for name, level in (("warning", t["warning"]),
+                            ("no new block", t["no_new_block"]),
+                            ("absolute stop", t["absolute"])):
+            page = base["current_total"] + level
+            hit = "REACHED" if usd >= level else f"{level - usd:>6.2f} to go"
+            print(f"  {name:<28} ${page:.2f}   {hit}")
+        rec = log.append(
+            "billing_observation", current_total=float(args.observe),
+            usd=usd, source="manual", instances_running=0,
+            billing_period=base["billing_period"],
+            currency=base.get("currency"),
+            note=args.note or "settled page total read with nothing running, "
+                              "before renting the next host. An observation: "
+                              "it authorises nothing and is not a baseline")
+        print(f"  recorded                     billing_observation #{rec['n']} "
+              f"at {rec['ts']}")
+        if usd >= t["absolute"]:
+            print("\n  STOP — the absolute limit is already reached; do not "
+                  "rent another host.", file=sys.stderr)
+            return 1
+        if usd >= t["no_new_block"]:
+            print("\n  STOP — past the no-new-block level; a further host "
+                  "would start work that cannot be authorised.", file=sys.stderr)
+            return 1
+        if usd >= t["warning"]:
+            print(f"\n  WARNING — cumulative spend has reached "
+                  f"${t['warning']:.0f}.")
+        return 0
 
     if args.project_after_block is not None:
         rows = log.read()

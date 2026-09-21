@@ -323,3 +323,57 @@ def test_host_start_authorises_nothing(tmp_path):
     with pytest.raises(BudgetStop) as e:
         b.check("after_setup")
     assert e.value.kind == "no_billing_reading"
+
+
+# ── the pre-rental observation ──
+def test_observe_computes_spend_against_the_frozen_baseline(tmp_path, capsys):
+    import shutil
+    p = tmp_path / "run.jsonl"
+    shutil.copy(REAL_LOG, p)
+    assert main(["--log", str(p), "--observe", "10.15"]) == 0
+    out = capsys.readouterr().out
+    assert "cumulative_pilot_spend       $2.99" in out
+    assert "$7.16" in out and "$37.16" in out
+
+
+def test_observe_reflects_late_charges_rather_than_a_fixed_number(tmp_path, capsys):
+    """Host 2's tail may still be landing; the figure is whatever the page
+    says minus the frozen origin."""
+    import shutil
+    p = tmp_path / "run.jsonl"
+    shutil.copy(REAL_LOG, p)
+    main(["--log", str(p), "--observe", "10.62"])
+    assert "cumulative_pilot_spend       $3.46" in capsys.readouterr().out
+
+
+def test_observe_authorises_nothing(tmp_path):
+    import shutil
+    p = tmp_path / "run.jsonl"
+    shutil.copy(REAL_LOG, p)
+    main(["--log", str(p), "--observe", "10.15"])
+    log = RunLog(p)
+    obs = [r for r in log.read() if r["kind"] == "billing_observation"]
+    assert obs and obs[-1]["instances_running"] == 0
+    assert "authorises nothing" in obs[-1]["note"]
+    # it is not a reading, so it cannot satisfy a checkpoint: the observation
+    # adds no billing_reading, and last_billing() still returns the previous
+    # host's, which the freshness guard will then refuse.
+    before = [r for r in RunLog(REAL_LOG).read() if r["kind"] == "billing_reading"]
+    after = [r for r in log.read() if r["kind"] == "billing_reading"]
+    assert len(after) == len(before)
+    assert log.last_billing()["kind"] == "billing_reading"
+
+
+def test_observe_refuses_a_total_below_the_baseline(tmp_path):
+    import shutil
+    p = tmp_path / "run.jsonl"
+    shutil.copy(REAL_LOG, p)
+    assert main(["--log", str(p), "--observe", "5.00"]) == 2
+
+
+@pytest.mark.parametrize("total,rc", [(27.16, 0), (32.16, 1), (37.16, 1)])
+def test_observe_stops_before_renting_when_the_budget_is_spent(tmp_path, total, rc):
+    import shutil
+    p = tmp_path / "run.jsonl"
+    shutil.copy(REAL_LOG, p)
+    assert main(["--log", str(p), "--observe", str(total)]) == rc
