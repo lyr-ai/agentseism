@@ -186,9 +186,10 @@ def test_the_protocol_hash_is_the_registered_one():
     warning did not move it, because WARNING_USD was already inside the hash.
     Amendment P.3 moved it to `e1f786939faeb9ea` by putting the task-selection
     rule inside, which is the point of P.3: how the tasks are drawn is part of
-    the design.
+    the design. P.5 moved it again to `a23ff8975a04f627` by putting the two
+    recovery-hint templates inside: the hint text *is* M2's mutation.
     """
-    assert P.protocol_hash() == "e1f786939faeb9ea"
+    assert P.protocol_hash() == "a23ff8975a04f627"
 
 
 def test_no_new_block_after_the_threshold(tmp_path):

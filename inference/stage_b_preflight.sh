@@ -28,10 +28,10 @@
 set -euo pipefail
 
 # ── frozen values. Changing one here is changing the experiment. ──
-PROTOCOL_HASH="e1f786939faeb9ea"   # amendment P.3 moved it
+PROTOCOL_HASH="a23ff8975a04f627"   # P.3 moved it; P.5 moved it again
 ORDER_HASH="cfe8856c9c9167b5"
 EXPECTED_CELLS=18
-EXPECTED_TESTS=530
+EXPECTED_TESTS=544
 BASELINE_USD="7.16"
 BASELINE_CURRENCY="USD"
 BASELINE_PERIOD="September 2026"

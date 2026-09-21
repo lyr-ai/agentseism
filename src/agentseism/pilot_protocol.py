@@ -133,6 +133,82 @@ def select_tasks(candidates, pull, wanted: int = TASK_COUNT,
     return drawn, rows
 
 
+# ── the recovery hint (amendment P.5) ──
+UPSTREAM_HINT_SOURCE = {
+    "package": "mini-swe-agent==2.4.6",
+    "path": "minisweagent/config/benchmarks/swebench.yaml",
+    "key": "model.format_error_template",
+    "file_sha256": "9a9c86ac10428b86b932c972b15fefc2f7b6e92230bac5ebdc47e83232a8315e",
+}
+"""Where `full` comes from. The package is pinned in
+`inference/requirements-eval.lock.txt`, so the upstream side is frozen by the
+lock and this records which bytes were read."""
+
+HINT_TRANSFORM = (
+    "In the `else` branch keep `Tool call error:` and the <error> block; "
+    "delete from `Here is general guidance on how to submit correct "
+    "toolcalls:` to the end of that branch. The `finish_reason` branch is "
+    "kept verbatim."
+)
+"""How `error_only` was derived. The rule is recorded **and** both results are
+frozen byte-for-byte below: a rule alone would let a different upstream
+version produce a different mutation under the same registration."""
+
+HINTS: dict[str, str] = {
+    "full": '{% if finish_reason is defined and (finish_reason == "length" or (finish_reason == "tool_calls" and not has_tool_calls)) -%}\nYour previous response reached the output token limit (finish_reason={{ finish_reason }}) before you produced a tool call, so it was cut off. Respond more concisely and finish with exactly one bash tool call. If you need to think more, do so briefly.\n{%- else -%}\nTool call error:\n\n<error>\n{{error}}\n</error>\n\nHere is general guidance on how to submit correct toolcalls:\n\nEvery response needs to use the \'bash\' tool at least once to execute commands.\n\nCall the bash tool with your command as the argument:\n- Tool: bash\n- Arguments: {"command": "your_command_here"}\n\nIf you have completed your assignment, please consult the first message about how to\nsubmit your solution (you will not be able to continue working on this task after that).\n{%- endif %}\n',
+    "error_only": '{% if finish_reason is defined and (finish_reason == "length" or (finish_reason == "tool_calls" and not has_tool_calls)) -%}\nYour previous response reached the output token limit (finish_reason={{ finish_reason }}) before you produced a tool call, so it was cut off. Respond more concisely and finish with exactly one bash tool call. If you need to think more, do so briefly.\n{%- else -%}\nTool call error:\n\n<error>\n{{error}}\n</error>\n{%- endif %}\n',
+}
+"""The two templates, verbatim.
+
+`full` is the complete upstream guidance: what went wrong **and** how to
+recover. `error_only` is the same message with the recovery instructions
+removed: what went wrong, and nothing about how to fix it. Everything else --
+the `finish_reason` branch, the error block, the surrounding structure -- is
+identical, so baseline and M2 differ on one axis.
+
+**Estimand, deliberately narrow.** Under the registered synthetic
+malformed-call challenge, compare recovery when the agent receives the complete
+upstream recovery guidance against the error content alone. This does not
+generalise to "removing error handling reduces agent success", and it estimates
+nothing about how often malformed calls occur naturally."""
+
+HINT_SHA256 = {
+    "full": "0f35cfbd448dd46e17e80b571d346256d4a75cd5ceffafc5c0d088ed0e1c0d9a",
+    "error_only": "450d5d015b1518c7903a90b6c1fcba6a76923c32582b9448b8300a7a29da428c",
+}
+
+
+def verify_hints() -> None:
+    """`full` must still be byte-identical to the pinned upstream.
+
+    Checked at startup. A newer mini-swe-agent that reworded the template is a
+    different experiment, and adapting the frozen text to it would silently
+    change what M2 removes. Fails closed; it does not adapt.
+    """
+    for name, text in HINTS.items():
+        got = hashlib.sha256(text.encode()).hexdigest()
+        if got != HINT_SHA256[name]:
+            raise ProtocolMismatch(
+                f"HINTS[{name!r}] hashes to {got}, registered "
+                f"{HINT_SHA256[name]}")
+    try:
+        import os as _os
+
+        import minisweagent as _m
+        import yaml as _yaml
+        path = _os.path.join(_os.path.dirname(_m.__file__),
+                             UPSTREAM_HINT_SOURCE["path"].split("/", 1)[1])
+        upstream = _yaml.safe_load(open(path))["model"]["format_error_template"]
+    except Exception as e:                      # noqa: BLE001
+        raise ProtocolMismatch(
+            f"cannot read the pinned upstream template: {e}") from e
+    if upstream != HINTS["full"]:
+        raise ProtocolMismatch(
+            "the installed mini-swe-agent's format_error_template differs from "
+            "the registered `full`. This is a different experiment; the frozen "
+            "text is not adapted to it")
+
+
 ORDER_SEED = 20260920
 ORDER_HASH = "cfe8856c9c9167b5"
 CELLS = TASK_COUNT * len(ARMS) * REPLICATES      # 18
@@ -208,6 +284,9 @@ def protocol_hash() -> str:
          "replicates": REPLICATES, "timeout": RUN_TIMEOUT_SECONDS,
          "budget": [WARNING_USD, NO_NEW_BLOCK_USD, ABSOLUTE_LIMIT_USD],
          "order_seed": ORDER_SEED, "order_hash": ORDER_HASH,
+         # The hint text is the M2 mutation; a different string is a
+         # different experiment (amendment P.5).
+         "hints": HINT_SHA256,
          # How the tasks are drawn is part of the design, so changing the rule
          # has to move the hash.
          "task_selection": TASK_SELECTION,

@@ -635,3 +635,140 @@ untouched. This amendment adds a gate before run 0 and changes nothing the
 pilot measures.
 
 `study_mode: feasibility` · `verdict_authority: descriptive_only`.
+
+---
+
+# Amendment P.5 — the recovery hint, frozen as text
+
+**2026-09-21, before Host 3 is rented, with `pilot_runs = 0` and
+`model_requests = 0`.** No pilot cell has ever executed and no outcome of any
+kind exists.
+
+## What was missing
+
+`ARMS` recorded `M2: hint: "error_only"` and §2 described the mutation as
+"remove the malformed-call recovery hint". **Neither template existed
+anywhere in the tree.** `error_only` appeared in exactly three places: the arm
+definition, one test assertion, and the deployment checklist. Nothing said what
+text it stood for.
+
+That is not a documentation gap. How much of the guidance comes out *is* M2's
+effect size: remove the whole block and the mutation is large, remove one line
+and it may be undetectable at 18 runs. Left as it was, whoever implemented the
+backend would have chosen the mutation's magnitude while writing it.
+
+## The source
+
+| | |
+|---|---|
+| Package | `mini-swe-agent==2.4.6`, pinned in `inference/requirements-eval.lock.txt` |
+| File | `minisweagent/config/benchmarks/swebench.yaml` |
+| Key | `model.format_error_template` |
+| File sha256 | `9a9c86ac10428b86b932c972b15fefc2f7b6e92230bac5ebdc47e83232a8315e` |
+
+`full` is that value byte-for-byte. It is what `recovery_challenge.py` already
+renders through `self.model.config.format_error_template`, so the baseline arm
+is the upstream default and not a variant authored here.
+
+## The transformation
+
+> In the `else` branch keep `Tool call error:` and the `<error>` block; delete
+> from `Here is general guidance on how to submit correct toolcalls:` to the
+> end of that branch. The `finish_reason` branch is kept verbatim.
+
+The rule is recorded **and both results are frozen byte-for-byte**. A rule
+alone would let a different upstream version produce a different mutation under
+the same registration, which is the failure this amendment exists to close.
+
+```
+full        878 bytes   sha256 0f35cfbd448dd46e17e80b571d346256d4a75cd5ceffafc5c0d088ed0e1c0d9a
+error_only  447 bytes   sha256 450d5d015b1518c7903a90b6c1fcba6a76923c32582b9448b8300a7a29da428c
+```
+
+Both live in `pilot_protocol.HINTS`, in full.
+
+### `full`
+
+```jinja
+{% if finish_reason is defined and (finish_reason == "length" or (finish_reason == "tool_calls" and not has_tool_calls)) -%}
+Your previous response reached the output token limit (finish_reason={{ finish_reason }}) before you produced a tool call, so it was cut off. Respond more concisely and finish with exactly one bash tool call. If you need to think more, do so briefly.
+{%- else -%}
+Tool call error:
+
+<error>
+{{error}}
+</error>
+
+Here is general guidance on how to submit correct toolcalls:
+
+Every response needs to use the 'bash' tool at least once to execute commands.
+
+Call the bash tool with your command as the argument:
+- Tool: bash
+- Arguments: {"command": "your_command_here"}
+
+If you have completed your assignment, please consult the first message about how to
+submit your solution (you will not be able to continue working on this task after that).
+{%- endif %}
+```
+
+### `error_only`
+
+```jinja
+{% if finish_reason is defined and (finish_reason == "length" or (finish_reason == "tool_calls" and not has_tool_calls)) -%}
+Your previous response reached the output token limit (finish_reason={{ finish_reason }}) before you produced a tool call, so it was cut off. Respond more concisely and finish with exactly one bash tool call. If you need to think more, do so briefly.
+{%- else -%}
+Tool call error:
+
+<error>
+{{error}}
+</error>
+{%- endif %}
+```
+
+The whole guidance block is removed, not part of it. For a feasibility pilot
+that is the defensible boundary: a mutation too small to detect at n = 18
+teaches nothing, and P.1 forbids strengthening it afterwards to obtain a
+result. The contrast is clean — error content plus how to recover, against
+error content alone — so what M2 varies is the presence of explicit recovery
+guidance rather than the wording of one example.
+
+## Estimand, deliberately narrow
+
+> Under the registered synthetic malformed-call challenge, compare recovery
+> when the agent receives the complete upstream recovery guidance against the
+> error content alone.
+
+It does **not** generalise to "removing error handling reduces agent success",
+and it estimates nothing about how often malformed calls occur naturally. The
+challenge is part of the scenario, identical in every arm, and registered
+before any run.
+
+## Binding rules
+
+1. The backend resolves the template as `HINTS[arm["hint"]]`, exactly. No
+   fallback, no runtime transformation, and no re-reading from the installed
+   package.
+2. `verify_hints()` runs at startup: both frozen templates must hash to their
+   registered digests, **and** `full` must still be byte-identical to the
+   pinned upstream. A mismatch stops the run. A newer `mini-swe-agent` that
+   reworded the template is a different experiment; the frozen text is not
+   adapted to it.
+
+## What moves
+
+| | |
+|---|---|
+| `protocol_hash` | **`e1f786939faeb9ea` → `a23ff8975a04f627`** |
+| `ORDER_HASH` | **`cfe8856c9c9167b5`, unchanged** |
+
+The hint digests enter `protocol_hash` because the template *is* the mutation.
+The order still binds positions, not ids or text.
+
+## Scope
+
+Arms, step limits, task count, replicates, the 1200 s cap, the budget stops,
+the block order, the P.3 draw and the P.4 smoke test are untouched. This
+amendment gives M2's registered axis a referent and changes nothing else.
+
+`study_mode: feasibility` · `verdict_authority: descriptive_only`.

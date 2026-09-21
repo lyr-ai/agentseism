@@ -111,9 +111,9 @@ printf '\n──── 1. happy path (real pytest, real resolve-only) ───�
   expect_rc 0 "exits 0"
   expect_out "READY_FOR_MANUAL_PILOT_CONFIRMATION" "reaches the ready banner"
   expect_out "pilot_runs = 0" "reports pilot_runs = 0"
-  expect_out "530 passed" "runs the real suite and sees 530"
+  expect_out "544 passed" "runs the real suite and sees 544"
   expect_out "cfe8856c9c9167b5" "verifies the order hash"
-  expect_out "e1f786939faeb9ea" "verifies the protocol hash (moved by P.3)"
+  expect_out "a23ff8975a04f627" "verifies the protocol hash (moved by P.3)"
   expect_out "pilot_spend   \$0.00" "computes spend against the frozen baseline"
   expect_out "after_setup   DEFERRED" "does not authorise after_setup with the launch reading"
   expect_out "setup began" "records when setup started"
@@ -176,16 +176,16 @@ printf '\n──── 5. arguments ────\n'
 # A short sha is what a human copies out of `git log`, and it must be accepted:
 # the first real host run failed here against a tree that was correct.
 ( SCENARIO_COMMIT="$(git -C "$ROOT" rev-parse --short HEAD)"; export SCENARIO_COMMIT
-  export MOCK_PYTEST_PASSED=530
+  export MOCK_PYTEST_PASSED=544
   run_scenario
   expect_rc 0 "a short commit sha is accepted"
   expect_out "$COMMIT" "the record carries the resolved full sha" )
 
 printf '\n──── 6. the frozen counts ────\n'
 ( export MOCK_PYTEST_PASSED=503; run_scenario
-  expect_rc 65 "529 passed is not 530"
-  expect_out "expected exactly 530" "says what it wanted" )
-( export MOCK_PYTEST_PASSED=530 MOCK_UNIVERSE_N=499; run_scenario
+  expect_rc 65 "543 passed is not 544"
+  expect_out "expected exactly 544" "says what it wanted" )
+( export MOCK_PYTEST_PASSED=544 MOCK_UNIVERSE_N=499; run_scenario
   expect_rc 65 "a changed candidate universe stops"
   expect_out "the draw is not the registered one" "explains why" )
 
@@ -245,12 +245,12 @@ printf '\n──── 6b. repository diversity (amendment P.3) ────\n'
   fi )
 
 printf '\n──── 7. image pulls are recorded, not retried ────\n'
-( export MOCK_PYTEST_PASSED=530 MOCK_PULL_FAIL_ALL=1; run_scenario
+( export MOCK_PYTEST_PASSED=544 MOCK_PULL_FAIL_ALL=1; run_scenario
   expect_rc 65 "no images means no run"
   expect_out "0 of 3 distinct repositories" "reports the shortfall"
   n="$(grep -c "pull_failed" "$SANDBOX/work/state/task_draw.tsv")"
   if [ "$n" -eq 500 ]; then ok "every failed attempt is recorded ($n)"; else bad "expected 500 pull_failed rows, found $n"; fi )
-( export MOCK_PYTEST_PASSED=530 MOCK_PULL_FAIL_GLOB="*astropy_1776_astropy-0000[12]*"; run_scenario
+( export MOCK_PYTEST_PASSED=544 MOCK_PULL_FAIL_GLOB="*astropy_1776_astropy-0000[12]*"; run_scenario
   expect_rc 0 "walks past failures to the next candidates"
   grep -q "astropy__astropy-00001" "$SANDBOX/work/state/drawn.txt"
   assert_false $? "failed candidates are skipped, in order"
@@ -258,12 +258,12 @@ printf '\n──── 7. image pulls are recorded, not retried ────\n'
   assert_true $? "the first success is the first drawn" )
 
 printf '\n──── 8. vLLM refuses the KV pool: stop, do not shrink ────\n'
-( export MOCK_PYTEST_PASSED=530 MOCK_VLLM_OOM=1; run_scenario
+( export MOCK_PYTEST_PASSED=544 MOCK_VLLM_OOM=1; run_scenario
   expect_rc 65 "an OOM at 131072 stops"
   expect_out "Not retrying at a smaller length" "refuses the automatic fallback"
   expect_not_out "65536" "never tries the smaller length"
   expect_out "pilot_runs = 0" "zero runs" )
-( export MOCK_PYTEST_PASSED=530 MOCK_GPU_USED_MIB=40000; run_scenario
+( export MOCK_PYTEST_PASSED=544 MOCK_GPU_USED_MIB=40000; run_scenario
   expect_rc 65 "a busy card stops before vLLM starts"
   expect_out "leftover process" "names the likely cause" )
 
@@ -272,7 +272,7 @@ printf '\n──── 9. resume is idempotent ────\n'
   SANDBOX="$(mktemp -d)"; build_mock_host "$SANDBOX" "$REAL_PYTHON"
   runit() { (cd "$ROOT" && env PATH="$SANDBOX/bin:$PATH" WORK="$SANDBOX/work" \
       REPO_URL="$ROOT" BRANCH="$BRANCH_UNDER_TEST" EXPECTED_COMMIT="$COMMIT" \
-      READING1_USD=7.16 MOCK_PYTEST_PASSED=530 MOCK_PULLED="$SANDBOX/pulled.txt" \
+      READING1_USD=7.16 MOCK_PYTEST_PASSED=544 MOCK_PULLED="$SANDBOX/pulled.txt" \
       bash "$SCRIPT" 2>&1); }
   runit >/dev/null; rc1=$?
   pulls1="$(wc -l < "$SANDBOX/pulled.txt")"
