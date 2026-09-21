@@ -31,7 +31,7 @@ set -euo pipefail
 PROTOCOL_HASH="5f4b95c9a250fccf"   # moved by P.3, P.5 and P.6
 ORDER_HASH="cfe8856c9c9167b5"
 EXPECTED_CELLS=18
-EXPECTED_TESTS=614
+EXPECTED_TESTS=638
 BASELINE_USD="7.16"
 BASELINE_CURRENCY="USD"
 BASELINE_PERIOD="September 2026"
@@ -614,6 +614,41 @@ start_serving() {
 }
 
 # ════════════════════════════════════════════════════════════════════════
+# 10b. the registered smoke test (P.4). The only place the dynamic chain may
+#      be demonstrated, and it runs *before* the fingerprint so the bound
+#      session is one that actually served something.
+# ════════════════════════════════════════════════════════════════════════
+run_smoke_test() {
+  step "10b. registered smoke test (P.4)"
+  if is_done smoke && [ -s "$PILOT_DIR/../smoke/smoke_report.json" ]; then
+    skip "smoke"
+    return 0
+  fi
+  # The smoke task's image is pulled once and frozen like any other. It is
+  # the instance P.3 excludes, so this cannot touch the draw.
+  local smoke_img
+  smoke_img="$(PYTHONPATH=src:. "$WORK/.venv-eval/bin/python" -c \
+    "from agentseism.task_draw import image_for; from agentseism.smoke import SMOKE_TASK; print(image_for(SMOKE_TASK))")"
+  if ! grep -q "^pytest-dev__pytest-10051" "$STATE/image_digests.tsv"; then
+    docker pull --platform linux/amd64 --quiet "$smoke_img" </dev/null >/dev/null \
+      || die "the smoke task's image did not pull"
+    local dig
+    dig="$(docker image inspect "$smoke_img" --format '{{index .RepoDigests 0}}')"
+    [ -n "$dig" ] || die "no repo digest for the smoke image"
+    printf 'pytest-dev__pytest-10051\t%s\n' "$dig" >> "$STATE/image_digests.tsv"
+    ok "smoke image" "$dig"
+  fi
+  cd "$REPO"
+  PYTHONPATH=src:. HF_HOME="$WORK/hf" "$WORK/.venv-eval/bin/python" \
+    -m agentseism.smoke --digests "$STATE/image_digests.tsv" \
+    --out "$WORK/smoke" --work-dir "$WORK/smoke-work" \
+    --model-name "$EXPECTED_MODEL" --model-revision "$EXPECTED_REVISION" \
+    || die "the registered smoke test failed; the chain is not connected and no pilot run follows"
+  cd - >/dev/null
+  mark_done smoke
+}
+
+# ════════════════════════════════════════════════════════════════════════
 # 11. the serving fingerprint. Never skipped: a restarted server is a new
 #     session, and a fingerprint carried over from the previous one would
 #     describe a process that no longer exists.
@@ -766,6 +801,7 @@ PY
   cd - >/dev/null
 
   STATE="$STATE" COMMIT="$EXPECTED_COMMIT" RUN_LOG="$PILOT_DIR/run.jsonl" \
+  SMOKE_REPORT="$WORK/smoke/smoke_report.json" \
     python3 - <<'PY' || die "report could not be written"
 import hashlib, json, os
 from pathlib import Path
@@ -784,15 +820,16 @@ rep = {
     "serving_fingerprint_sha256": (st / "serving_fingerprint.json.sha256").read_text().strip(),
     "run_log": os.environ["RUN_LOG"],
     "pilot_runs": 0,
-    "model_requests": 0,
+    "pilot_model_requests": 0,
+    "smoke": json.loads(Path(os.environ["SMOKE_REPORT"]).read_text())
+             if Path(os.environ["SMOKE_REPORT"]).exists() else None,
     "after_setup_checkpoint": "deferred: requires a billing reading taken "
                               "after the setup_started marker",
     "backend_constructible": True,
-    "unverified": [
-        "tool-call parsing was not exercised: that needs a completion request, "
-        "and preflight issues none. The three parser flags are verified on the "
-        "live command line instead.",
-    ],
+    "unverified": [],
+    "note": "pilot_model_requests is 0: the only model requests made here "
+            "belong to the registered smoke test, which is not pilot "
+            "evidence. Tool-call parsing is exercised by that smoke run.",
     "status": "READY_FOR_MANUAL_PILOT_CONFIRMATION",
 }
 body = json.dumps(rep, indent=2, sort_keys=True) + "\n"
@@ -839,6 +876,7 @@ main() {
   verify_backend_images
   download_model
   start_serving
+  run_smoke_test
   fingerprint
   rehearse_retrieval
   write_report

@@ -132,6 +132,26 @@ fi
 if [ -n "\${MOCK_BACKEND_BROKEN:-}" ]; then
   export PYTHONPATH="\$BROKEN:\${PYTHONPATH:-}"
 fi
+# The registered smoke test is the one step that really calls a model and
+# really starts a container, so the mock host stands in for it. Its outcome is
+# scripted: MOCK_SMOKE_FAIL makes the chain look broken.
+case " \$* " in
+  *" -m agentseism.smoke "*)
+    out=""; prev=""
+    for a in "\$@"; do [ "\$prev" = "--out" ] && out="\$a"; prev="\$a"; done
+    mkdir -p "\$out"
+    if [ -n "\${MOCK_SMOKE_FAIL:-}" ]; then
+      printf '{"passed": false, "failed": ["evaluator_decided"], "smoke": true, "pilot_evidence": false, "evaluator_resolved": null}\n' > "\$out/smoke_report.json"
+      echo "  evaluator_decided                  FAIL  the evaluator returned an explicit boolean resolved"
+      echo "  SMOKE FAILED: evaluator_decided" >&2
+      exit 1
+    fi
+    printf '{"passed": true, "failed": [], "smoke": true, "pilot_evidence": false, "evaluator_resolved": %s, "outcome_state": "%s", "task": "pytest-dev__pytest-10051", "arm": "baseline", "runs": 1}\n' \
+      "\${MOCK_SMOKE_RESOLVED:-false}" "\${MOCK_SMOKE_STATE:-RESOLVED_FALSE}" > "\$out/smoke_report.json"
+    echo "  evaluator_resolved                 \${MOCK_SMOKE_RESOLVED:-false} — reported, not gated on"
+    echo "  SMOKE PASS — the chain is connected; this is not pilot evidence"
+    exit 0 ;;
+esac
 exec "\$REAL" "\$@"
 EOF
 
