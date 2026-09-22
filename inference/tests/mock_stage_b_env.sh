@@ -191,7 +191,9 @@ case "${1:-}" in
       fi
       # A loop body, not `sleep`: `sh -c 'sleep 600'` is exec-optimised into
       # sleep itself and the argv the fingerprint reads would be lost.
-      exec /bin/sh -c 'while :; do sleep 1; done' "$@" ;;
+      # HARNESS_ID rides in the argv so the reaper can target this run's
+      # servers and no other's.
+      exec /bin/sh -c 'while :; do sleep 1; done' "${HARNESS_ID:-stageb}" "$@" ;;
   *) exit 0 ;;
 esac
 EOF

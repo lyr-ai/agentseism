@@ -31,6 +31,44 @@ BRANCH_UNDER_TEST="${BRANCH_UNDER_TEST:-$(git -C "$ROOT" rev-parse --abbrev-ref 
 # fixture 570 -> 574 -> 588 -> 614, and a "too old" driver quietly became
 # a new enough one. The scenario passed while testing nothing.
 OLD_DRIVER="570.195.03"
+# Only one harness at a time. Scenarios reap stray mock servers by pattern, so
+# two concurrent runs kill each other's and the failures look like real
+# regressions in vLLM startup -- which is exactly how three overlapping runs
+# were misread once. `mkdir` is atomic, so this is a lock.
+LOCK="${TMPDIR:-/tmp}/agentseism-stageb-harness.lock"
+if ! mkdir "$LOCK" 2>/dev/null; then
+  # Fail closed and say enough to diagnose it. The lock is NOT removed
+  # automatically: it may belong to a live run, and breaking someone else's
+  # lock to get a green result is the same mistake as re-running until green.
+  owner="$(cat "$LOCK/pid" 2>/dev/null || echo unknown)"
+  printf 'another harness run holds %s\n' "$LOCK" >&2
+  printf '  owner pid   %s\n' "$owner" >&2
+  if [ "$owner" != unknown ] && kill -0 "$owner" 2>/dev/null; then
+    printf '  owner state ALIVE -- wait for it to finish\n' >&2
+  else
+    printf '  owner state not running -- the lock is stale\n' >&2
+    printf '  created     %s\n' "$(cat "$LOCK/created" 2>/dev/null || echo unknown)" >&2
+    printf '  remove it deliberately:  rmdir %s/pid %s 2>/dev/null; rm -rf %s\n' \
+      "$LOCK" "$LOCK" "$LOCK" >&2
+  fi
+  exit 2
+fi
+printf '%s\n' "$$" > "$LOCK/pid"
+date -u +%FT%TZ > "$LOCK/created"
+release_lock() { rm -rf "$LOCK" 2>/dev/null || true; }
+# EXIT alone does not fire on an uncaught signal, so the three are trapped.
+#
+# Measured behaviour, not assumed: bash defers a signal trap until the
+# currently running foreground command returns, so after a SIGTERM the lock is
+# held until the scenario in flight finishes -- about 40 s in practice, never
+# indefinitely. Under SIGKILL no trap runs at all and the lock survives; that
+# is the stale-lock path above, which reports the dead owner and refuses to
+# remove the directory on its own.
+trap 'release_lock' EXIT
+trap 'release_lock; exit 130' INT
+trap 'release_lock; exit 143' TERM
+trap 'release_lock; exit 129' HUP
+
 RESULTS="$(mktemp)"
 ok()   { printf '  \033[32mPASS\033[0m  %s\n' "$1"; echo PASS >> "$RESULTS"; }
 bad()  { printf '  \033[31mFAIL\033[0m  %s\n' "$1"; echo FAIL >> "$RESULTS"; }
@@ -39,10 +77,24 @@ bad()  { printf '  \033[31mFAIL\033[0m  %s\n' "$1"; echo FAIL >> "$RESULTS"; }
 # Prints nothing; leaves $OUT (combined output) and $RC (exit code).
 # A mock server left alive by the previous scenario would answer the next
 # scenario's readiness probe, and the OOM case would then look like a success.
+#
+# The pattern is scoped to *this* harness. A global
+# `pkill -f vllm.entrypoints.openai.api_server` also reaps another run's
+# servers, and three overlapping runs once produced failures that read exactly
+# like a real regression in vLLM startup. The lock above makes overlap an
+# error; this makes it harmless.
+HARNESS_ID="stageb-harness-$$"
+export HARNESS_ID
 kill_mock_servers() {
-  /usr/bin/pkill -f 'vllm.entrypoints.openai.api_server' >/dev/null 2>&1 || true
+  # An empty or short pattern would match half the process table --
+  # `pkill -f ""` matches everything. Refuse rather than reap broadly.
+  case "$HARNESS_ID" in
+    stageb-harness-[0-9]*) : ;;
+    *) printf 'refusing to reap with pattern %s\n' "$HARNESS_ID" >&2; return 1 ;;
+  esac
+  /usr/bin/pkill -f "$HARNESS_ID" >/dev/null 2>&1 || true
 }
-trap 'kill_mock_servers; rm -f "$RESULTS"' EXIT
+trap 'kill_mock_servers; rm -f "$RESULTS"; rmdir "$LOCK" 2>/dev/null' EXIT
 
 run_scenario() {
   kill_mock_servers
@@ -60,7 +112,33 @@ run_scenario() {
   kill_mock_servers
 }
 
-_dump() { printf '%s\n' "$OUT" | tail -12 | sed 's/^/        /'; }
+_dump() {
+  printf '%s\n' "$OUT" | tail -12 | sed 's/^/        /'
+  # The mock vLLM's own stdout/stderr, its pid and whether it is still alive.
+  # Without these a startup failure is indistinguishable from a reaped server.
+  local v="$SANDBOX/work/state/vllm.log" p="$SANDBOX/work/state/vllm.pid"
+  if [ -s "$v" ]; then
+    printf '        --- mock vllm.log (tail) ---\n'
+    tail -6 "$v" | sed 's/^/        /'
+  fi
+  [ -f "$p" ] || { printf '        --- mock vllm: never started ---\n'; return 0; }
+  local pid ready; pid="$(cat "$p")"
+  ready=$(printf '%s' "$OUT" | grep -c "vllm .*ready after")
+  if kill -0 "$pid" 2>/dev/null; then
+    if [ "$ready" -gt 0 ]; then
+      printf '        --- mock vllm pid %s: ALIVE and was READY ---\n' "$pid"
+    else
+      printf '        --- mock vllm pid %s: ALIVE but never READY ---\n' "$pid"
+    fi
+  elif grep -qiE "ValueError|Traceback|memory" "$v" 2>/dev/null; then
+    printf '        --- mock vllm pid %s: EXITED on its own, see the log above ---\n' "$pid"
+  elif [ "$ready" -gt 0 ]; then
+    printf '        --- mock vllm pid %s: was READY then DISAPPEARED ---\n' "$pid"
+    printf '        (nothing in the log: consistent with an external reaper)\n'
+  else
+    printf '        --- mock vllm pid %s: GONE, cause not in the log ---\n' "$pid"
+  fi
+}
 expect_rc() {
   if [ "$RC" -eq "$1" ]; then ok "$2"; else bad "$2 (rc=$RC, wanted $1)"; _dump; fi
 }
