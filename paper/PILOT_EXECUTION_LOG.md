@@ -450,3 +450,28 @@ transfer. vLLM pid 6315, started `Tue Sep 22 05:19:05 2026`, ready after 580 s.
 The registered stop condition — a second Host-4-class failure from a defect
 findable offline — has fired. `$6.67` of `$30` spent across four hosts, zero
 pilot runs, zero pilot evidence, zero contaminated data.
+
+### host_4 — termination record, correction (appended, nothing overwritten)
+
+The section above left the terminating actor implicit and the end time absent.
+Recorded explicitly:
+
+```text
+termination_actor:    user
+termination_method:   manual Lambda console action
+terminated_at_utc:    unknown / not captured
+page_total_at_close:  13.83 USD
+```
+
+`terminated_at_utc` is **unknown**, not inferred. The moment SSH stopped
+answering is when this environment lost contact, not when Lambda stopped
+billing, and substituting one for the other would put a fabricated timestamp
+into a cost record.
+
+No Lambda credential, config or API client exists in this working environment
+— checked at the time — so termination could only have been performed from the
+console by the operator.
+
+The figures in the section above are unchanged and correct: `host_4_cost`
+`$1.56`, `cumulative_pilot_spend` `$6.67`, `pilot_runs` `0`, `pilot_evidence`
+`none`.
