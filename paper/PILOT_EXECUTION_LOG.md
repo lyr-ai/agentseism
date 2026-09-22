@@ -364,3 +364,89 @@ What the three hosts bought: a preflight that fails closed on a missing runner,
 a budget machine that cannot be restarted by a new machine, and a smoke test
 that stopped an eighteen-run batch before a single cell ran against a chain
 that could not make a model call. None of that was reachable from a mock.
+
+---
+
+## host_4 — 2026-09-22
+
+```text
+status               = registered_smoke_failure
+reason               = LiteLLM cost accounting discarded a successful response
+instance_started_at  = 2026-09-22T05:03:30Z
+terminated_by        = the operator (no Lambda credentials exist in this
+                       working environment; the assistant cannot rent,
+                       terminate, or read the billing page)
+bound_commit         = 77769d1
+page_total_at_close  = $13.83 USD
+host_4_cost          = $1.56   ($13.83 − $12.27)
+cumulative_pilot_spend = $6.67 ($13.83 − $7.16)
+pilot_runs           = 0
+pilot_evidence       = none
+```
+
+> Registered smoke failure after one successful model transport attempt. The
+> response was discarded by LiteLLM cost accounting for an unmapped local
+> model. No retry, no evaluator verdict, no pilot evidence.
+
+**The end time shown on the Host 4 row is not recorded here**, because it was
+not supplied and cannot be read from this environment. The closing total is
+`$13.83`, settled.
+
+## What failed
+
+```
+Error calculating cost for model openai/Qwen/Qwen3.6-27B-FP8:
+  This model isn't mapped yet.
+```
+
+LiteLLM prices a response **after** generating it. A locally served model has
+no price entry, so `_calculate_cost` raised on a response that had already
+arrived. `n_calls: 0`, `challenge_status: NOT_ELIGIBLE`,
+`infrastructure_status: BACKEND_ERROR`, `evaluator_resolved: None`.
+
+**This project had already paid for this defect once.** It destroyed a Gate 9
+attempt, was diagnosed, and the fix — `MSWEA_COST_TRACKING=ignore_errors` —
+was written down. It was never carried into the pilot backend. Three preflight
+gates, eight amendments and a registered smoke test did not include a check
+against this project's own failure history.
+
+## What held
+
+| | |
+|---|---|
+| addressing (P.8) | `openai/Qwen/Qwen3.6-27B-FP8` reached the server; the container started; host 3's failure did not recur |
+| retries (P.8.1) | `transport_attempts: 1`, **0 retries observed**, 1 cost error. Under the old policy that single failure would have become ten attempts with 4 s–60 s backoff |
+| the smoke gate (P.4) | four criteria failed, `BACKEND_ERROR`, **no `RESOLVED_FALSE`** |
+| the budget machine | `smoke_completed` unmarked, so `after_setup` was unreachable; no fingerprint frozen; nothing bound |
+
+The apparatus did its job. It stopped an eighteen-run batch on a chain that
+could not deliver one response.
+
+## The methodological finding
+
+Three smoke attempts, three different defects, **all of them on the success
+path**:
+
+| host | defect | reachable offline? |
+|---|---|---|
+| 2 | no runner existed at all | yes — now a constructibility gate |
+| 3 | bare model id reached LiteLLM | yes — now a transport check |
+| 4 | cost accounting discarded a successful response | yes — now a success-path test |
+
+Every one was reachable without a GPU. The failure-path tests were extensive
+and none of them touched the path a *working* response takes through the
+client: parse, price, parse actions, inject the challenge. A stub that only
+returns errors cannot reach the code that raised on host 4.
+
+## Retrieved and verified
+
+`data/runs/pilot/host_4_smoke_failure/` — bundle
+`83fb8441bac278a03c2a843196d283a6ee76facc531d2a99e0b19c757bc38b0e`, matched
+host to local; `smoke_run.json` and `smoke_report.json` each re-verified after
+transfer. vLLM pid 6315, started `Tue Sep 22 05:19:05 2026`, ready after 580 s.
+
+## Paid experiments paused
+
+The registered stop condition — a second Host-4-class failure from a defect
+findable offline — has fired. `$6.67` of `$30` spent across four hosts, zero
+pilot runs, zero pilot evidence, zero contaminated data.

@@ -1,0 +1,6 @@
+87:  transport_model                    ok  openai/Qwen/Qwen3.6-27B-FP8
+90:  retry layer (env)                  ok  {'MSWEA_MODEL_RETRY_STOP_AFTER_ATTEMPT': '1'}
+106:  vllm                               ok  ready after 580s, pid 6315
+117:minisweagent.environment: INFO: Started container minisweagent-074b1f04 with ID 
+120:Error calculating cost for model openai/Qwen/Qwen3.6-27B-FP8: This model isn't mapped yet. model=openai/Qwen/Qwen3.6-27B-FP8, custom_llm_provider=openai. Add it here - https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json., perhaps it's not registered? You can ignore this issue from your config file with cost_tracking: 'ignore_errors' or globally with export MSWEA_COST_TRACKING='ignore_errors'. Alternatively check the 'Cost tracking' section in the documentation at https://klieret.short.gy/mini-local-models.  Still stuck? Please open a github issue at https://github.com/SWE-agent/mini-swe-agent/issues/new/choose!
+121:  SMOKE FAILED: challenge_injected_once, evaluator_decided, image_started, valid_tool_call
