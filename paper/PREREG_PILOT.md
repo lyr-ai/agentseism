@@ -1061,3 +1061,97 @@ mapping and the P.7 cost check are untouched. The model, its revision and the
 serving configuration are unchanged.
 
 `study_mode: feasibility` · `verdict_authority: descriptive_only`.
+
+---
+
+# Amendment P.8.1 — the retry layer was not the one P.8 named
+
+**2026-09-21, before Host 4 is rented.** `pilot_runs = 0`. P.8 has never been
+executed on any machine, so this corrects a registration before it has been
+used, not after.
+
+## What P.8 got wrong
+
+P.8 attributed host 3's nine retries to LiteLLM and pinned
+`num_retries`/`max_retries` to zero. **Those knobs would not have stopped
+them.** The retry is in `mini-swe-agent` itself:
+
+```python
+# minisweagent/models/utils.py
+def retry(*, logger, abort_exceptions):
+    return Retrying(
+        stop=stop_after_attempt(int(os.getenv(
+            "MSWEA_MODEL_RETRY_STOP_AFTER_ATTEMPT", "10"))),
+        wait=wait_exponential(multiplier=1, min=4, max=60),
+        ...)
+```
+
+`LitellmModel.query` wraps every call in it. Ten attempts by default, backing
+off 4 s to 60 s — which is exactly the nine retries and exactly the 4 s → 60 s
+pattern host 3 logged.
+
+It is an **environment variable**, not a config field. P.8 as written would
+have shipped with a registered one-attempt rule and a transport that still
+made ten.
+
+## The correction
+
+```
+RETRY_ENV = {'MSWEA_MODEL_RETRY_STOP_AFTER_ATTEMPT': '1'}
+```
+
+Set before the model is constructed. LiteLLM's knobs stay pinned at zero —
+they are a real second layer — but the variable is the one that governs.
+
+`RETRY_ENV_DEPENDENCY` is registered alongside it: the variable is not public
+API, a later version may rename it, and **setting an environment variable
+that nothing reads looks identical to setting one that works**.
+Constructibility therefore asserts the installed source still reads it, and
+fails closed if it does not.
+
+## The evidence, at the layer where the number was wrong
+
+Config-level assertions show the knobs are passed. They cannot show how many
+requests leave the process, and on host 3 that number was ten. So the proof is
+now three-layered:
+
+| layer | evidence |
+|---|---|
+| configuration | the knobs and the env reach the model config |
+| **HTTP** | a local stub counts inbound requests through the real `get_model` path |
+| run | the artifact records `transport_attempts`; a mismatch is an integrity stop |
+
+The stub returns **500**. Not `400`, which most clients do not retry at all —
+one request under a 400 would prove nothing. Not `429`, whose `Retry-After`
+introduces waiting of its own. Each run is a separate subprocess so LiteLLM's
+global state cannot carry between cases.
+
+```
+registered (1 attempt)   1 HTTP request   0.12 s   no gaps   InternalServerError
+control    (2 attempts)  2 HTTP requests  4.14 s   gap 4.02 s
+```
+
+The control exists because "one request" might otherwise only mean the probe
+cannot count. It is test-only and never enters the pilot configuration.
+
+**One defect the probe found in itself.** Under HTTP keep-alive the retried
+request landed on `BaseHTTPRequestHandler`'s default HTML error page, and the
+client reported a `BadRequestError` the stub had never sent — the probe was
+measuring its own server. The stub now closes every connection and answers
+every method with the same 500.
+
+## What moves
+
+| | |
+|---|---|
+| `protocol_hash` | **`7ae0ef31676ee555` → `b5ee184b7b35d8ba`** |
+| `ORDER_HASH` | **`cfe8856c9c9167b5`, unchanged** |
+
+## Scope
+
+Everything P.8 said about addressing stands unchanged. Arms, step limits, the
+hint text, task count, replicates, the 1200 s cap, the budget stops, the block
+order, the draw, the smoke test, the exit mapping and the cost check are
+untouched.
+
+`study_mode: feasibility` · `verdict_authority: descriptive_only`.

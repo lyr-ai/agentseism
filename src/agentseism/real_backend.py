@@ -309,11 +309,31 @@ def _check_transport(cfg: BackendConfig) -> dict:
         if value != 0:
             raise BackendUnavailable(
                 f"retry knob {knob} is registered as {value}, not 0")
+
+    # The layer that actually retried on host 3 is an environment variable,
+    # not a config field. Setting one nothing reads looks identical to setting
+    # one that works, so the installed source is checked.
+    try:
+        from minisweagent.models.utils import retry as _retry
+        retry_src = inspect.getsource(_retry)
+    except Exception as e:                                  # noqa: BLE001
+        raise BackendUnavailable(
+            f"cannot read the retry layer's source: {e}") from e
+    for var, value in P.RETRY_ENV.items():
+        if var not in retry_src:
+            raise BackendUnavailable(
+                f"{var} is registered as the retry control but the installed "
+                "retry layer does not read it; the policy would be set and "
+                "have no effect")
+        if int(value) != 1:
+            raise BackendUnavailable(
+                f"{var} is registered as {value!r}, not '1'")
     return {"registered_model_id": cfg.model_name,
             "transport_model": addressed,
             "api_base": cfg.model_base_url,
             "attempts": P.TRANSPORT_ATTEMPTS,
             "retry_knobs": {k: v for k, v in P.RETRY_KNOBS.items()},
+            "retry_env": dict(P.RETRY_ENV),
             "requests_sent": 0}
 
 
@@ -462,14 +482,9 @@ def _recovered(messages: list[dict], injected_at_call: int) -> bool:
     return False
 
 
-def _agent_result(cell: dict, config: BackendConfig, hint: str, image: str):
-    """One agent execution. No retry: a cell is one run."""
-    from minisweagent.agents.default import DefaultAgent
-    from minisweagent.environments import get_environment
-    from minisweagent.models import get_model
-
-    from experiments.coding.recovery_challenge import challenging
-
+def model_config(config: BackendConfig, hint: str) -> dict:
+    """The model section the pilot serves with. Separated so the transport
+    probe can exercise the real thing rather than a copy of it."""
     base = _swebench_base()
     model_cfg = dict(base["model"])
     model_cfg["format_error_template"] = hint          # the M2 axis, exactly
@@ -485,6 +500,33 @@ def _agent_result(cell: dict, config: BackendConfig, hint: str, image: str):
         # default is a policy nobody registered.
         **{k: v for k, v in P.RETRY_KNOBS.items() if v is not None},
     }
+    return model_cfg
+
+
+def apply_retry_env() -> dict:
+    """Pin the retry layer that is an environment variable, not a config field.
+
+    `minisweagent`'s query loop is tenacity with `stop_after_attempt` read from
+    the environment, defaulting to ten. That is what made nine retries on host
+    3, and no LiteLLM knob touches it.
+    """
+    import os
+    for k, v in P.RETRY_ENV.items():
+        os.environ[k] = v
+    return dict(P.RETRY_ENV)
+
+
+def _agent_result(cell: dict, config: BackendConfig, hint: str, image: str):
+    """One agent execution. No retry: a cell is one run."""
+    from minisweagent.agents.default import DefaultAgent
+    from minisweagent.environments import get_environment
+    from minisweagent.models import get_model
+
+    from experiments.coding.recovery_challenge import challenging
+
+    apply_retry_env()
+    base = _swebench_base()
+    model_cfg = model_config(config, hint)
     env_cfg = dict(base["environment"])
     env_cfg["image"] = image                           # digest-pinned
     agent_cfg = dict(base["agent"])

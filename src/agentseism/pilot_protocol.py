@@ -237,8 +237,33 @@ RETRY_KNOBS = {
     "max_retries": 0,          # the underlying OpenAI client
     "request_timeout": None,   # left to the registered wall-clock cap
 }
-"""Pinned at every layer that has one. A knob left at its default is a policy
-nobody registered."""
+"""LiteLLM's own layers. Pinned, but **not** the layer that produced the nine
+attempts on host 3 -- see `RETRY_ENV`."""
+
+RETRY_ENV = {"MSWEA_MODEL_RETRY_STOP_AFTER_ATTEMPT": "1"}
+"""The layer that actually retried.
+
+`minisweagent.models.utils.retry` wraps every query in tenacity:
+
+    stop=stop_after_attempt(int(os.getenv(
+        "MSWEA_MODEL_RETRY_STOP_AFTER_ATTEMPT", "10")))
+    wait=wait_exponential(multiplier=1, min=4, max=60)
+
+Ten attempts by default, backing off 4 s to 60 s -- exactly the nine retries
+host 3 logged. It is an **environment variable**, not a config field, so
+pinning LiteLLM's knobs would have left it untouched and the transport would
+still have made ten attempts under a registered one-attempt rule.
+
+Set to 1: the request is issued once and the failure is reported."""
+
+RETRY_ENV_DEPENDENCY = (
+    "minisweagent 2.4.6 reads MSWEA_MODEL_RETRY_STOP_AFTER_ATTEMPT inside "
+    "models/utils.py:retry(). The name is not public API and a later version "
+    "may rename or remove it, so constructibility asserts the installed "
+    "source still reads it rather than assuming the variable has an effect."
+)
+"""Registered because setting an environment variable that nothing reads looks
+identical to setting one that works."""
 
 
 def transport_model(registered_model_id: str) -> str:
@@ -390,7 +415,8 @@ def protocol_hash() -> str:
          # logical request may enter the transport (amendment P.8).
          "transport": {"provider": LITELLM_PROVIDER,
                        "attempts": TRANSPORT_ATTEMPTS,
-                       "retry_knobs": RETRY_KNOBS},
+                       "retry_knobs": RETRY_KNOBS,
+                       "retry_env": RETRY_ENV},
          "scorable": list(SCORABLE),
          "schema": SCHEMA_VERSION}, sort_keys=True).encode()).hexdigest()[:16]
 

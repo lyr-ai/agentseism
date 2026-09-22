@@ -190,9 +190,10 @@ def test_the_protocol_hash_is_the_registered_one():
     recovery-hint templates inside: the hint text *is* M2's mutation. P.6 moved
     it again by registering the exit-status mapping and the scorable set. P.7
     moved it again by registering the post-block cost check, and P.8 by
-    registering the provider address and the transport retry policy.
+    registering the provider address and the transport retry policy, and P.8.1
+    by correcting which layer actually retries.
     """
-    assert P.protocol_hash() == "7ae0ef31676ee555"
+    assert P.protocol_hash() == "b5ee184b7b35d8ba"
 
 
 def test_no_new_block_after_the_threshold(tmp_path):

@@ -28,10 +28,10 @@
 set -euo pipefail
 
 # ── frozen values. Changing one here is changing the experiment. ──
-PROTOCOL_HASH="7ae0ef31676ee555"   # moved by P.3, P.5, P.6, P.7, P.8
+PROTOCOL_HASH="b5ee184b7b35d8ba"   # moved by P.3, P.5-P.8.1
 ORDER_HASH="cfe8856c9c9167b5"
 EXPECTED_CELLS=18
-EXPECTED_TESTS=694
+EXPECTED_TESTS=709
 BASELINE_USD="7.16"
 BASELINE_CURRENCY="USD"
 BASELINE_PERIOD="September 2026"
@@ -501,7 +501,8 @@ print(f"  registered_model_id                ok  {t['registered_model_id']}")
 print(f"  transport_model                    ok  {t['transport_model']}")
 print(f"  api_base                           ok  {t['api_base']}")
 print(f"  transport attempts                 ok  {t['attempts']}  "
-      f"retries {t['retry_knobs']}")
+      f"litellm {t['retry_knobs']}")
+print(f"  retry layer (env)                  ok  {t['retry_env']}")
 out = _check_images(cfg)
 assert out["pulled"] is False
 for t, d in sorted(out["images"].items()):

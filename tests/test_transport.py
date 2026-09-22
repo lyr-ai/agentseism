@@ -176,3 +176,26 @@ def test_the_policy_is_inside_the_protocol_hash():
 def test_the_order_hash_is_unmoved_by_p8():
     assert P.ORDER_HASH == "cfe8856c9c9167b5"
     assert P.order_hash(P.build_order()) == P.ORDER_HASH
+
+
+def test_constructibility_refuses_if_the_retry_variable_is_unread(monkeypatch):
+    """If a later mini-swe-agent stops reading it, the policy is inert and
+    that must fail rather than pass quietly."""
+    monkeypatch.setitem(P.RETRY_ENV, "MSWEA_NO_SUCH_VARIABLE", "1")
+    monkeypatch.delitem(P.RETRY_ENV, "MSWEA_MODEL_RETRY_STOP_AFTER_ATTEMPT")
+    with pytest.raises(RB.BackendUnavailable) as e:
+        RB._check_transport(cfg())
+    assert "would be set and have no effect" in str(e.value)
+
+
+def test_constructibility_refuses_more_than_one_attempt(monkeypatch):
+    monkeypatch.setitem(P.RETRY_ENV, "MSWEA_MODEL_RETRY_STOP_AFTER_ATTEMPT", "3")
+    with pytest.raises(RB.BackendUnavailable) as e:
+        RB._check_transport(cfg())
+    assert "not '1'" in str(e.value)
+
+
+def test_the_dry_run_report_carries_the_env_policy():
+    out = RB._check_transport(cfg())
+    assert out["retry_env"] == {"MSWEA_MODEL_RETRY_STOP_AFTER_ATTEMPT": "1"}
+    assert out["requests_sent"] == 0
