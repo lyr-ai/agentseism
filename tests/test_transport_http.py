@@ -28,19 +28,24 @@ PROBE = ROOT / "tests" / "_transport_probe.py"
 def probe(attempts: int, when: str = "before") -> dict:
     """Subprocess, so LiteLLM's global state cannot leak between cases.
 
-    A clean environment is passed explicitly: the control sets the retry
-    variable inside the child, and it must not reach this process or any other
-    test.
+    A clean environment is passed explicitly: the child decides the variable
+    for itself, and whatever it chooses must not reach this process.
+
+    The parent's own value is recorded and compared, not asserted absent --
+    on the pilot host the shell exports it deliberately, and a test that
+    demanded its absence would fail there for the very reason the policy
+    exists. That is what the mock harness caught.
     """
     import os
-    env = {k: v for k, v in os.environ.items()
-           if k != "MSWEA_MODEL_RETRY_STOP_AFTER_ATTEMPT"}
+    var = "MSWEA_MODEL_RETRY_STOP_AFTER_ATTEMPT"
+    parent_before = os.environ.get(var)
+    env = {k: v for k, v in os.environ.items() if k != var}
     r = subprocess.run([sys.executable, str(PROBE), str(attempts), when],
                        cwd=ROOT, capture_output=True, text=True, timeout=600,
                        env=env)
     assert r.returncode == 0, r.stderr[-2000:]
-    assert "MSWEA_MODEL_RETRY_STOP_AFTER_ATTEMPT" not in os.environ, \
-        "the probe leaked its variable into the test process"
+    assert os.environ.get(var) == parent_before, \
+        "the probe changed the test process's environment"
     return json.loads(r.stdout.strip().splitlines()[-1])
 
 
