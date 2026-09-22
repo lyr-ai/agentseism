@@ -31,7 +31,7 @@ set -euo pipefail
 PROTOCOL_HASH="b5ee184b7b35d8ba"   # moved by P.3, P.5-P.8.1
 ORDER_HASH="cfe8856c9c9167b5"
 EXPECTED_CELLS=18
-EXPECTED_TESTS=709
+EXPECTED_TESTS=715
 BASELINE_USD="7.16"
 BASELINE_CURRENCY="USD"
 BASELINE_PERIOD="September 2026"
@@ -60,6 +60,14 @@ VLLM_PORT=8000
 # we wait for it to finish. Loading 31 GB of FP8 weights and profiling the KV
 # pool took minutes on the reference host.
 WAIT_VLLM_SECONDS=1800
+
+# Exported before any Python starts, for every entry point this script has:
+# the constructibility gate, the smoke test and the pilot runner all inherit
+# it. mini-swe-agent's retry loop reads this variable; the default is ten
+# attempts, which is what host 3 logged. The backend verifies it and refuses
+# to set it, so a process can never repair its own transport policy and then
+# report that the policy was in force.
+export MSWEA_MODEL_RETRY_STOP_AFTER_ATTEMPT=1
 
 WORK="${WORK:-$HOME/agentseism-stageb}"
 REPO="$WORK/repo"
@@ -503,6 +511,8 @@ print(f"  api_base                           ok  {t['api_base']}")
 print(f"  transport attempts                 ok  {t['attempts']}  "
       f"litellm {t['retry_knobs']}")
 print(f"  retry layer (env)                  ok  {t['retry_env']}")
+assert t["retry_env_in_process"] == t["retry_env"], t["retry_env_in_process"]
+print(f"  retry env in this process          ok  exported before Python started")
 out = _check_images(cfg)
 assert out["pulled"] is False
 for t, d in sorted(out["images"].items()):

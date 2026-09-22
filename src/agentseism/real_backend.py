@@ -319,6 +319,7 @@ def _check_transport(cfg: BackendConfig) -> dict:
     except Exception as e:                                  # noqa: BLE001
         raise BackendUnavailable(
             f"cannot read the retry layer's source: {e}") from e
+    assert_retry_env()          # in force in this process, not repaired here
     for var, value in P.RETRY_ENV.items():
         if var not in retry_src:
             raise BackendUnavailable(
@@ -334,6 +335,8 @@ def _check_transport(cfg: BackendConfig) -> dict:
             "attempts": P.TRANSPORT_ATTEMPTS,
             "retry_knobs": {k: v for k, v in P.RETRY_KNOBS.items()},
             "retry_env": dict(P.RETRY_ENV),
+            "retry_env_in_process": {k: __import__("os").environ.get(k)
+                                     for k in P.RETRY_ENV},
             "requests_sent": 0}
 
 
@@ -503,16 +506,30 @@ def model_config(config: BackendConfig, hint: str) -> dict:
     return model_cfg
 
 
-def apply_retry_env() -> dict:
-    """Pin the retry layer that is an environment variable, not a config field.
+def assert_retry_env() -> dict:
+    """Verify the retry variable. **Never set it.**
 
     `minisweagent`'s query loop is tenacity with `stop_after_attempt` read from
-    the environment, defaulting to ten. That is what made nine retries on host
-    3, and no LiteLLM knob touches it.
+    the environment, defaulting to ten -- the nine retries host 3 logged, which
+    no LiteLLM knob touches.
+
+    Measured on 2.4.6, the value is read inside `retry()` on every call, so
+    setting it after import does take effect. The backend still refuses to set
+    it, for two reasons. A process that repairs its own transport policy cannot
+    report whether the policy was in force when it started, and the guarantee
+    would silently depend on an implementation detail that a later version is
+    free to change to import-time evaluation. It is exported by the shell
+    before any Python starts, and checked here.
     """
     import os
-    for k, v in P.RETRY_ENV.items():
-        os.environ[k] = v
+    for k, want in P.RETRY_ENV.items():
+        got = os.environ.get(k)
+        if got != want:
+            raise BackendUnavailable(
+                f"{k} is {got!r}, registered as {want!r}. It must be exported "
+                "before Python starts -- the backend verifies it and does not "
+                "repair it, so that the artifact records the policy that was "
+                "actually in force")
     return dict(P.RETRY_ENV)
 
 
@@ -524,7 +541,7 @@ def _agent_result(cell: dict, config: BackendConfig, hint: str, image: str):
 
     from experiments.coding.recovery_challenge import challenging
 
-    apply_retry_env()
+    assert_retry_env()
     base = _swebench_base()
     model_cfg = model_config(config, hint)
     env_cfg = dict(base["environment"])

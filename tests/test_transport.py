@@ -52,7 +52,8 @@ def test_an_empty_id_is_refused():
 
 
 # ── the regression that host 3 cost a GPU to find ──
-def test_a_bare_model_id_reaching_the_transport_is_caught_before_renting():
+def test_a_bare_model_id_reaching_the_transport_is_caught_before_renting(monkeypatch):
+    monkeypatch.setenv("MSWEA_MODEL_RETRY_STOP_AFTER_ATTEMPT", "1")
     """The whole point: this is now reachable without an instance."""
     out = RB._check_transport(cfg())
     assert out["transport_model"].startswith("openai/")
@@ -86,6 +87,7 @@ def test_an_empty_model_id_is_refused():
 
 
 def test_the_check_sends_nothing(monkeypatch):
+    monkeypatch.setenv("MSWEA_MODEL_RETRY_STOP_AFTER_ATTEMPT", "1")
     import litellm
     monkeypatch.setattr(litellm, "completion",
                         lambda *a, **k: pytest.fail("a request was sent"))
@@ -102,6 +104,7 @@ def test_every_knob_is_pinned_to_zero():
 
 
 def test_a_non_zero_knob_fails_constructibility(monkeypatch):
+    monkeypatch.setenv("MSWEA_MODEL_RETRY_STOP_AFTER_ATTEMPT", "1")
     monkeypatch.setitem(P.RETRY_KNOBS, "num_retries", 3)
     with pytest.raises(RB.BackendUnavailable) as e:
         RB._check_transport(cfg())
@@ -121,6 +124,7 @@ def test_litellm_still_exposes_the_knobs_we_pin():
 
 def test_the_knobs_reach_the_model_config(monkeypatch):
     """Behavioural: what run_cell hands to the model carries the policy."""
+    monkeypatch.setenv("MSWEA_MODEL_RETRY_STOP_AFTER_ATTEMPT", "1")
     seen = {}
 
     class FakeModel:
@@ -181,6 +185,7 @@ def test_the_order_hash_is_unmoved_by_p8():
 def test_constructibility_refuses_if_the_retry_variable_is_unread(monkeypatch):
     """If a later mini-swe-agent stops reading it, the policy is inert and
     that must fail rather than pass quietly."""
+    monkeypatch.setenv("MSWEA_NO_SUCH_VARIABLE", "1")
     monkeypatch.setitem(P.RETRY_ENV, "MSWEA_NO_SUCH_VARIABLE", "1")
     monkeypatch.delitem(P.RETRY_ENV, "MSWEA_MODEL_RETRY_STOP_AFTER_ATTEMPT")
     with pytest.raises(RB.BackendUnavailable) as e:
@@ -189,13 +194,15 @@ def test_constructibility_refuses_if_the_retry_variable_is_unread(monkeypatch):
 
 
 def test_constructibility_refuses_more_than_one_attempt(monkeypatch):
+    monkeypatch.setenv("MSWEA_MODEL_RETRY_STOP_AFTER_ATTEMPT", "3")
     monkeypatch.setitem(P.RETRY_ENV, "MSWEA_MODEL_RETRY_STOP_AFTER_ATTEMPT", "3")
     with pytest.raises(RB.BackendUnavailable) as e:
         RB._check_transport(cfg())
     assert "not '1'" in str(e.value)
 
 
-def test_the_dry_run_report_carries_the_env_policy():
+def test_the_dry_run_report_carries_the_env_policy(monkeypatch):
+    monkeypatch.setenv("MSWEA_MODEL_RETRY_STOP_AFTER_ATTEMPT", "1")
     out = RB._check_transport(cfg())
     assert out["retry_env"] == {"MSWEA_MODEL_RETRY_STOP_AFTER_ATTEMPT": "1"}
     assert out["requests_sent"] == 0

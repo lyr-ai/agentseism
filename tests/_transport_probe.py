@@ -58,8 +58,21 @@ class Stub(BaseHTTPRequestHandler):
 
 def main() -> int:
     attempts = sys.argv[1]
-    os.environ["MSWEA_MODEL_RETRY_STOP_AFTER_ATTEMPT"] = attempts
+    when = sys.argv[2] if len(sys.argv) > 2 else "before"
     os.environ.setdefault("MSWEA_GLOBAL_CONFIG_FILE", "/dev/null")
+
+    if when == "before":
+        os.environ["MSWEA_MODEL_RETRY_STOP_AFTER_ATTEMPT"] = attempts
+    elif when == "after":
+        # Import the retry layer *first*, then set the variable. If the
+        # `os.getenv` were evaluated at import or decoration time this would
+        # be too late and the default of ten would stand.
+        os.environ.pop("MSWEA_MODEL_RETRY_STOP_AFTER_ATTEMPT", None)
+        import minisweagent.models.utils  # noqa: F401
+        import minisweagent.models.litellm_model  # noqa: F401
+        os.environ["MSWEA_MODEL_RETRY_STOP_AFTER_ATTEMPT"] = attempts
+    else:
+        raise SystemExit(f"unknown mode {when!r}")
 
     srv = ThreadingHTTPServer(("127.0.0.1", 0), Stub)
     port = srv.server_address[1]
@@ -89,6 +102,7 @@ def main() -> int:
     gaps = [round(b - a, 3) for a, b in zip(HITS, HITS[1:])]
     print(json.dumps({
         "requested_attempts": int(attempts),
+        "env_set": when,
         "http_requests": len(HITS),
         "elapsed_seconds": round(elapsed, 3),
         "gaps_between_requests": gaps,
