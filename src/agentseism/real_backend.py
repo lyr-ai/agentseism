@@ -632,17 +632,49 @@ def _evaluate(cell: dict, submission: str, config: BackendConfig) -> tuple:
          "--max_workers", "1", "--timeout", "1800",
          "--report_dir", str(reports)],
         stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=3600)
-    hits = sorted(reports.glob(f"*{run_id}*.json"))
-    if not hits:
+    path = _instance_report(run_id, cell["task"])
+    if path is None:
         return None, ""
-    report = json.loads(hits[0].read_text())
-    body = report.get(cell["task"], report)
-    value = body.get("resolved")
-    if not isinstance(value, bool):
-        # An absent key, a string, a harness that produced a report about
-        # something else -- none of those is `False`.
-        return None, str(hits[0])
-    return value, str(hits[0])
+    return _verdict(json.loads(path.read_text()), cell["task"]), str(path)
+
+
+def _instance_report(run_id: str, task: str) -> Path | None:
+    """The harness's **per-instance** report, which is the authoritative one.
+
+    The run-level summary it also writes has no per-instance `resolved` field
+    and can disagree: a real run graded this task `resolved: False` with 15
+    PASS_TO_PASS successes while the summary filed it under
+    `ambiguous_failure_ids / no_tests_collected`. A mocked evaluator hid both
+    facts.
+    """
+    for root in (Path("logs/run_evaluation") / run_id,
+                 Path("logs/run_evaluation")):
+        if not root.exists():
+            continue
+        hits = sorted(root.rglob(f"{task}/report.json"))
+        if hits:
+            return hits[-1]
+    return None
+
+
+def _verdict(report: dict, task: str):
+    """True, False, or None -- via the checker this project already had.
+
+    `c2h_checker.label_from_report` was written for the donor batch and
+    verified 20/20 offline. The pilot reimplemented it, badly, against the
+    wrong file. Reusing it is the point: an infra failure, a missing patch, a
+    patch that did not apply and an absent `resolved` are each **undecided**,
+    never False.
+    """
+    try:
+        from experiments.coding.c2h_checker import (UnlabelledDonor,
+                                                    label_from_report)
+    except Exception:                                       # noqa: BLE001
+        return None
+    try:
+        return label_from_report(report, task) == "PASS"
+    except UnlabelledDonor:
+        return None
 
 
 def run_cell(cell: dict, config: BackendConfig) -> dict:

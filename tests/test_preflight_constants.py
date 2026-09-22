@@ -58,7 +58,25 @@ def test_the_expected_test_count_is_what_the_suite_actually_collects():
     assert r.returncode == 0, r.stdout[-2000:]
     m = re.search(r"(\d+) tests? collected", r.stdout)
     assert m, r.stdout[-2000:]
-    assert int(const("EXPECTED_TESTS")) == int(m.group(1))
+    # The script compares against *passed*, and some tests are collected but
+    # skipped by design, so the two frozen numbers must sum to the collection.
+    collected = int(m.group(1))
+    assert int(const("EXPECTED_TESTS")) + int(const("EXPECTED_SKIPPED")) \
+        == collected
+
+
+def test_the_skipped_count_is_the_opt_in_docker_suite():
+    """Skips are deliberate and enumerated, not incidental."""
+    r = subprocess.run([sys.executable, "-m", "pytest", "--collect-only", "-q",
+                        "-p", "no:cacheprovider",
+                        "tests/test_docker_integration.py"],
+                       cwd=ROOT, capture_output=True, text=True, timeout=300)
+    n = int(re.search(r"(\d+) tests? collected", r.stdout).group(1))
+    # every Docker-marked test skips without the opt-in
+    import os
+    assert not os.environ.get("AGENTSEISM_DOCKER_TESTS"), \
+        "run the default suite without the opt-in to check the skip count"
+    assert int(const("EXPECTED_SKIPPED")) <= n
 
 
 def test_the_serving_constants_match_the_serving_config():

@@ -31,7 +31,12 @@ set -euo pipefail
 PROTOCOL_HASH="cc9b0c3ff329ef58"   # moved by P.3, P.5-P.9
 ORDER_HASH="cfe8856c9c9167b5"
 EXPECTED_CELLS=18
-EXPECTED_TESTS=745
+EXPECTED_TESTS=748
+EXPECTED_SKIPPED=9
+# The Docker integration tests are collected but skipped unless
+# AGENTSEISM_DOCKER_TESTS is set: preflight must not perform an unregistered
+# execution. Both numbers are frozen, so a test that silently starts -- or
+# stops -- skipping is caught rather than absorbed.
 BASELINE_USD="7.16"
 BASELINE_CURRENCY="USD"
 BASELINE_PERIOD="September 2026"
@@ -114,6 +119,10 @@ skip()      { note "$1" "already done -- skipping (resumable step)"; }
 # named before it. Parse the count instead of grepping for the literal, so a
 # 484 reads as a mismatch rather than as an absence of "483 passed".
 parse_passed() { grep -oE '[0-9]+ passed' "$1" | tail -1 | cut -d' ' -f1; }
+parse_skipped() {
+  local n; n="$(grep -oE '[0-9]+ skipped' "$1" | tail -1 | cut -d' ' -f1)"
+  printf '%s' "${n:-0}"
+}
 
 disk_gb() { df -BG --output=avail "$1" | tail -1 | tr -dc '0-9'; }
 
@@ -429,10 +438,13 @@ run_tests() {
     tail -25 "$log"
     die "the suite did not pass; see $log"
   }
-  local passed; passed="$(parse_passed "$log")"
+  local passed skipped
+  passed="$(parse_passed "$log")"; skipped="$(parse_skipped "$log")"
   [ "${passed:-0}" -eq "$EXPECTED_TESTS" ] \
     || die "$passed tests passed, expected exactly $EXPECTED_TESTS -- the tree is not the tree the count was frozen against"
-  ok "pytest" "$passed passed"
+  [ "${skipped:-0}" -eq "$EXPECTED_SKIPPED" ] \
+    || die "$skipped tests skipped, expected exactly $EXPECTED_SKIPPED -- a test that silently started or stopped skipping is not the frozen suite"
+  ok "pytest" "$passed passed, $skipped skipped"
   cd - >/dev/null
 }
 

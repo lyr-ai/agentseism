@@ -125,7 +125,7 @@ EOF
 REAL="$real_python"
 BROKEN="$root/broken"
 if [ "\${1:-}" = "-m" ] && [ "\${2:-}" = "pytest" ] && [ -n "\${MOCK_PYTEST_PASSED:-}" ]; then
-  echo "\${MOCK_PYTEST_PASSED} passed in 1.00s"
+  echo "\${MOCK_PYTEST_PASSED} passed, \${MOCK_PYTEST_SKIPPED:-9} skipped in 1.00s"
   [ -n "\${MOCK_PYTEST_FAIL:-}" ] && exit 1
   exit 0
 fi
