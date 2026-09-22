@@ -64,10 +64,9 @@ release_lock() { rm -rf "$LOCK" 2>/dev/null || true; }
 # indefinitely. Under SIGKILL no trap runs at all and the lock survives; that
 # is the stale-lock path above, which reports the dead owner and refuses to
 # remove the directory on its own.
-trap 'release_lock' EXIT
-trap 'release_lock; exit 130' INT
-trap 'release_lock; exit 143' TERM
-trap 'release_lock; exit 129' HUP
+# The traps themselves are installed once, below, after $RESULTS exists --
+# installing them here too would be overwritten and give a false sense that
+# the lock is covered from this point.
 
 RESULTS="$(mktemp)"
 ok()   { printf '  \033[32mPASS\033[0m  %s\n' "$1"; echo PASS >> "$RESULTS"; }
@@ -94,7 +93,14 @@ kill_mock_servers() {
   esac
   /usr/bin/pkill -f "$HARNESS_ID" >/dev/null 2>&1 || true
 }
-trap 'kill_mock_servers; rm -f "$RESULTS"; rmdir "$LOCK" 2>/dev/null' EXIT
+# One EXIT trap, and it must call release_lock. A second `trap ... EXIT`
+# silently replaces the first, and this one used `rmdir`, which cannot remove
+# the lock directory once it holds `pid` and `created` -- so a *successful*
+# run left its own lock behind and the next run refused to start.
+trap 'kill_mock_servers; rm -f "$RESULTS"; release_lock' EXIT
+trap 'kill_mock_servers; rm -f "$RESULTS"; release_lock; exit 130' INT
+trap 'kill_mock_servers; rm -f "$RESULTS"; release_lock; exit 143' TERM
+trap 'kill_mock_servers; rm -f "$RESULTS"; release_lock; exit 129' HUP
 
 run_scenario() {
   kill_mock_servers
