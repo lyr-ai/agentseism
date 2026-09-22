@@ -205,3 +205,101 @@ host is rented rather than after.
 **Any failure between 3 and 11 stops the host.** Artifacts are retrieved and
 verified, the instance is terminated, and the record says which condition
 failed.
+
+---
+
+# Short review — before Host 4
+
+**2026-09-21.** `pilot_runs = 0`, `$5.11` spent across three hosts, no pilot
+evidence. Reviewed at `protocol_hash b5ee184b7b35d8ba`,
+`order_hash cfe8856c9c9167b5`.
+
+## 1. When the retry variable is read — **measured, not reasoned**
+
+The concern: tenacity's `os.getenv` might be evaluated at import or decoration
+time, in which case setting it before constructing the model is still too
+late.
+
+Measured against a 500-returning stub through the real `get_model` path:
+
+| variable set | HTTP requests | elapsed |
+|---|---|---|
+| before import | 1 | 0.15 s |
+| **after import** | **1** | 0.12 s |
+
+On 2.4.6 it is read inside `retry()` on every call, so a late value does take
+effect. **The rule stands anyway**, because the cost is zero and two things
+would otherwise be true: a process that repairs its own transport policy
+cannot report whether the policy was in force when it started, and the
+guarantee would depend on an implementation detail a later version is free to
+change. If that day comes, `test_the_variable_is_read_at_call_time_on_this_version`
+fails and names the export as load-bearing.
+
+- the shell **exports** `MSWEA_MODEL_RETRY_STOP_AFTER_ATTEMPT=1` at line 70;
+  the first Python starts at line 266;
+- `apply_retry_env` is gone. `assert_retry_env` verifies and **refuses** —
+  even a value that would work;
+- a structural test asserts **no code path writes the variable**;
+- the artifact records the registered attempts, the value in force, and the
+  attempts actually made.
+
+## 2. Import ordering
+
+`verify_hints()` does import `minisweagent`, and it is the first thing
+`build(dry_run=True)` touches. It runs inside a Python the shell started
+**after** the export, so the variable is in the process environment before any
+`minisweagent` module loads. Checked by position in the file, not by belief.
+
+## 3. All three entry points inherit it
+
+| entry point | line | started by |
+|---|---|---|
+| constructibility gate | 468 | this script |
+| digest binding + transport check | 498 | this script |
+| registered smoke test | 738 | this script |
+
+The pilot runner will be the fourth and is started the same way. None of them
+sets the variable itself.
+
+## 4. LiteLLM's layer is still closed
+
+`num_retries: 0`, `max_retries: 0`, `request_timeout: None` — the second layer
+stays pinned. `request_timeout` is deliberately unset so it cannot compete
+with the registered 1200 s cap. Constructibility fails if any knob is
+non-zero, or if the installed LiteLLM no longer exposes it.
+
+## 5. Every artifact records all three numbers
+
+`transport_attempts` (registered), `retry_env` (the policy), and
+`retry_env_in_process` (what was actually in force) — a mismatch is an
+integrity stop, not a footnote.
+
+## 6. The control cannot contaminate anything
+
+Each probe runs in its own subprocess with an explicit environment that has
+the variable **stripped**, and the parent asserts it is still absent from its
+own environment after the child returns. The two-attempt control is test-only
+and never enters the pilot configuration.
+
+## Findings
+
+None requiring a new amendment. The measurement in §1 contradicted the
+hypothesis that prompted the review, and the resulting rule is stricter than
+the measurement requires — which is the right direction when the thing being
+guarded is an implementation detail of someone else's package.
+
+```
+pytest      715 passed
+harness     108 passed
+shellcheck  clean
+```
+
+## Host 4
+
+The sequence is unchanged: read the settled total with nothing running, record
+it, rent, stop before setup, then setup → constructibility → images and
+weights → vLLM → **one** smoke attempt.
+
+By P.4 the smoke test gets exactly one attempt. A failure stops the host and
+is not re-run with adjusted parameters — including a failure whose cause looks
+small once it is visible, which is the only kind that has occurred so far.
