@@ -320,6 +320,7 @@ def _check_transport(cfg: BackendConfig) -> dict:
         raise BackendUnavailable(
             f"cannot read the retry layer's source: {e}") from e
     assert_retry_env()          # in force in this process, not repaired here
+    assert_cost_env()
     for var, value in P.RETRY_ENV.items():
         if var not in retry_src:
             raise BackendUnavailable(
@@ -337,6 +338,9 @@ def _check_transport(cfg: BackendConfig) -> dict:
             "retry_env": dict(P.RETRY_ENV),
             "retry_env_in_process": {k: __import__("os").environ.get(k)
                                      for k in P.RETRY_ENV},
+            "cost_tracking": P.COST_TRACKING,
+            "cost_env_in_process": {k: __import__("os").environ.get(k)
+                                    for k in P.COST_ENV},
             "requests_sent": 0}
 
 
@@ -495,6 +499,12 @@ def model_config(config: BackendConfig, hint: str) -> dict:
     # client addresses it. Host 3 reached the container and then failed on
     # `LLM Provider NOT provided` because the bare id went to LiteLLM.
     model_cfg["model_name"] = P.transport_model(config.model_name)
+    # LiteLLM prices a response *after* generating it, and a locally served
+    # model has no price entry -- so the answer is discarded by accounting the
+    # pilot does not need. Spend is read from the billing page, never from a
+    # price table. Set on the config because the environment variable behind
+    # this field is read at import time.
+    model_cfg["cost_tracking"] = P.COST_TRACKING
     model_cfg["model_kwargs"] = {
         **model_cfg.get("model_kwargs", {}),
         "api_base": config.model_base_url,
@@ -504,6 +514,23 @@ def model_config(config: BackendConfig, hint: str) -> dict:
         **{k: v for k, v in P.RETRY_KNOBS.items() if v is not None},
     }
     return model_cfg
+
+
+def assert_cost_env() -> dict:
+    """Verify the cost-tracking environment. **Never set it.**
+
+    The config field is the mechanism that holds; this checks that the
+    environment agrees, so the two cannot drift apart silently.
+    """
+    import os
+    for k, want in P.COST_ENV.items():
+        got = os.environ.get(k)
+        if got != want:
+            raise BackendUnavailable(
+                f"{k} is {got!r}, registered as {want!r}. It is read at "
+                "import time, so it must be exported before Python starts; "
+                "the backend verifies it and does not repair it")
+    return dict(P.COST_ENV)
 
 
 def assert_retry_env() -> dict:
@@ -542,6 +569,7 @@ def _agent_result(cell: dict, config: BackendConfig, hint: str, image: str):
     from experiments.coding.recovery_challenge import challenging
 
     assert_retry_env()
+    assert_cost_env()
     base = _swebench_base()
     model_cfg = model_config(config, hint)
     env_cfg = dict(base["environment"])
@@ -699,6 +727,7 @@ def _result(cell, hint_sha, image, config, t0, agent, *,
         "transport_model": P.transport_model(config.model_name),
         "api_base": config.model_base_url,
         "transport_attempts": P.TRANSPORT_ATTEMPTS,
+        "cost_tracking": P.COST_TRACKING,
         "model_revision": config.model_revision,
         "evaluator_report_path": report_path,
         "n_calls": int(getattr(agent, "n_calls", 0)),

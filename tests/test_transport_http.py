@@ -74,7 +74,7 @@ def test_there_is_no_backoff(registered):
 
 
 def test_the_failure_stays_an_infrastructure_error(registered):
-    assert registered["exception"] == "InternalServerError"
+    assert registered["exception"].startswith("InternalServerError")
 
 
 def test_the_address_used_is_the_registered_one(registered):

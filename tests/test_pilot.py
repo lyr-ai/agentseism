@@ -191,9 +191,10 @@ def test_the_protocol_hash_is_the_registered_one():
     it again by registering the exit-status mapping and the scorable set. P.7
     moved it again by registering the post-block cost check, and P.8 by
     registering the provider address and the transport retry policy, and P.8.1
-    by correcting which layer actually retries.
+    by correcting which layer actually retries, and P.9 by registering the cost
+    accounting that discarded a successful response on host 4.
     """
-    assert P.protocol_hash() == "b5ee184b7b35d8ba"
+    assert P.protocol_hash() == "cc9b0c3ff329ef58"
 
 
 def test_no_new_block_after_the_threshold(tmp_path):

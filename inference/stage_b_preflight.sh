@@ -28,10 +28,10 @@
 set -euo pipefail
 
 # ── frozen values. Changing one here is changing the experiment. ──
-PROTOCOL_HASH="b5ee184b7b35d8ba"   # moved by P.3, P.5-P.8.1
+PROTOCOL_HASH="cc9b0c3ff329ef58"   # moved by P.3, P.5-P.9
 ORDER_HASH="cfe8856c9c9167b5"
 EXPECTED_CELLS=18
-EXPECTED_TESTS=715
+EXPECTED_TESTS=731
 BASELINE_USD="7.16"
 BASELINE_CURRENCY="USD"
 BASELINE_PERIOD="September 2026"
@@ -68,6 +68,12 @@ WAIT_VLLM_SECONDS=1800
 # to set it, so a process can never repair its own transport policy and then
 # report that the policy was in force.
 export MSWEA_MODEL_RETRY_STOP_AFTER_ATTEMPT=1
+# LiteLLM prices a response after generating it and a locally served model has
+# no price entry, so the answer is thrown away by accounting the pilot does not
+# need. This one is read at *import* time, so exporting it here is not
+# belt-and-braces -- it is the only moment it can be set from outside. The
+# backend also sets it on the model config, which is what actually holds.
+export MSWEA_COST_TRACKING=ignore_errors
 
 WORK="${WORK:-$HOME/agentseism-stageb}"
 REPO="$WORK/repo"

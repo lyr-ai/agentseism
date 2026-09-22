@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 HITS: list[float] = []
 LOCK = threading.Lock()
+MODE = "fail"
 
 
 class Stub(BaseHTTPRequestHandler):
@@ -37,28 +38,70 @@ class Stub(BaseHTTPRequestHandler):
     # the probe was measuring its own server, not the retry policy.
     protocol_version = "HTTP/1.0"
 
-    def _fail(self):
-        with LOCK:
-            HITS.append(time.monotonic())
-        body = b'{"error":{"message":"stub: upstream failure",' \
-               b'"type":"server_error","code":500}}'
-        self.send_response(500)
+    def _respond(self, code: int, body: bytes):
+        self.send_response(code)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Connection", "close")
         self.end_headers()
         self.wfile.write(body)
 
+    def _handle(self):
+        with LOCK:
+            HITS.append(time.monotonic())
+        if MODE == "success":
+            # A valid OpenAI tool call, so the client runs its whole success
+            # path: parse the response, price it, parse the actions. Host 4
+            # died in that path -- after a successful generation -- and no
+            # failure-returning stub can reach it.
+            self._respond(200, json.dumps({
+                "id": "chatcmpl-stub", "object": "chat.completion",
+                "created": 0, "model": "openai/Qwen/Qwen3.6-27B-FP8",
+                "choices": [{
+                    "index": 0, "finish_reason": "tool_calls",
+                    "message": {
+                        "role": "assistant", "content": "",
+                        "tool_calls": [{
+                            "id": "call_stub", "type": "function",
+                            "function": {"name": "bash", "arguments":
+                                         json.dumps({"command": "ls /testbed"})},
+                        }],
+                    },
+                }],
+                "usage": {"prompt_tokens": 11, "completion_tokens": 7,
+                          "total_tokens": 18},
+            }).encode())
+            return
+        body = b'{"error":{"message":"stub: upstream failure",' \
+               b'"type":"server_error","code":500}}'
+        self._respond(500, body)
+
     # Every method, so nothing the client tries reaches a default error page.
-    do_POST = do_GET = do_PUT = do_HEAD = _fail
+    do_POST = do_GET = do_PUT = do_HEAD = _handle
 
     def log_message(self, *a):
         pass
 
 
 def main() -> int:
+    global MODE
     attempts = sys.argv[1]
     when = sys.argv[2] if len(sys.argv) > 2 else "before"
+    MODE = sys.argv[3] if len(sys.argv) > 3 else "fail"
+    # The value that made host 4 fail is read at import time, so the probe
+    # must set it before anything imports mini-swe-agent -- and a mode that
+    # omits it reproduces host 4 exactly.
+    if MODE == "success":
+        os.environ["MSWEA_COST_TRACKING"] = "ignore_errors"
+    elif MODE == "success_without_cost_env":
+        os.environ.pop("MSWEA_COST_TRACKING", None)
+        MODE = "success"
+    elif MODE == "success_without_fix":
+        # Neither mechanism: the control that proves this probe can see the
+        # defect. Without it, "no exception" might only mean the probe cannot
+        # reach the code that raised on host 4.
+        os.environ.pop("MSWEA_COST_TRACKING", None)
+        MODE = "success"
     os.environ.setdefault("MSWEA_GLOBAL_CONFIG_FILE", "/dev/null")
 
     if when == "before":
@@ -86,16 +129,23 @@ def main() -> int:
                         model_name="Qwen/Qwen3.6-27B-FP8",
                         model_revision="probe")
     mc = model_config(cfg, P.HINTS["full"])
+    if sys.argv[3:4] == ["success_without_fix"]:
+        mc.pop("cost_tracking", None)
 
     from minisweagent.models import get_model
     model = get_model(mc["model_name"], config=mc)
 
     t0 = time.monotonic()
     err = None
+    actions = None
+    cost = None
     try:
-        model.query([{"role": "user", "content": "probe"}])
+        out = model.query([{"role": "user", "content": "probe"}])
+        extra = (out or {}).get("extra") or {}
+        actions = [a.get("command") for a in (extra.get("actions") or [])]
+        cost = extra.get("cost")
     except BaseException as e:                              # noqa: BLE001
-        err = f"{type(e).__name__}"
+        err = f"{type(e).__name__}: {str(e)[:120]}"
     elapsed = time.monotonic() - t0
     srv.shutdown()
 
@@ -107,6 +157,11 @@ def main() -> int:
         "elapsed_seconds": round(elapsed, 3),
         "gaps_between_requests": gaps,
         "exception": err,
+        "mode": MODE,
+        "actions": actions,
+        "cost": cost,
+        "cost_tracking_config": mc.get("cost_tracking"),
+        "cost_env": os.environ.get("MSWEA_COST_TRACKING"),
         "model_name": mc["model_name"],
         "num_retries": mc["model_kwargs"].get("num_retries"),
         "max_retries": mc["model_kwargs"].get("max_retries"),

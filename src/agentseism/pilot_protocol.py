@@ -256,6 +256,47 @@ still have made ten attempts under a registered one-attempt rule.
 
 Set to 1: the request is issued once and the failure is reported."""
 
+COST_TRACKING = "ignore_errors"
+"""Set on the **model config**, which is the authoritative mechanism.
+
+Unlike the retry variable, `cost_tracking` is a class-body default:
+
+    cost_tracking: Literal["default", "ignore_errors"] = os.getenv(
+        "MSWEA_COST_TRACKING", "default")
+
+That is evaluated when the module is imported, so an environment variable set
+afterwards has no effect at all -- the case the retry review hypothesised and
+did not find there. Passing the value in the model config sidesteps import
+order entirely, and it is explicit in the frozen configuration rather than
+implicit in an environment."""
+
+COST_ENV = {"MSWEA_COST_TRACKING": "ignore_errors"}
+"""LiteLLM prices a response after generating it (amendment P.9).
+
+A locally served model has no price entry, so `_calculate_cost` raises
+**after** the model has already answered:
+
+    Error calculating cost for model openai/Qwen/Qwen3.6-27B-FP8:
+    This model isn't mapped yet.
+
+The response is discarded by accounting that the pilot does not need: cost is
+measured from the billing page, not from LiteLLM's price table.
+
+The environment variable is exported as well, before any Python starts, so
+both mechanisms agree. The config field is what makes it hold.
+
+This project has paid for this defect twice. It destroyed a Gate 9 attempt,
+was diagnosed, written down -- and was not carried into the pilot backend,
+where it then failed host 4's registered smoke test. It is registered here so
+that it is part of the protocol rather than a thing someone has to remember."""
+
+COST_ENV_DEPENDENCY = (
+    "minisweagent 2.4.6 reads MSWEA_COST_TRACKING in models/utils.py. The "
+    "accepted value 'ignore_errors' suppresses the raise and leaves cost "
+    "unrecorded, which is correct here: the pilot's spend is read from the "
+    "billing page and never from a price table."
+)
+
 RETRY_ENV_DEPENDENCY = (
     "minisweagent 2.4.6 reads MSWEA_MODEL_RETRY_STOP_AFTER_ATTEMPT inside "
     "models/utils.py:retry(). The name is not public API and a later version "
@@ -416,7 +457,9 @@ def protocol_hash() -> str:
          "transport": {"provider": LITELLM_PROVIDER,
                        "attempts": TRANSPORT_ATTEMPTS,
                        "retry_knobs": RETRY_KNOBS,
-                       "retry_env": RETRY_ENV},
+                       "retry_env": RETRY_ENV,
+                       "cost_env": COST_ENV,
+                       "cost_tracking": COST_TRACKING},
          "scorable": list(SCORABLE),
          "schema": SCHEMA_VERSION}, sort_keys=True).encode()).hexdigest()[:16]
 
