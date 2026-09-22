@@ -28,10 +28,10 @@
 set -euo pipefail
 
 # ── frozen values. Changing one here is changing the experiment. ──
-PROTOCOL_HASH="cc9b0c3ff329ef58"   # moved by P.3, P.5-P.9
+PROTOCOL_HASH="b7af66ca3ab783ab"   # moved by P.3, P.5-P.10
 ORDER_HASH="cfe8856c9c9167b5"
 EXPECTED_CELLS=18
-EXPECTED_TESTS=748
+EXPECTED_TESTS=751
 EXPECTED_SKIPPED=9
 # The Docker integration tests are collected but skipped unless
 # AGENTSEISM_DOCKER_TESTS is set: preflight must not perform an unregistered

@@ -303,3 +303,75 @@ weights → vLLM → **one** smoke attempt.
 By P.4 the smoke test gets exactly one attempt. A failure stops the host and
 is not re-run with adjusted parameters — including a failure whose cause looks
 small once it is visible, which is the only kind that has occurred so far.
+
+---
+
+# Go / no-go — Host 5
+
+**2026-09-22.** `pilot_runs = 0` · `$6.67` of `$30` spent across four hosts ·
+no pilot evidence. Reviewed at `protocol_hash b7af66ca3ab783ab`,
+`order_hash cfe8856c9c9167b5`.
+
+**Conditional GO**, on the terms P.10 registers. Not because the risk is gone,
+but because the verification boundary is now in a defensible place.
+
+## The boundary
+
+| chain segment | evidence |
+|---|---|
+| LiteLLM addressing, successful response | real client path, locally, one request |
+| cost accounting | control reproduces host 4; the P.9 path passes |
+| retry policy | real HTTP 500: exactly one attempt, no backoff |
+| challenge injection and recovery | full sequence, suppressed action never executed |
+| real Docker `/testbed` | exact smoke-image digest, `5789e62ba`, clean tree |
+| patch extraction | recovery edit present, suppressed edit **absent** from the patch |
+| SWE-bench evaluator | real harness, explicit `resolved: false` |
+| timeout / censoring | cap path passes, evaluator never runs |
+| **remaining unknown** | **does the real Qwen, through vLLM's parser, emit a usable tool call** |
+
+One unknown, and it is not reachable without a GPU. That gives Host 5 a
+specific, irreplaceable experimental purpose rather than another attempt at
+the same thing.
+
+## The repeated pattern, recorded
+
+Two of the three smoke failures came from the pilot **reimplementing a
+mechanism the project had already verified**, not from anything novel:
+
+| | already existed | what the pilot did |
+|---|---|---|
+| cost policy | registered in two preregs; set by `gate9.py`, `c2h_backend.py`, `run_phase_a.sh` | set by neither the backend nor preflight |
+| evaluator verdict | `c2h_checker.label_from_report`, verified 20/20 offline, with the right guards | a second parser, reading the wrong file |
+
+The conclusion is **not** more checks. It is:
+
+1. the evaluator verdict calls `c2h_checker.label_from_report` directly;
+2. the pilot keeps **no second report parser** — asserted structurally by
+   `test_the_pilot_keeps_no_second_report_parser`;
+3. the failure matrix covers every known runner configuration;
+4. after Host 5 the protocol is **not extended in response to a smoke
+   result** — P.10.
+
+This pattern is a residual risk that no single check removes, and it is the
+honest argument against a GO. It is outweighed here only because the remaining
+unknown is narrow, named, and unreachable any other way.
+
+## Budget
+
+`$6.67` spent, `$23.33` to the absolute stop. One smoke attempt is roughly
+`$1.50–2.50` of instance time. Affordable, and P.7 still governs what happens
+after block 0.
+
+## Terms
+
+- Host 5 gets **one** smoke attempt.
+- Failure ⇒ `infrastructure_feasibility_stop`: no responding amendment, no
+  Host 6, no verdict, the record stands as the feasibility result.
+- Pass ⇒ fresh `after_setup` reading, fresh block-0 reading, block 0 only,
+  then P.7.
+
+```
+pytest      751 passed, 9 skipped
+harness     to be re-run at this commit before renting
+shellcheck  clean
+```

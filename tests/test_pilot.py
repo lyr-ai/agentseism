@@ -192,9 +192,10 @@ def test_the_protocol_hash_is_the_registered_one():
     moved it again by registering the post-block cost check, and P.8 by
     registering the provider address and the transport retry policy, and P.8.1
     by correcting which layer actually retries, and P.9 by registering the cost
-    accounting that discarded a successful response on host 4.
+    accounting that discarded a successful response on host 4, and P.10 by
+    registering host 5 as the final paid smoke attempt.
     """
-    assert P.protocol_hash() == "cc9b0c3ff329ef58"
+    assert P.protocol_hash() == "b7af66ca3ab783ab"
 
 
 def test_no_new_block_after_the_threshold(tmp_path):

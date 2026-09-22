@@ -318,6 +318,27 @@ def transport_model(registered_model_id: str) -> str:
     return f"{LITELLM_PROVIDER}/{registered_model_id}"
 
 
+# ── the terminal smoke attempt (amendment P.10) ──
+FINAL_PAID_SMOKE_HOST = "host_5"
+INFRASTRUCTURE_FEASIBILITY_STOP = "infrastructure_feasibility_stop"
+"""Host 5 is this pilot's last paid smoke attempt.
+
+Three attempts have failed, each on a different defect, and each was answered
+with an amendment. A fourth would make *register a fix and retry* the method,
+which is indistinguishable from tuning until the gate opens. This rule is
+registered **before** host 5 so that it cannot be adopted after seeing the
+result.
+
+On failure: `infrastructure_feasibility_stop`. Artifacts are retrieved, the
+host is terminated, **no amendment is registered in response**, there is no
+host 6, and no recoverability or regression verdict is produced. The failure
+record and the cost stand as the feasibility artifact -- which is a result,
+not an absence of one.
+
+On pass: a fresh `after_setup` reading, a fresh block-0 reading, and block 0.
+P.7 then decides whether the remaining blocks are released."""
+
+
 # ── cost-model check after a block (amendment P.7) ──
 COST_EXPECTATION_PER_RUN = 1.17
 """~$21 for 18 runs plus the smoke test, i.e. about $3.50 for a three-cell
@@ -452,6 +473,8 @@ def protocol_hash() -> str:
          # The post-block cost check is a stopping rule (amendment P.7).
          "cost_check": {"expectation_per_run": COST_EXPECTATION_PER_RUN,
                         "anchor": "ABSOLUTE_LIMIT_USD"},
+         # The terminal smoke attempt (amendment P.10).
+         "final_paid_smoke_host": FINAL_PAID_SMOKE_HOST,
          # How the client addresses the server, and how many times one
          # logical request may enter the transport (amendment P.8).
          "transport": {"provider": LITELLM_PROVIDER,

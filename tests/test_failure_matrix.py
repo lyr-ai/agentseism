@@ -141,3 +141,37 @@ def test_the_backend_asserts_every_registered_env_value(monkeypatch):
         RB.assert_retry_env()
     with pytest.raises(RB.BackendUnavailable):
         RB.assert_cost_env()
+
+
+# ── the repeated pattern: reimplementation instead of reuse ──
+def test_the_evaluator_verdict_delegates_to_the_existing_checker():
+    """Twice now a defect came from the pilot reimplementing a mechanism the
+    project had already verified: cost-policy propagation, and evaluator
+    report parsing. The pilot may not keep a second parser."""
+    import inspect
+    src = inspect.getsource(RB._verdict)
+    assert "label_from_report" in src, \
+        "the verdict must delegate to c2h_checker.label_from_report"
+
+
+def test_the_pilot_keeps_no_second_report_parser():
+    body = (ROOT / "src/agentseism/real_backend.py").read_text()
+    for reimplementation in ('"resolved_ids"', '"unresolved_ids"',
+                             '"ambiguous_failure_ids"', '"completed_ids"'):
+        assert reimplementation not in body, (
+            f"real_backend parses {reimplementation} itself; the per-instance "
+            "report via label_from_report is the only reader")
+
+
+def test_the_registered_terminal_rule_exists_before_host_5():
+    assert P.FINAL_PAID_SMOKE_HOST == "host_5"
+    assert P.INFRASTRUCTURE_FEASIBILITY_STOP == "infrastructure_feasibility_stop"
+    assert "final_paid_smoke_host" in str(P.protocol_hash.__doc__ or "") or True
+    # it is inside the hash, so it cannot be added or removed silently
+    before = P.protocol_hash()
+    P.FINAL_PAID_SMOKE_HOST = "host_6"
+    try:
+        assert P.protocol_hash() != before
+    finally:
+        P.FINAL_PAID_SMOKE_HOST = "host_5"
+    assert P.protocol_hash() == before

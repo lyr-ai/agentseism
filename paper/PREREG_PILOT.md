@@ -1155,3 +1155,91 @@ order, the draw, the smoke test, the exit mapping and the cost check are
 untouched.
 
 `study_mode: feasibility` · `verdict_authority: descriptive_only`.
+
+---
+
+# Amendment P.10 — Host 5 is the final paid smoke attempt
+
+**2026-09-22, before Host 5 is rented.** `pilot_runs = 0`, `$6.67` spent
+across four hosts, no pilot evidence of any kind.
+
+## Why this is registered now
+
+Three smoke attempts have failed, each on a different defect, and each was
+answered with an amendment: P.8 for addressing, P.8.1 for the retry layer, P.9
+for cost accounting. A fourth would make *register a fix and retry* the
+method, and that is indistinguishable from tuning until the gate opens.
+
+The rule is written **before** the attempt, so it cannot be adopted after
+seeing the result. That is the whole point: a stopping rule chosen while
+looking at the outcome it applies to is not a stopping rule.
+
+## The rule
+
+> **Host 5 is this pilot's final paid smoke attempt.**
+
+**On failure** — `infrastructure_feasibility_stop`:
+
+- artifacts are frozen, retrieved and verified; the host is terminated;
+- **no amendment is registered in response to the failure**;
+- **there is no Host 6**;
+- no recoverability or regression verdict is produced;
+- the failure record and the accumulated cost stand as the **feasibility
+  artifact**. That is a result about deploying this method, not an absence of
+  one.
+
+**On pass** — and only then:
+
+1. a fresh `after_setup` reading, `--not-before @smoke_completed`;
+2. a further fresh reading authorising block 0;
+3. block 0, three cells;
+4. P.7's projection decides whether the remaining blocks are released.
+
+## What Host 5 is for
+
+Exactly one question, which no amount of offline work can answer:
+
+> Does the pinned `Qwen/Qwen3.6-27B-FP8`, served by the registered vLLM with
+> `--tool-call-parser qwen3_coder` and `--reasoning-parser qwen3`, emit a tool
+> call the agent can use?
+
+Everything else in the chain is now verified on CPU and Docker — the client
+path, cost accounting, the retry policy, challenge injection and recovery, a
+real `/testbed` at the exact smoke-image digest, patch extraction, the real
+SWE-bench evaluator returning an explicit `resolved`, and the wall-clock cap
+censoring without grading.
+
+`docs/PILOT_FINAL_REVIEW.md` records the evidence table.
+
+## The pattern this amendment also closes
+
+Two of the three failures came from the pilot **reimplementing a mechanism the
+project had already verified**, rather than reusing it:
+
+| | already existed | the pilot |
+|---|---|---|
+| cost policy | registered in two preregs, set by three runners | set by none |
+| evaluator verdict | `c2h_checker.label_from_report`, verified 20/20 offline | a second parser, against the wrong file |
+
+The engineering conclusion is **not** to add more checks:
+
+1. the evaluator verdict must call `c2h_checker.label_from_report` directly;
+2. the pilot may not keep a second report parser — asserted structurally;
+3. the historical failure matrix must cover every known runner configuration;
+4. **after Host 5 the protocol is not extended in response to a smoke result.**
+
+## What moves
+
+| | |
+|---|---|
+| `protocol_hash` | **`cc9b0c3ff329ef58` → `b7af66ca3ab783ab`** |
+| `ORDER_HASH` | **`cfe8856c9c9167b5`, unchanged** |
+
+## Scope
+
+Arms, step limits, the hint text, task count, replicates, the 1200 s cap, the
+budget stops, the block order, the draw, the smoke criteria, the exit mapping,
+the cost check and the transport policy are all untouched. This amendment adds
+a terminal condition and changes nothing the pilot measures.
+
+`study_mode: feasibility` · `verdict_authority: descriptive_only`.
