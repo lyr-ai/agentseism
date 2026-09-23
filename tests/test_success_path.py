@@ -100,11 +100,14 @@ def test_the_evaluator_verdict_is_an_explicit_boolean(tmp_path, monkeypatch,
     report.parent.mkdir(parents=True, exist_ok=True)
     report.write_text(json.dumps({"t": {"resolved": resolved}}))
     monkeypatch.setattr(RB.subprocess, "run", lambda *a, **k: None)
-    got, path = RB._evaluate({"order_index": 0, "task": "t", "arm": "baseline",
-                              "replicate": 0}, "diff", RB.BackendConfig(
-        image_digests={}, work_dir=tmp_path, model_base_url="",
-        model_name="m", model_revision="r"))
+    got, path, rel, sha = RB._evaluate(
+        {"order_index": 0, "task": "t", "arm": "baseline", "replicate": 0},
+        "diff", RB.BackendConfig(image_digests={}, work_dir=tmp_path,
+                                 model_base_url="", model_name="m",
+                                 model_revision="r"))
     assert got is None or isinstance(got, bool)
+    # no report found here, so nothing is preserved and nothing is invented
+    assert (rel, sha) == ("", "")
 
 
 # 9. a complete, verifiable cell artifact
@@ -123,6 +126,8 @@ def test_a_complete_cell_artifact_is_produced_and_verifies(tmp_path):
         "api_base": "http://127.0.0.1:8000/v1", "transport_attempts": 1,
         "cost_tracking": "ignore_errors", "model_revision": "e89b16eb",
         "evaluator_report_path": "reports/r.json", "n_calls": 3,
+        "evaluator_report": "evaluator_reports/r.report.json",
+        "evaluator_report_sha256": "a" * 64,
         "elapsed_seconds": 12.0,
     }
     result["outcome_state"] = RB.outcome_state("OK", False)

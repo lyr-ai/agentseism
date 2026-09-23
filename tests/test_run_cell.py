@@ -58,7 +58,8 @@ def wire(monkeypatch, agent, *, resolved=True, report="r.json", boom=None,
         if eval_boom:
             raise eval_boom
         agent.graded = submission
-        return resolved, report
+        # (verdict, harness path, preserved relative path, preserved digest)
+        return resolved, report, "evaluator_reports/r.report.json", "b" * 64
     monkeypatch.setattr(RB, "_agent_result", _agent_result)
     monkeypatch.setattr(RB, "_evaluate", _evaluate)
 
@@ -248,7 +249,7 @@ def test_one_agent_execution_and_one_evaluator_execution(tmp_path, monkeypatch):
 
     def _evaluate(c, submission, config):
         runs["eval"] += 1
-        return True, "r.json"
+        return True, "r.json", "evaluator_reports/r.report.json", "b" * 64
     monkeypatch.setattr(RB, "_agent_result", _agent_result)
     monkeypatch.setattr(RB, "_evaluate", _evaluate)
     RB.run_cell(cell(), cfg(tmp_path))

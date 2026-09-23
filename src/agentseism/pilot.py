@@ -81,14 +81,47 @@ def verify_artifact(path: Path) -> bool:
             == d.read_text().split()[0])
 
 
+def verify_evaluator_evidence(out: Path, d: dict) -> bool:
+    """The preserved per-instance report must still be byte-exact.
+
+    The `evaluator_resolved` boolean is derived; the report is the source. A
+    cell whose evidence is missing, truncated or altered is not a completed
+    cell, whatever its artifact says.
+
+    A cell whose evaluator never ran records no report and no digest -- a
+    censored or broken run fabricates neither, and is judged only on its own
+    artifact.
+    """
+    rel = d.get("evaluator_report") or ""
+    sha = d.get("evaluator_report_sha256") or ""
+    if not rel and not sha:
+        return True
+    if not rel or not sha:
+        return False
+    path = out / rel
+    digest = Path(str(path) + ".sha256")
+    if not path.is_file() or not digest.is_file():
+        return False
+    body = path.read_bytes()
+    return (hashlib.sha256(body).hexdigest() == sha
+            and digest.read_text().split()[0] == sha)
+
+
 def completed_cells(out: Path) -> dict[int, dict]:
-    """Only runs whose artifact still verifies. A tampered or truncated file
-    is not a completed cell, and resume re-runs it."""
+    """Only runs whose artifact **and** evaluator evidence still verify.
+
+    A tampered or truncated file is not a completed cell, and resume re-runs
+    it. That now covers the evaluator report as well as the artifact: keeping
+    the boolean while losing the report would leave a verdict nobody can
+    audit.
+    """
     done = {}
     for f in sorted((out / "runs").glob("run_*.json")):
         if not verify_artifact(f):
             continue
         d = json.loads(f.read_text())
+        if not verify_evaluator_evidence(out, d):
+            continue
         done[d["order_index"]] = d
     return done
 
@@ -299,6 +332,9 @@ def real_backend_from_preflight(report_path: Path, work_dir: Path):
     cfg = BackendConfig(
         image_digests=digests,
         work_dir=work_dir,
+        # Reports are preserved under the run directory, so an artifact and
+        # its evidence end up in the same retrieval bundle.
+        run_dir=work_dir.parent,
         model_base_url=str(serving.get("model_base_url") or ""),
         model_name=str(fp.get("model") or ""),
         model_revision=str(fp.get("model_revision") or ""),

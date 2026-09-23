@@ -31,7 +31,7 @@ set -euo pipefail
 PROTOCOL_HASH="b7af66ca3ab783ab"   # moved by P.3, P.5-P.10
 ORDER_HASH="cfe8856c9c9167b5"
 EXPECTED_CELLS=18
-EXPECTED_TESTS=759
+EXPECTED_TESTS=773
 EXPECTED_SKIPPED=16
 # The Docker integration tests are collected but skipped unless
 # AGENTSEISM_DOCKER_TESTS is set: preflight must not perform an unregistered
@@ -899,6 +899,11 @@ rehearse_retrieval() {
     || die "the unpacked bundle does not match what was packed"
   rm -rf "$tmp"
   ok "bundle" "$(sha_of "$bundle" | cut -c1-16)…  packs, digests and unpacks"
+  # The bundle packs the whole pilot directory, so evaluator_reports/ and
+  # their digests travel with the cell artifacts. The boolean in an artifact
+  # is derived; the report is the evidence.
+  printf '  evidence in the bundle             %s\n' \
+    "cell artifacts + digests, evaluator reports + digests"
   printf '  retrieval command for the operator, after the run:\n'
   printf '    scp ubuntu@<host>:%s .\n' "$bundle"
   printf '    sha256sum -c %s\n' "$(basename "$bundle").sha256"

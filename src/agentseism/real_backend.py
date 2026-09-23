@@ -23,6 +23,7 @@ and a run that genuinely failed are the same number once both are `success: 0`.
 from __future__ import annotations
 
 import dataclasses
+import hashlib
 import inspect
 import json
 import shutil
@@ -111,8 +112,8 @@ REQUIRED_RESULT_FIELDS = (
     "challenge_status", "challenge_record", "recovered",
     "hint_sha256", "step_limit", "image_digest", "model_revision",
     "registered_model_id", "transport_model", "api_base",
-    "transport_attempts", "evaluator_report_path", "n_calls",
-    "elapsed_seconds",
+    "transport_attempts", "evaluator_report_path", "evaluator_report",
+    "evaluator_report_sha256", "n_calls", "elapsed_seconds",
 )
 
 
@@ -156,7 +157,7 @@ def validate_result(r: dict) -> dict:
     if r["agent_termination_code"] in (P.STEP_LIMIT_REACHED,
                                        P.FORMAT_ERROR_LIMIT_REACHED) \
             and r["infrastructure_status"] == "OK" \
-            and not r.get("evaluator_report_path"):
+            and not r.get("evaluator_report"):
         raise ValueError(
             f"{r['agent_termination_code']} with healthy infrastructure must "
             "carry an evaluator report: the run ran out of a registered "
@@ -164,6 +165,15 @@ def validate_result(r: dict) -> dict:
             "any other. It may still be undecided -- it may not be ungraded")
 
     # 4. broken machinery never carries a verdict
+    # A cell whose evaluator never ran must not carry preserved evidence.
+    if r["evaluator_resolved"] is None and r["infrastructure_status"] != "OK" \
+            and (r.get("evaluator_report") or r.get("evaluator_report_sha256")):
+        raise ValueError(
+            "a run whose evaluator never executed carries a preserved report; "
+            "nothing is fabricated for a censored or broken run")
+    if bool(r.get("evaluator_report")) != bool(r.get("evaluator_report_sha256")):
+        raise ValueError("a preserved report and its digest go together")
+
     if r["infrastructure_status"] != "OK" and r["evaluator_resolved"] is not None:
         raise ValueError(
             f"infrastructure_status {r['infrastructure_status']} with "
@@ -189,6 +199,14 @@ class BackendConfig:
     evaluator_split: str = "test"
     api_key: str = "not-needed"
     """A local vLLM needs no credential; LiteLLM needs the field present."""
+    run_dir: Path | None = None
+    """Where the run's artifacts live. Evaluator reports are preserved under
+    it, and their recorded paths are relative to it, so an artifact and its
+    evidence travel together in one retrieval bundle."""
+
+    @property
+    def evidence_root(self) -> Path:
+        return Path(self.run_dir if self.run_dir is not None else self.work_dir)
 
 
 # ── constructibility ──
@@ -605,12 +623,42 @@ def _map_exit(agent, info: dict, cell: dict) -> str:
     return code
 
 
+def report_basename(cell: dict) -> str:
+    """One-to-one with the cell artifact `freeze()` writes."""
+    return (f"run_{cell['order_index']:02d}_{cell['task']}_{cell['arm']}"
+            f"_r{cell['replicate']}")
+
+
+def preserve_report(cell: dict, source: Path, config: BackendConfig) -> tuple:
+    """Copy the authoritative report **verbatim**, digest it, verify it back.
+
+    The `evaluator_resolved` boolean in a cell artifact is derived. The report
+    is where `resolved`, `patch_successfully_applied`, `infra_failure` and
+    `tests_status` live, and they are what separates a genuine FAIL from an
+    undecided one. A run that kept only the boolean could not be audited.
+
+    Returns `(relative_path, sha256)`.
+    """
+    root = config.evidence_root / "evaluator_reports"
+    root.mkdir(parents=True, exist_ok=True)
+    dest = root / f"{report_basename(cell)}.report.json"
+    raw = source.read_bytes()
+    dest.write_bytes(raw)
+    digest = hashlib.sha256(raw).hexdigest()
+    Path(str(dest) + ".sha256").write_text(digest + "\n")
+    # Verified from disk, not from the bytes we happen to be holding.
+    if hashlib.sha256(dest.read_bytes()).hexdigest() != digest:
+        raise CellError(f"preserved report does not verify: {dest}")
+    return str(dest.relative_to(config.evidence_root)), digest
+
+
 def _evaluate(cell: dict, submission: str, config: BackendConfig) -> tuple:
     """One evaluator execution against this cell's own patch.
 
-    Returns `(resolved, report_path)`. `resolved` is `True`/`False` only when
-    the report says so in a boolean; anything else is `None`, which becomes
-    EVALUATOR_UNDECIDED rather than a failure.
+    Returns `(resolved, report_path, preserved_rel, preserved_sha)`.
+    `resolved` is `True`/`False` only when the report says so in a boolean;
+    anything else is `None`, which becomes EVALUATOR_UNDECIDED rather than a
+    failure. The verdict logic is unchanged by evidence preservation.
     """
     run_id = (f"pilot_{cell['order_index']:02d}_{cell['task']}_"
               f"{cell['arm']}_r{cell['replicate']}")
@@ -634,8 +682,9 @@ def _evaluate(cell: dict, submission: str, config: BackendConfig) -> tuple:
         stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=3600)
     path = _instance_report(run_id, cell["task"])
     if path is None:
-        return None, ""
-    return _verdict(json.loads(path.read_text()), cell["task"]), str(path)
+        return None, "", "", ""
+    rel, sha = preserve_report(cell, path, config)
+    return _verdict(json.loads(path.read_text()), cell["task"]), str(path), rel, sha
 
 
 def _instance_report(run_id: str, task: str) -> Path | None:
@@ -722,7 +771,7 @@ def run_cell(cell: dict, config: BackendConfig) -> dict:
                        fired=fired, record=record)
 
     try:
-        resolved, report_path = _evaluate(cell, submission, config)
+        resolved, report_path, rel, sha = _evaluate(cell, submission, config)
     except Exception as e:                                   # noqa: BLE001
         return _error_result(cell, hint_sha, image, config, t0,
                              f"evaluator: {type(e).__name__}: {e}", agent)
@@ -731,12 +780,12 @@ def run_cell(cell: dict, config: BackendConfig) -> dict:
                    agent_termination_code=code,
                    infrastructure_status="OK",
                    evaluator_resolved=resolved, report_path=report_path,
-                   fired=fired, record=record)
+                   preserved=(rel, sha), fired=fired, record=record)
 
 
 def _result(cell, hint_sha, image, config, t0, agent, *,
             agent_termination_code, infrastructure_status, evaluator_resolved,
-            report_path, fired, record) -> dict:
+            report_path, fired, record, preserved=("", "")) -> dict:
     import time
     injected = (record or {}).get("injected_at_call")
     messages = list(getattr(agent, "messages", []) or [])
@@ -762,6 +811,11 @@ def _result(cell, hint_sha, image, config, t0, agent, *,
         "cost_tracking": P.COST_TRACKING,
         "model_revision": config.model_revision,
         "evaluator_report_path": report_path,
+        # The preserved copy: path relative to the run directory, so it
+        # travels with the artifact, plus its digest. Empty for a cell whose
+        # evaluator never ran -- nothing is fabricated.
+        "evaluator_report": preserved[0],
+        "evaluator_report_sha256": preserved[1],
         "n_calls": int(getattr(agent, "n_calls", 0)),
         "elapsed_seconds": round(time.time() - t0, 2),
         "cost": float(getattr(agent, "cost", 0.0)),
@@ -798,6 +852,8 @@ def _error_result(cell, hint_sha, image, config, t0, detail, agent) -> dict:
         "transport_attempts": P.TRANSPORT_ATTEMPTS,
         "model_revision": config.model_revision,
         "evaluator_report_path": "",
+        "evaluator_report": "",
+        "evaluator_report_sha256": "",
         "n_calls": int(getattr(agent, "n_calls", 0)),
         "elapsed_seconds": round(time.time() - t0, 2),
         "backend_error": detail,

@@ -43,6 +43,8 @@ def _ok_result(**over):
         "api_base": "http://127.0.0.1:8000/v1",
         "transport_attempts": 1,
         "evaluator_report_path": "reports/x.json",
+        "evaluator_report": "evaluator_reports/r.report.json",
+        "evaluator_report_sha256": "a" * 64,
         "n_calls": 12,
         "elapsed_seconds": 314.0,
     }
@@ -292,7 +294,8 @@ def test_a_censored_run_may_not_carry_a_verdict():
 def test_a_step_limited_run_must_have_been_graded():
     r = _ok_result(agent_termination_code=P.STEP_LIMIT_REACHED,
                    evaluator_resolved=False)
-    r["evaluator_report_path"] = ""
+    r["evaluator_report"] = ""
+    r["evaluator_report_sha256"] = ""
     with pytest.raises(ValueError) as e:
         RB.validate_result(r)
     assert "graded like any other" in str(e.value)

@@ -128,7 +128,8 @@ def test_a_format_limited_run_must_still_be_graded():
     r = _result(agent_termination_code=P.FORMAT_ERROR_LIMIT_REACHED,
                 challenge_status="FIRED", recovered=False,
                 evaluator_resolved=False)
-    r["evaluator_report_path"] = ""
+    r["evaluator_report"] = ""
+    r["evaluator_report_sha256"] = ""
     with pytest.raises(ValueError) as e:
         RB.validate_result(r)
     assert "may not be ungraded" in str(e.value)
@@ -151,6 +152,8 @@ def _result(**over):
         "api_base": "http://127.0.0.1:8000/v1",
         "transport_attempts": 1,
         "evaluator_report_path": "reports/x.json",
+        "evaluator_report": "evaluator_reports/r.report.json",
+        "evaluator_report_sha256": "a" * 64,
         "n_calls": 40,
         "elapsed_seconds": 900.0,
     }
