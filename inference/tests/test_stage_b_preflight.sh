@@ -35,7 +35,7 @@ OLD_DRIVER="570.195.03"
 # once: the mock previously defaulted to 9 of its own accord, so when
 # EXPECTED_SKIPPED moved to 16 every scenario failed step 5 -- the gate
 # working, against a stale fixture.
-MOCK_PYTEST_SKIPPED=16
+MOCK_PYTEST_SKIPPED=23
 export MOCK_PYTEST_SKIPPED
 # Only one harness at a time. Scenarios reap stray mock servers by pattern, so
 # two concurrent runs kill each other's and the failures look like real

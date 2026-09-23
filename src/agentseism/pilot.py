@@ -23,39 +23,52 @@ from pathlib import Path
 
 os.environ.setdefault("MSWEA_COST_TRACKING", "ignore_errors")
 
-from agentseism import pilot_protocol as P  # noqa: E402
+from agentseism import f3_protocol, pilot_protocol as P  # noqa: E402
 from agentseism.budget import (  # noqa: E402
     Budget, BudgetStop, RunLog, session_fingerprint, write_atomic,
 )
 
+SPECS = {"pilot": P.SPEC, "f3": f3_protocol.SPEC}
+"""The registrations this runner can execute.
 
-PILOT_THRESHOLDS = {"warning": P.WARNING_USD,
-                    "no_new_block": P.NO_NEW_BLOCK_USD,
-                    "stop_stage": float("inf"),
-                    "absolute": P.ABSOLUTE_LIMIT_USD}
-"""The registered pilot stops, mapped honestly onto the machine's three slots.
+Both run the *same* code below. A second runner would have given F3 its
+own identity at the cost of two paths that drift apart silently -- which
+is how the pilot reached a host with an entry point nothing had executed.
+"""
 
-The registration has **$20 warning · $25 start no new block · $30 absolute**.
-There is no "stop the current stage" level, so `stop_stage` is unreachable
-rather than aliased to $25 — aliasing would turn "do not start another block"
-into "abandon the block you are in", which is stricter than what was
-registered and would truncate work already paid for.
 
-$20 is a warning: it is reported, and it starts nothing on its own. It was
-registered and then left out of the implementation, so a run passing $20 said
-nothing at all; `warning` now carries it, and `check` logs `budget_warning`
-beside `budget_ok` without refusing anything. `WARNING_USD` was already inside
-`protocol_hash`, so naming it here changes no hash."""
+PILOT_THRESHOLDS = P.SPEC.thresholds
+"""The registered stops live on the spec now (`Spec.thresholds`).
+
+They were a module constant read from `pilot_protocol` globals, which is the
+same coupling that stamped a closed experiment's identity onto every artifact:
+a second experiment could not carry different stops without editing this file.
+
+The mapping onto the machine's four slots, and why `stop_stage` is unreachable
+rather than aliased, is documented on `Spec.thresholds`. $20 is a warning: it
+is reported, and it starts nothing on its own.
+
+This name is kept because it is still true -- these are *the pilot's* stops --
+and because a second experiment now gets its own from its own spec rather than
+by editing this line.
+"""
 
 
 class PilotStop(RuntimeError):
     """A registered stop. Artifacts are kept; no release verdict follows."""
 
 
-def artifact(cell: dict, result: dict, identity: dict, synthetic: bool) -> dict:
+def artifact(cell: dict, result: dict, identity: dict, synthetic: bool,
+             spec) -> dict:
+    """The identity comes from `spec`, never from a module global.
+
+    This is the line that made a second experiment impossible to run
+    honestly: it stamped `pilot_protocol`'s hashes onto whatever was
+    executing, so F3 evidence would have carried the closed pilot's name.
+    """
     return {
         "schema_version": P.SCHEMA_VERSION,
-        "protocol_hash": P.protocol_hash(), "order_hash": P.ORDER_HASH,
+        "protocol_hash": spec.protocol_hash, "order_hash": spec.order_hash,
         "synthetic": synthetic,
         "order_index": cell["order_index"], "replicate": cell["replicate"],
         "task": cell["task"], "arm": cell["arm"],
@@ -126,7 +139,7 @@ def completed_cells(out: Path) -> dict[int, dict]:
     return done
 
 
-def cell_validity(runs: list[dict]) -> dict:
+def cell_validity(runs: list[dict], spec) -> dict:
     """Per (task, arm): a cell needs 2 of 2 valid to be interpreted (P.1 §2).
 
     No re-running, no substitution, no borrowing. Without this, "exactly two
@@ -139,13 +152,13 @@ def cell_validity(runs: list[dict]) -> dict:
     for k, rs in by.items():
         valid = [r for r in rs if r["termination"] in P.SCORABLE]
         out[k] = {"n": len(rs), "valid": len(valid),
-                  "interpretable": len(valid) == P.REPLICATES,
+                  "interpretable": len(valid) == spec.replicates,
                   "terminations": sorted(r["termination"] for r in rs)}
     return out
 
 
 def run_pilot(out: Path, backend, task_ids: list[str], synthetic: bool,
-              log: RunLog, budget: Budget, on_block=None) -> dict:
+              log: RunLog, budget: Budget, spec, on_block=None) -> dict:
     """`on_block` supplies the billing reading each block requires.
 
     One reading authorises one block, so the hook exists rather than a bypass:
@@ -153,9 +166,11 @@ def run_pilot(out: Path, backend, task_ids: list[str], synthetic: bool,
     total. The rule is the same in both, which is the point of exercising it
     synthetically at all.
     """
-    cells = P.verify(task_ids)
+    cells = spec.verify(task_ids)
     identity = session_fingerprint()
-    log.append("plan", protocol_hash=P.protocol_hash(), order_hash=P.ORDER_HASH,
+    log.append("plan", experiment=spec.name,
+               protocol_hash=spec.protocol_hash,
+               order_hash=spec.order_hash,
                cells=len(cells), tasks=task_ids, synthetic=synthetic)
 
     # Read the authorisation; do not take it. Calling `check("after_setup")`
@@ -190,7 +205,7 @@ def run_pilot(out: Path, backend, task_ids: list[str], synthetic: bool,
         result.setdefault("elapsed_seconds", round(time.time() - t0, 2))
         if result["termination"] not in P.TERMINATIONS:
             raise PilotStop(f"unknown termination {result['termination']!r}")
-        payload = artifact(cell, result, identity, synthetic)
+        payload = artifact(cell, result, identity, synthetic, spec)
         digest = freeze(out, cell, payload)
         path = (out / "runs" /
                 f"run_{cell['order_index']:02d}_{cell['task']}_{cell['arm']}"
@@ -204,18 +219,21 @@ def run_pilot(out: Path, backend, task_ids: list[str], synthetic: bool,
         done[cell["order_index"]] = payload
 
     runs = [done[i] for i in sorted(done)]
-    validity = cell_validity(runs)
-    complete = len(runs) == P.CELLS and all(v["interpretable"]
+    validity = cell_validity(runs, spec)
+    complete = len(runs) == spec.cell_count and all(v["interpretable"]
                                             for v in validity.values())
     report = {
-        "state": "complete_18" if complete else "censored_feasibility_run",
+        "experiment": spec.name,
+        "state": (f"complete_{spec.cell_count}" if complete
+                  else "censored_feasibility_run"),
         "verdict_allowed": False,     # always: this is a feasibility pilot
         "synthetic": synthetic,
-        "cells_done": len(runs), "cells_registered": P.CELLS,
+        "cells_done": len(runs), "cells_registered": spec.cell_count,
         "interpretable_cells": sum(1 for v in validity.values()
                                    if v["interpretable"]),
         "validity": {f"{t}|{a}": v for (t, a), v in validity.items()},
-        "protocol_hash": P.protocol_hash(), "order_hash": P.ORDER_HASH,
+        "protocol_hash": spec.protocol_hash,
+        "order_hash": spec.order_hash,
     }
     write_atomic(out / "report.json",
                  json.dumps(report, indent=2, sort_keys=True))
@@ -351,21 +369,34 @@ def main(argv=None) -> int:
     ap.add_argument("--preflight-report",
                     help="verified READY report that binds the real backend")
     ap.add_argument("--tasks", nargs="*", default=None)
+    ap.add_argument("--experiment", choices=("pilot", "f3"), default="pilot",
+                    help="which registration to execute; selects the "
+                         "protocol and order hashes stamped on evidence")
     args = ap.parse_args(argv)
     out = Path(args.out)
+    spec = SPECS[args.experiment]
+    if args.experiment == "f3" and args.tasks is None:
+        # F3 registered its single task; it is not drawn on the host.
+        args.tasks = [f3_protocol.TASK]
 
     if args.resolve_only:
-        cells = P.verify(args.tasks)
-        print(f"protocol {P.protocol_hash()}   order {P.ORDER_HASH}   "
-              f"cells {len(cells)}")
+        cells = spec.verify(args.tasks)
+        print(f"experiment {spec.name}   protocol {spec.protocol_hash}   "
+              f"order {spec.order_hash}   cells {len(cells)}")
         for c in cells:
-            print(f"  {c['order_index']:>2}  rep{c['replicate']}  {c['task']:<10}"
+            print(f"  {c['order_index']:>2}  rep{c['replicate']}  {c['task']:<26}"
                   f"{c['arm']:<10} step_limit={c['step_limit']:<4} "
                   f"hint={c['hint']:<11} challenge={c['challenge']}")
+        t = spec.thresholds
         print(f"\ncap {P.RUN_TIMEOUT_SECONDS}s   stops "
-              f"${P.WARNING_USD:.0f}/${P.NO_NEW_BLOCK_USD:.0f}/"
-              f"${P.ABSOLUTE_LIMIT_USD:.0f} on pilot spend "
+              f"${t['warning']:.0f}/${t['no_new_block']:.0f}/"
+              f"${t['absolute']:.0f} on {spec.name} spend "
               "(current total - frozen baseline)")
+        if spec.host_wall_clock_seconds:
+            # For a single-block design the billing thresholds cannot
+            # interrupt a running cell; the wall clock is what binds.
+            print(f"host wall clock {spec.host_wall_clock_seconds}s "
+                  "(the binding in-block control)")
         print("RESOLVE-ONLY: PASS")
         return 0
 
@@ -379,12 +410,13 @@ def main(argv=None) -> int:
     # Synthetic runs never share a directory with real ones.
     out = out / "synthetic" if args.backend == "fake" else out
     log = RunLog(out / "run.jsonl")
-    budget = Budget(log, PILOT_THRESHOLDS)
+    budget = Budget(log, spec.thresholds)
     if args.backend == "real":
         try:
             backend, task_ids = real_backend_from_preflight(
                 Path(args.preflight_report), out / "backend")
-            rep = run_pilot(out, backend, task_ids, False, log, budget)
+            rep = run_pilot(out, backend, task_ids, False, log, budget,
+                            spec)
         except (BudgetStop, PilotStop) as e:
             kind = getattr(e, "kind", type(e).__name__)
             log.append("stopped", stop_kind=kind, detail=str(e))
@@ -404,7 +436,7 @@ def main(argv=None) -> int:
         budget.check("after_setup")
     try:
         rep = run_pilot(out, fake_backend, args.tasks or None, True, log,
-                        budget,
+                        budget, spec,
                         on_block=lambda b: budget.record_reading(
                             0.0, billing_period="synthetic",
                             note=f"synthetic block {b}"))

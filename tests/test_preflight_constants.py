@@ -66,7 +66,8 @@ def test_the_expected_test_count_is_what_the_suite_actually_collects():
 
 
 OPT_IN_DOCKER_MODULES = ("tests/test_docker_integration.py",
-                         "tests/test_real_cli_docker.py")
+                         "tests/test_real_cli_docker.py",
+                         "tests/test_f3_cli_docker.py")
 
 
 def test_the_harness_mock_reports_the_frozen_counts():

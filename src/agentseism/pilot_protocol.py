@@ -16,6 +16,8 @@ from __future__ import annotations
 import hashlib
 import json
 import random
+
+from agentseism import protocol_spec as _spec
 import re
 
 PREREG = "paper/PREREG_PILOT.md"
@@ -393,66 +395,27 @@ CELLS = TASK_COUNT * len(ARMS) * REPLICATES      # 18
 SCHEMA_VERSION = 1
 
 
-class ProtocolMismatch(RuntimeError):
-    """The regenerated plan is not the registered plan."""
+ProtocolMismatch = _spec.ProtocolMismatch
+"""Re-exported, not redefined. `Spec.verify` raises this one, and a separate
+class here would look identical while failing every `except P.ProtocolMismatch`
+in the tree."""
 
 
 def build_order(task_ids: list[str] | None = None) -> list[dict]:
-    """The 18 cells, in the registered sequence.
-
-    Interleaved rather than all-baseline-first, so drift over the session does
-    not align with an arm. Generated from the seed over the whole registered
-    arm set — never by deleting an arm from an older order.
-    """
-    names = task_ids or [f"task_{i + 1}" for i in range(TASK_COUNT)]
-    if len(names) != TASK_COUNT:
-        raise ProtocolMismatch(f"need {TASK_COUNT} tasks, got {len(names)}")
-    rng = random.Random(ORDER_SEED)
-    blocks = []
-    for rep in range(REPLICATES):
-        for i in range(TASK_COUNT):
-            arms = list(ARMS)
-            rng.shuffle(arms)
-            blocks.append({"replicate": rep, "task": names[i], "arms": arms})
-    return blocks
+    """The 18 cells' blocks, in the registered sequence. Delegates to `SPEC`."""
+    return SPEC.build_order(task_ids)
 
 
 def order_hash(blocks: list[dict]) -> str:
-    """Over positions, not task names, so the hash is fixed before the draw.
-
-    Task ids are drawn mechanically on the instance and cannot be known when
-    the order is registered. Hashing them would make the frozen hash
-    unverifiable, so the hash covers replicate index, task *position* and arm
-    sequence — the part the registration actually fixes.
-    """
-    canonical = [{"replicate": b["replicate"], "task": f"task_{i % TASK_COUNT + 1}",
-                  "arms": b["arms"]} for i, b in enumerate(blocks)]
-    return hashlib.sha256(
-        json.dumps(canonical, sort_keys=True).encode()).hexdigest()[:16]
+    return SPEC.compute_order_hash(blocks)
 
 
 def cells(blocks: list[dict]) -> list[dict]:
-    """Flattened execution order: one dict per run, with its index."""
-    out = []
-    for b in blocks:
-        for arm in b["arms"]:
-            out.append({"order_index": len(out), "replicate": b["replicate"],
-                        "task": b["task"], "arm": arm, **ARMS[arm]})
-    return out
+    return SPEC.cells(blocks)
 
 
 def verify(task_ids: list[str] | None = None) -> list[dict]:
-    """Regenerate and check. Fails closed."""
-    blocks = build_order(task_ids)
-    got = order_hash(blocks)
-    if got != ORDER_HASH:
-        raise ProtocolMismatch(
-            f"order hash {got} != registered {ORDER_HASH}; the regenerated "
-            "plan is not the registered plan")
-    c = cells(blocks)
-    if len(c) != CELLS:
-        raise ProtocolMismatch(f"{len(c)} cells, registered {CELLS}")
-    return c
+    return SPEC.verify(task_ids)
 
 
 def protocol_hash() -> str:
@@ -555,3 +518,22 @@ counting -- is a visible break instead of a silent misclassification."""
 
 RECOVERY_DENOMINATOR = (COMPLETED, STEP_LIMIT_REACHED)
 """`NOT_ELIGIBLE` is excluded by construction."""
+
+
+SPEC = _spec.Spec(
+    name="pilot",
+    task_count=TASK_COUNT,
+    replicates=REPLICATES,
+    arms=ARMS,
+    order_seed=ORDER_SEED,
+    order_hash=ORDER_HASH,
+    protocol_hash=protocol_hash(),
+    warning_usd=WARNING_USD,
+    no_new_block_usd=NO_NEW_BLOCK_USD,
+    absolute_limit_usd=ABSOLUTE_LIMIT_USD,
+)
+"""The closed Gate-2 pilot as an injectable spec.
+
+Built from the constants above rather than restating them, so this object
+cannot disagree with the module that `protocol_hash()` already covers.
+"""

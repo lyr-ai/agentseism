@@ -30,9 +30,9 @@ def _budget(out: Path):
 
 def _run(out: Path, backend=fake_backend, tasks=None):
     log, b = _budget(out)
-    return run_pilot(out, backend, tasks, True, log, b,
-                     on_block=lambda blk: b.record_reading(0.0,
-                                                           billing_period="t"))
+    return run_pilot(out, backend, tasks, True, log, b, spec=P.SPEC,
+                     on_block=lambda blk: b.record_reading(
+                         0.0, billing_period="t"))
 
 
 # ── the registered plan ──
@@ -47,10 +47,17 @@ def test_the_order_hash_matches_the_frozen_value():
     assert P.order_hash(P.build_order()) == P.ORDER_HASH == "cfe8856c9c9167b5"
 
 
-def test_a_changed_seed_fails_closed(monkeypatch):
-    monkeypatch.setattr(P, "ORDER_SEED", 1)
+def test_a_changed_seed_fails_closed():
+    """The seed lives on the spec now, so the test perturbs the spec.
+
+    Patching `P.ORDER_SEED` no longer reaches the frozen `SPEC` built from it,
+    which is the intended direction: an experiment's identity should not be
+    editable by assigning to a module attribute at runtime.
+    """
+    import dataclasses
+    tampered = dataclasses.replace(P.SPEC, order_seed=1)
     with pytest.raises(P.ProtocolMismatch, match="not the registered plan"):
-        P.verify()
+        tampered.verify()
 
 
 def test_the_hash_is_over_positions_so_drawn_task_ids_do_not_break_it():
@@ -109,14 +116,14 @@ def test_an_unknown_termination_stops_the_run(tmp_path):
 def test_a_cell_needs_two_valid_runs_to_be_interpretable():
     runs = [{"task": "t", "arm": "M1", "termination": P.COMPLETED},
             {"task": "t", "arm": "M1", "termination": P.NOT_ELIGIBLE}]
-    v = cell_validity(runs)[("t", "M1")]
+    v = cell_validity(runs, P.SPEC)[("t", "M1")]
     assert v["valid"] == 1 and v["interpretable"] is False
 
 
 def test_two_valid_runs_are_interpretable():
     runs = [{"task": "t", "arm": "M1", "termination": P.COMPLETED},
             {"task": "t", "arm": "M1", "termination": P.STEP_LIMIT_REACHED}]
-    assert cell_validity(runs)[("t", "M1")]["interpretable"] is True
+    assert cell_validity(runs, P.SPEC)[("t", "M1")]["interpretable"] is True
 
 
 def test_no_third_replicate_is_ever_attempted(tmp_path):
@@ -262,7 +269,8 @@ def test_resume_reruns_only_the_missing_cells(tmp_path):
     b.record_reading(0.0, billing_period="t")
     run_pilot(tmp_path, lambda c: (ran.append(c["order_index"]),
                                    fake_backend(c))[1], None, True, log, b,
-              on_block=lambda blk: b.record_reading(0.0, billing_period="t"))
+              on_block=lambda blk: b.record_reading(0.0, billing_period="t"),
+              spec=P.SPEC)
     assert ran == [3]
 
 
@@ -299,6 +307,30 @@ def test_real_backend_requires_a_preflight_report():
     assert "--preflight-report" in str(e.value)
 
 
+class _OneCellSpec:
+    """A one-cell stand-in carrying the pilot's identity.
+
+    Only what `run_pilot` actually reads. Written as a class rather than a
+    `dataclasses.replace` of `P.SPEC` because no legal combination of task
+    count and replicates yields one cell, and forcing one would require a
+    different `order_hash` -- which would make the artifact assert a plan the
+    registration does not contain.
+    """
+
+    name = P.SPEC.name
+    protocol_hash = P.SPEC.protocol_hash
+    order_hash = P.SPEC.order_hash
+    replicates = 1
+    cell_count = 1
+    thresholds = P.SPEC.thresholds
+
+    def __init__(self, cell):
+        self._cell = cell
+
+    def verify(self, task_ids=None):
+        return [self._cell]
+
+
 def test_public_cli_real_backend_produces_a_digest_bearing_artifact(
         tmp_path, monkeypatch):
     """The regression Host 5 lacked: enter through pilot.main, not run_cell."""
@@ -307,8 +339,10 @@ def test_public_cli_real_backend_produces_a_digest_bearing_artifact(
     cell = {"order_index": 0, "replicate": 0, "task": "task_1",
             "arm": "baseline", "step_limit": 250, "hint": "full",
             "challenge": True}
-    monkeypatch.setattr(P, "verify", lambda tasks: [cell])
-    monkeypatch.setattr(P, "CELLS", 1)
+    # Shrink the *spec*, not module globals. `run_pilot` reads its plan from
+    # the injected spec now, which is the whole point of the injection: a
+    # runtime assignment to `P.verify` no longer changes what executes.
+    monkeypatch.setitem(pilot.SPECS, "pilot", _OneCellSpec(cell))
     monkeypatch.setattr(
         pilot, "real_backend_from_preflight",
         lambda report, work: (lambda c: fake_backend(c), ["task_1"]))

@@ -5,7 +5,11 @@ backend, and nothing had ever executed that entry point: the smoke test calls
 `run_cell` directly. This probe calls `pilot.main()` and nothing else, against
 a real container and the real SWE-bench evaluator, with only the model stubbed.
 
-    python tests/_cli_cell_probe.py <workdir>
+    python tests/_cli_cell_probe.py <workdir> [pilot|f3]
+
+Parameterised rather than copied. F3 is a different registration on the *same*
+runner, so a second probe would be a second way in -- and "a path nothing ever
+executed" is precisely what stopped the pilot.
 """
 from __future__ import annotations
 
@@ -27,6 +31,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "src"))
 
 WORK = Path(sys.argv[1])
+EXPERIMENT = sys.argv[2] if len(sys.argv) > 2 else "pilot"
 # The form `docker image inspect` reports, which is what the draw records in
 # image_digests.tsv -- not the `docker.io/` form `image_for` builds for pulls.
 IMAGE = ("swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10051"
@@ -84,7 +89,7 @@ def write_verified(path: Path, obj) -> None:
 
 
 def main() -> int:
-    from agentseism import pilot, pilot_protocol as P
+    from agentseism import f3_protocol, pilot, pilot_protocol as P
     from agentseism.budget import Budget, RunLog
 
     WORK.mkdir(parents=True, exist_ok=True)
@@ -110,8 +115,14 @@ def main() -> int:
     # the same image digest so `_check_images` can verify them without pulling
     # images for cells that will never run. This is a plumbing fixture, not a
     # draw: the real draw is P.3's and produces three different images.
-    tasks = ["pytest-dev__pytest-10051", "django__django-10097",
-             "matplotlib__matplotlib-13989"]
+    if EXPERIMENT == "f3":
+        # F3 registers its one task rather than drawing it, so there is no
+        # multi-name fixture to arrange: three arms over a single task are a
+        # single block, which is the whole experiment.
+        tasks = [f3_protocol.TASK]
+    else:
+        tasks = ["pytest-dev__pytest-10051", "django__django-10097",
+                 "matplotlib__matplotlib-13989"]
     serving = {"model_base_url": f"http://127.0.0.1:{port}/v1",
                "model_name": MODEL, "model_revision": REVISION,
                "vllm_pid": str(fake_vllm.pid),
@@ -133,7 +144,8 @@ def main() -> int:
     out = WORK / "pilot"
     out.mkdir(parents=True, exist_ok=True)
     log = RunLog(out / "run.jsonl")
-    b = Budget(log, pilot.PILOT_THRESHOLDS)
+    spec = pilot.SPECS[EXPERIMENT]
+    b = Budget(log, spec.thresholds)
     b.record_baseline(0.0, billing_period="t", currency="USD")
     b.record_reading(0.0, billing_period="t", currency="USD")
     b.check("after_setup")                      # taken by the caller
@@ -144,6 +156,7 @@ def main() -> int:
     rc = None
     try:
         rc = pilot.main(["--backend", "real", "--execute-registered-pilot",
+                         "--experiment", EXPERIMENT,
                          "--preflight-report", str(rp), "--out", str(out)])
     except BaseException as e:                              # noqa: BLE001
         err = f"{type(e).__name__}: {str(e)[:200]}"
@@ -151,7 +164,7 @@ def main() -> int:
     srv.shutdown()
     fake_vllm.kill()
 
-    cells = P.verify(tasks)
+    cells = spec.verify(tasks)
     block0 = [c for c in cells
               if (c["replicate"], c["task"]) == (cells[0]["replicate"],
                                                  cells[0]["task"])]
@@ -164,6 +177,8 @@ def main() -> int:
         body = json.loads(a.read_text())
         verified.append({"file": a.name, "digest_ok": ok,
                          "synthetic": body.get("synthetic"),
+                         "protocol_hash": body.get("protocol_hash"),
+                         "order_hash": body.get("order_hash"),
                          "termination": body.get("termination"),
                          "outcome_state": body.get("outcome_state"),
                          "evaluator_resolved": body.get("evaluator_resolved"),
@@ -171,7 +186,10 @@ def main() -> int:
                          "transport_attempts": body.get("transport_attempts"),
                          "challenge_injections": body.get("challenge_injections")})
     stops = [r for r in log.read() if r["kind"] == "stopped"]
+    rep_path = out / "report.json"
+    report_out = json.loads(rep_path.read_text()) if rep_path.is_file() else None
     print(json.dumps({"rc": rc, "exception": err, "elapsed_seconds": elapsed,
+                      "experiment": EXPERIMENT, "report": report_out,
                       "http_requests": len(REQUESTS),
                       "cells_in_block_0": len(block0),
                       "registered_cells": len(cells),

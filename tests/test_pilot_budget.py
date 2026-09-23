@@ -14,6 +14,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from agentseism.budget import Budget, BudgetStop, RunLog
+from agentseism import pilot_protocol as P
 from agentseism.pilot import PILOT_THRESHOLDS
 from agentseism.pilot_budget import main, phase_ts
 
@@ -155,7 +156,7 @@ def test_the_runner_refuses_without_an_after_setup_authorisation(tmp_path):
     log, b = _pilot_log(tmp_path)
     b.record_reading(0.0, billing_period="t")
     with pytest.raises(PilotStop) as e:
-        run_pilot(tmp_path, fake_backend, None, True, log, b)
+        run_pilot(tmp_path, fake_backend, None, True, log, b, spec=P.SPEC)
     assert "no un-superseded after_setup authorisation" in str(e.value)
 
 
@@ -168,7 +169,8 @@ def test_a_superseded_authorisation_does_not_authorise(tmp_path):
           "--supersede-checkpoint", "after_setup", "--reason", "stale"])
     with pytest.raises(PilotStop):
         run_pilot(tmp_path, fake_backend, None, True, RunLog(tmp_path / "run.jsonl"),
-                  Budget(RunLog(tmp_path / "run.jsonl"), PILOT_THRESHOLDS))
+                  Budget(RunLog(tmp_path / "run.jsonl"), PILOT_THRESHOLDS),
+                  spec=P.SPEC)
 
 
 def test_the_runner_does_not_consume_the_first_blocks_reading(tmp_path):
@@ -185,7 +187,7 @@ def test_the_runner_does_not_consume_the_first_blocks_reading(tmp_path):
     # raised stale_reading.
     rep = run_pilot(tmp_path, fake_backend, None, True, log, b,
                     on_block=lambda blk: b.record_reading(0.0, billing_period="t")
-                    if blk != (0, "task_1") else None)
+                    if blk != (0, "task_1") else None, spec=P.SPEC)
     assert rep["cells_done"] == 18
     reads = [r for r in log.read() if r["kind"] == "authorisation_read"]
     assert len(reads) == 1 and reads[0]["checkpoint"] == "after_setup"

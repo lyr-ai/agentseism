@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from agentseism import pilot_protocol as P  # noqa: E402
 from agentseism.budget import Budget, BudgetStop, RunLog  # noqa: E402
-from agentseism.pilot import PILOT_THRESHOLDS  # noqa: E402
+from agentseism.pilot import PILOT_THRESHOLDS, SPECS  # noqa: E402
 
 DEFAULT_LOG = "data/runs/pilot/run.jsonl"
 
@@ -92,10 +92,14 @@ def main(argv=None) -> int:
                          "superseded; requires --reason")
     ap.add_argument("--reason", default="")
     ap.add_argument("--cells-in-block", type=int, default=0)
+    ap.add_argument("--experiment", choices=("pilot", "f3"), default="pilot",
+                    help="whose registered thresholds this reading is "
+                         "checked against")
     args = ap.parse_args(argv)
 
     log = RunLog(Path(args.log))
-    budget = Budget(log, PILOT_THRESHOLDS)
+    spec = SPECS[args.experiment]
+    budget = Budget(log, spec.thresholds)
 
     if args.status:
         return status(log)
@@ -125,11 +129,12 @@ def main(argv=None) -> int:
             return _fail(f"${args.observe:.2f} is below the frozen baseline of "
                          f"${base['current_total']:.2f}; a cumulative total "
                          "cannot fall, so one of the two is wrong")
-        t = PILOT_THRESHOLDS
+        t = spec.thresholds
         print(f"  experiment_billing_baseline  ${base['current_total']:.2f}  "
               f"{base['billing_period']}  {base.get('currency')}")
         print(f"  settled page total           ${args.observe:.2f}")
-        print(f"  cumulative_pilot_spend       ${usd:.2f}")
+        label = f"cumulative_{spec.name}_spend"
+        print(f"  {label:<29}${usd:.2f}")
         for name, level in (("warning", t["warning"]),
                             ("no new block", t["no_new_block"]),
                             ("absolute stop", t["absolute"])):
@@ -176,9 +181,9 @@ def main(argv=None) -> int:
         after = round(last["current_total"] - base["current_total"], 2)
         done = len([r for r in rows if r["kind"] == "run"])
         # A block is one (replicate, task): three cells, one per arm.
-        cells_in_block = args.cells_in_block or len(P.ARMS)
+        cells_in_block = args.cells_in_block or len(spec.arms)
         proj = P.project_after_block(auth[-1]["usd"], after, cells_in_block,
-                                     P.CELLS - done)
+                                     spec.cell_count - done)
         print(json.dumps(proj, indent=2, sort_keys=True))
         log.append("cost_projection", block_index=args.project_after_block,
                    **proj)
@@ -238,12 +243,12 @@ def main(argv=None) -> int:
         return 1
     print(f"  baseline      ${base['current_total']:.2f}")
     print(f"  reading       ${args.reading:.2f}   ({s['reading_ts']})")
-    print(f"  pilot_spend   ${s['usd']:.2f}")
+    print(f"  {spec.name + '_spend':<14}${s['usd']:.2f}")
     print(f"  checkpoint    {args.checkpoint}: PASS")
     if s["warning"]:
         print(f"  WARNING       spend has reached ${s['warning_at']:.0f}")
-    print(f"  stops         ${PILOT_THRESHOLDS['no_new_block']:.0f} no new block "
-          f"· ${PILOT_THRESHOLDS['absolute']:.0f} absolute")
+    print(f"  stops         ${spec.thresholds['no_new_block']:.0f} no new block "
+          f"· ${spec.thresholds['absolute']:.0f} absolute")
     return 0
 
 

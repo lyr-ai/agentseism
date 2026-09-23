@@ -31,8 +31,8 @@ set -euo pipefail
 PROTOCOL_HASH="b7af66ca3ab783ab"   # moved by P.3, P.5-P.10
 ORDER_HASH="cfe8856c9c9167b5"
 EXPECTED_CELLS=18
-EXPECTED_TESTS=777
-EXPECTED_SKIPPED=16
+EXPECTED_TESTS=794
+EXPECTED_SKIPPED=23
 # The Docker integration tests are collected but skipped unless
 # AGENTSEISM_DOCKER_TESTS is set: preflight must not perform an unregistered
 # execution. Both numbers are frozen, so a test that silently starts -- or
