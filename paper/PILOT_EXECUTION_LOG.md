@@ -475,3 +475,99 @@ console by the operator.
 The figures in the section above are unchanged and correct: `host_4_cost`
 `$1.56`, `cumulative_pilot_spend` `$6.67`, `pilot_runs` `0`, `pilot_evidence`
 `none`.
+
+---
+
+## host_5 — 2026-09-23
+
+```text
+status               = infrastructure_feasibility_stop_before_run_0
+reason               = pilot entry point cannot construct or invoke the
+                       registered real backend
+instance_started_at  = 2026-09-23T17:50:23Z
+bound_commit         = 52d7c2b
+smoke                = PASS
+pilot_runs           = 0
+pilot_evidence       = none
+```
+
+## The registered smoke test passed
+
+The one question no offline work could answer is answered: **the pinned
+`Qwen/Qwen3.6-27B-FP8`, served by the registered vLLM with
+`--tool-call-parser qwen3_coder` and `--reasoning-parser qwen3`, emits tool
+calls the agent can use.**
+
+| criterion | |
+|---|---|
+| `image_started` | ok |
+| `valid_tool_call` | ok |
+| `challenge_injected_once` | ok — fired once, original recorded and not executed |
+| `termination_registered` | ok |
+| `evaluator_decided` | ok |
+| `artifact_frozen` | ok |
+
+34 model calls in 208 s, `transport_attempts: 1`, `cost_tracking:
+ignore_errors`, `recovered: true`, `suppressed_actions_executed: false`. The
+real SWE-bench harness returned `resolved: true` — **reported, never gated on**;
+a `false` would have passed identically and says nothing about any hypothesis.
+
+vLLM pid **5821**, started `Wed Sep 23 18:05:53 2026`, identical before and
+after the smoke run. `smoke_completed` at `18:18:48Z`. The fingerprint binds
+that session, and step 13 matched smoke's serving record to it field by field.
+
+`after_setup` was then taken on a reading that postdates the smoke run —
+`$16.56` at `18:42:03Z`, `pilot_spend $9.40` — the first checkpoint in this
+pilot that actually covers setup *and* smoke.
+
+## Why it stopped anyway
+
+`agentseism.pilot` still refuses `--backend real`:
+
+> the real backend is wired on the instance, after the six deployment checks.
+> Nothing here runs an agent.
+
+Nothing in `pilot.py` constructs a `BackendConfig`, calls `build()`, or reaches
+`run_cell`. The backend exists, is constructible, and was exercised
+end-to-end — but **only through `run_smoke`, which calls `run_cell` directly.**
+The registered pilot entry point was never connected to it.
+
+Preflight's gate 6b verifies the backend is *constructible*. Nothing verified
+that the **entry point can invoke it**. That is Host 2's defect in a new place,
+and the smoke test could not catch it because the smoke test does not use that
+entry point.
+
+## Why there is no Host 6
+
+P.10 names a *smoke* failure, and the smoke passed. The letter of it would
+permit renting again. That reading is rejected.
+
+Four hosts have now ended the same way: find an execution-chain gap, fix it,
+add tests, rent again. Using a textual boundary to take a fifth step in that
+loop is the loop. The honest finding is not about this particular missing
+wire:
+
+> The test apparatus repeatedly proves the **components** and repeatedly fails
+> to prove the **registered entry point is executable end to end.**
+
+`pilot.py` can be fixed offline. That is subsequent software work. **A host
+rented after it does not belong to this pre-registered pilot.**
+
+## What this pilot established
+
+| | |
+|---|---|
+| smoke chain | works, on real hardware, with the registered model and parser |
+| real backend | constructible and exercised end to end against a real container and the real evaluator |
+| registered entry point | **not executable** |
+| pilot runs | 0 |
+| pilot evidence | none |
+| infrastructure feasibility | **not reached** |
+
+## Retrieved and verified
+
+`data/runs/pilot/host_5_stop_before_run_0/` — bundle
+`522d133a5e99cf3d9450d82ff4f8be74f19fbe8477d067afd86ff55674e1095c`, matched
+host to local. Four artifacts re-verified against their own digests after
+transfer: `smoke_run.json`, `smoke_report.json`, `serving_fingerprint.json`,
+`preflight_report.json`.

@@ -1,0 +1,22 @@
+{
+  "cuda_version": "13.0",
+  "dependency_lock_sha256": "fe76ffa62784871226d8781dc7699ee9957377e9ab1bcd66f0c3ae605020daa9",
+  "docker_version": "29.2.1",
+  "driver_version": "580.105.08",
+  "gpu_memory_total": "81559 MiB",
+  "gpu_name": "NVIDIA H100 PCIe",
+  "gpu_uuid": "GPU-a760e4e7-ce2c-761b-41c3-cbc493a85c7f",
+  "kind": "serving_fingerprint",
+  "launch_args": "python3 -m vllm.entrypoints.openai.api_server --model Qwen/Qwen3.6-27B-FP8 --revision e89b16ebf1988b3d6befa7de50abc2d76f26eb09 --host 127.0.0.1 --port 8000 --dtype auto --max-model-len 131072 --gpu-memory-utilization 0.9 --tensor-parallel-size 1 --max-num-seqs 4 --quantization fp8 --enable-prefix-caching --enable-auto-tool-choice --tool-call-parser qwen3_coder --reasoning-parser qwen3",
+  "model": "Qwen/Qwen3.6-27B-FP8",
+  "model_revision": "e89b16ebf1988b3d6befa7de50abc2d76f26eb09",
+  "note": "a restart of vLLM invalidates this record: the pid and the session it names no longer exist, and the fingerprint is regenerated rather than reused",
+  "recorded_at": "2026-09-23T18:18:48Z",
+  "repo_commit": "52d7c2b6c0f04f7bbeafdd36094a348747da28e4",
+  "serving_config_sha256": "afed51104d5d25be4252f428cce9492013fd54ab76b3e5417e06113388d24bca",
+  "torch_version": "2.13.0+cu130",
+  "uname": "Linux 209-20-158-139 6.8.0-1046-nvidia #49~22.04.1-Ubuntu SMP PREEMPT_DYNAMIC Wed Jan 28 22:29:18 UTC 2 x86_64 x86_64 x86_64 GNU/Linux",
+  "vllm_pid": 5821,
+  "vllm_started_at": "2026-09-23T18:15:01Z",
+  "vllm_version": "0.28.0"
+}

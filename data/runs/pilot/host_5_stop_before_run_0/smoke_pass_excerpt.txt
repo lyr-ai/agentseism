@@ -1,0 +1,8 @@
+127:  SMOKE PASS — the chain is connected; this is not pilot evidence
+128:  vllm session                       ok  unchanged across the smoke run, pid 5821
+129:  smoke_completed                    2026-09-23T18:18:48Z
+159:  after_setup   DEFERRED -- the only reading predates setup; it cannot
+170:READY_FOR_MANUAL_PILOT_CONFIRMATION
+180:  * the after_setup checkpoint is taken with a reading from NOW:
+182:        --reading <page total> --checkpoint after_setup \
+183:        --not-before @smoke_completed

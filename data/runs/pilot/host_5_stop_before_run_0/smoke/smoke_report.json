@@ -1,0 +1,39 @@
+{
+  "arm": "baseline",
+  "artifact": "/home/ubuntu/agentseism-stageb/smoke/smoke_run.json",
+  "artifact_verified": true,
+  "criteria": {
+    "artifact_frozen": true,
+    "challenge_injected_once": true,
+    "evaluator_decided": true,
+    "image_started": true,
+    "termination_registered": true,
+    "valid_tool_call": true
+  },
+  "descriptions": {
+    "artifact_frozen": "the artifact was written atomically and verifies against its digest",
+    "challenge_injected_once": "the challenge fired exactly once and the original action was recorded, not executed",
+    "evaluator_decided": "the evaluator returned an explicit boolean resolved",
+    "image_started": "the task image ran and the agent executed inside it",
+    "termination_registered": "the run ended with a registered code, with the step limit and the 1200 s cap distinguishable",
+    "valid_tool_call": "the agent produced at least one valid tool call"
+  },
+  "evaluator_resolved": true,
+  "failed": [],
+  "note": "resolved is reported, never gated on: whether the task was solved says nothing about whether the chain is connected",
+  "outcome_state": "RESOLVED_TRUE",
+  "passed": true,
+  "pilot_evidence": false,
+  "runs": 1,
+  "serving": {
+    "dependency_lock_sha256": "fe76ffa62784871226d8781dc7699ee9957377e9ab1bcd66f0c3ae605020daa9",
+    "model_base_url": "http://127.0.0.1:8000/v1",
+    "model_name": "Qwen/Qwen3.6-27B-FP8",
+    "model_revision": "e89b16ebf1988b3d6befa7de50abc2d76f26eb09",
+    "serving_config_sha256": "afed51104d5d25be4252f428cce9492013fd54ab76b3e5417e06113388d24bca",
+    "vllm_pid": "5821"
+  },
+  "sha256": "6ccfda8980f6ac74334d770524d70ef42911471be8c2d5db6ec0f21cfe246870",
+  "smoke": true,
+  "task": "pytest-dev__pytest-10051"
+}
