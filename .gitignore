@@ -17,6 +17,17 @@ results/*_experiment.json
 data/runs/*/*.archive/
 .venv-eval/
 
-# SWE-bench harness output from local Docker integration tests. Regenerable,
-# per-run, and large; the verdict that matters is copied into the artifact.
+# SWE-bench harness output from **local integration tests**: regenerable by
+# re-running them, so not versioned.
+#
+# This does NOT apply to a real run. There, the per-instance evaluator report
+# is the *source* of the verdict -- `resolved`, `patch_successfully_applied`,
+# `infra_failure` and `tests_status` all live in it, and they are what
+# separates a genuine FAIL from an undecided one. The `evaluator_resolved`
+# boolean in a cell artifact is derived from that report and cannot stand in
+# for it.
+#
+# So a retrieval bundle from a real run must collect the evaluator reports and
+# their digests explicitly. Being ignored here must never become "we kept only
+# the boolean".
 logs/run_evaluation/pilot_*/
