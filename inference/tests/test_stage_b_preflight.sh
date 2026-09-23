@@ -279,7 +279,7 @@ printf '\n──── 5. arguments ────\n'
   expect_out "$COMMIT" "the record carries the resolved full sha" )
 
 printf '\n──── 6. the frozen counts ────\n'
-( export MOCK_PYTEST_PASSED=750; run_scenario
+( export MOCK_PYTEST_PASSED=752; run_scenario
   expect_rc 65 "752 passed is not 753"
   expect_out "expected exactly 753" "says what it wanted" )
 ( export MOCK_PYTEST_PASSED=753 MOCK_UNIVERSE_N=499; run_scenario
