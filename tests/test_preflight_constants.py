@@ -69,6 +69,20 @@ OPT_IN_DOCKER_MODULES = ("tests/test_docker_integration.py",
                          "tests/test_real_cli_docker.py")
 
 
+def test_the_harness_mock_reports_the_frozen_counts():
+    """The mock stands in for pytest during harness scenarios. When
+    EXPECTED_SKIPPED moved and the mock kept its own default of 9, every
+    scenario failed step 5 -- the gate working against a stale fixture. The
+    numbers are tied together here so that cannot recur."""
+    harness = (ROOT / "inference/tests/test_stage_b_preflight.sh").read_text()
+    m = re.search(r"^MOCK_PYTEST_SKIPPED=(\d+)$", harness, re.M)
+    assert m, "the harness does not export a skip count"
+    assert m.group(1) == const("EXPECTED_SKIPPED")
+    mock = (ROOT / "inference/tests/mock_stage_b_env.sh").read_text()
+    assert "MOCK_PYTEST_SKIPPED:?" in mock, \
+        "the mock has a default skip count again; it must take the harness's"
+
+
 def test_the_skipped_count_is_exactly_the_opt_in_docker_tests():
     """Skips are deliberate and enumerated, not incidental.
 
