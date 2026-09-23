@@ -4,6 +4,7 @@ Fake backend only. No model, no container, no network.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -291,11 +292,95 @@ def test_real_backend_needs_the_confirmation_flag():
     assert "--execute-registered-pilot" in str(e.value)
 
 
-def test_real_backend_is_not_wired_locally():
+def test_real_backend_requires_a_preflight_report():
     with pytest.raises(SystemExit) as e:
         main(["--backend", "real", "--execute-registered-pilot",
               "--out", "/tmp/nope"])
-    assert "six deployment checks" in str(e.value)
+    assert "--preflight-report" in str(e.value)
+
+
+def test_public_cli_real_backend_produces_a_digest_bearing_artifact(
+        tmp_path, monkeypatch):
+    """The regression Host 5 lacked: enter through pilot.main, not run_cell."""
+    import agentseism.pilot as pilot
+
+    cell = {"order_index": 0, "replicate": 0, "task": "task_1",
+            "arm": "baseline", "step_limit": 250, "hint": "full",
+            "challenge": True}
+    monkeypatch.setattr(P, "verify", lambda tasks: [cell])
+    monkeypatch.setattr(P, "CELLS", 1)
+    monkeypatch.setattr(
+        pilot, "real_backend_from_preflight",
+        lambda report, work: (lambda c: fake_backend(c), ["task_1"]))
+
+    out = tmp_path / "pilot"
+    log = RunLog(out / "run.jsonl")
+    budget = Budget(log, pilot.PILOT_THRESHOLDS)
+    budget.record_baseline(0.0, billing_period="test")
+    budget.record_reading(1.0, billing_period="test")
+    budget.check("after_setup")
+    budget.record_reading(1.0, billing_period="test")
+
+    rc = main(["--backend", "real", "--execute-registered-pilot",
+               "--preflight-report", str(tmp_path / "report.json"),
+               "--out", str(out)])
+    assert rc == 0
+    artifacts = list((out / "runs").glob("run_*.json"))
+    assert len(artifacts) == 1
+    assert verify_artifact(artifacts[0])
+    payload = json.loads(artifacts[0].read_text())
+    assert payload["synthetic"] is False
+
+
+def test_real_cli_constructs_the_backend_from_the_verified_preflight_report(
+        tmp_path, monkeypatch):
+    import agentseism.pilot as pilot
+    from agentseism import real_backend as RB
+
+    serving = {
+        "model_base_url": "http://127.0.0.1:8000/v1",
+        "model_name": "Qwen/Qwen3.6-27B-FP8",
+        "model_revision": "revision",
+        "vllm_pid": "123",
+        "dependency_lock_sha256": "lock",
+        "serving_config_sha256": "config",
+    }
+    fingerprint = {
+        "model": serving["model_name"],
+        "model_revision": serving["model_revision"],
+        "vllm_pid": 123,
+        "dependency_lock_sha256": "lock",
+        "serving_config_sha256": "config",
+    }
+    report = {
+        "status": "READY_FOR_MANUAL_PILOT_CONFIRMATION",
+        "repo_commit": "current",
+        "pilot_runs": 0,
+        "drawn_tasks": ["task_1"],
+        "image_digests": {"task_1": "image@sha256:" + "a" * 64},
+        "serving_fingerprint": fingerprint,
+        "smoke": {"passed": True, "pilot_evidence": False,
+                  "serving": serving},
+    }
+    path = tmp_path / "preflight.json"
+    body = json.dumps(report).encode()
+    path.write_bytes(body)
+    Path(str(path) + ".sha256").write_text(hashlib.sha256(body).hexdigest())
+
+    seen = {}
+    monkeypatch.setattr(pilot, "_live_serving_session",
+                        lambda fp: seen.setdefault("fingerprint", fp))
+    monkeypatch.setattr(pilot, "_current_repo_commit", lambda: "current")
+    monkeypatch.setattr(RB, "build",
+                        lambda cfg: seen.setdefault("config", cfg) or object())
+    backend, tasks = pilot.real_backend_from_preflight(path, tmp_path / "work")
+    assert tasks == ["task_1"]
+    assert backend is seen["config"]
+    assert seen["fingerprint"] == fingerprint
+    assert seen["config"].image_digests == report["image_digests"]
+    assert seen["config"].model_base_url == serving["model_base_url"]
+    assert seen["config"].model_name == serving["model_name"]
+    assert seen["config"].model_revision == serving["model_revision"]
 
 
 def test_resolve_only_writes_nothing(tmp_path, capsys):

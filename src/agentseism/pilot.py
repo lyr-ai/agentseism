@@ -16,6 +16,7 @@ import argparse
 import hashlib
 import json
 import os
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -204,12 +205,97 @@ def fake_backend(cell: dict) -> dict:
     }
 
 
+def _verified_json(path: Path) -> dict:
+    """Read a JSON artifact only when its adjacent digest still matches."""
+    digest = Path(str(path) + ".sha256")
+    if not path.is_file() or not digest.is_file():
+        raise PilotStop(f"missing artifact or digest: {path}")
+    body = path.read_bytes()
+    want = digest.read_text().split()[0]
+    got = hashlib.sha256(body).hexdigest()
+    if got != want:
+        raise PilotStop(f"artifact digest mismatch: {path}")
+    return json.loads(body)
+
+
+def _live_serving_session(fp: dict) -> None:
+    """Refuse a fingerprint whose vLLM process is gone or has changed."""
+    try:
+        pid = int(fp["vllm_pid"])
+        cmdline = Path(f"/proc/{pid}/cmdline").read_bytes().replace(b"\0", b" ")
+    except (KeyError, ValueError, OSError) as e:
+        raise PilotStop("the fingerprint's vLLM process is not alive") from e
+    for value in (fp.get("model"), fp.get("model_revision")):
+        if not value or str(value).encode() not in cmdline:
+            raise PilotStop(
+                "the live vLLM command line does not match the fingerprint")
+
+
+def _current_repo_commit() -> str:
+    root = Path(__file__).resolve().parents[2]
+    r = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root,
+                       capture_output=True, text=True, timeout=30)
+    if r.returncode or not r.stdout.strip():
+        raise PilotStop("cannot resolve the runner's repository commit")
+    return r.stdout.strip()
+
+
+def real_backend_from_preflight(report_path: Path, work_dir: Path):
+    """Construct the registered backend from the artifact preflight froze.
+
+    This is deliberately the only real-CLI adapter.  It does not reconstruct
+    deployment facts from flags: the draw, digests, model, revision and
+    endpoint all come from the verified report produced by preflight.
+    """
+    from agentseism.real_backend import BackendConfig, build
+
+    report = _verified_json(report_path)
+    if report.get("status") != "READY_FOR_MANUAL_PILOT_CONFIRMATION":
+        raise PilotStop("preflight report is not READY")
+    if report.get("repo_commit") != _current_repo_commit():
+        raise PilotStop("preflight report is bound to a different commit")
+    smoke = report.get("smoke") or {}
+    if smoke.get("passed") is not True or smoke.get("pilot_evidence") is not False:
+        raise PilotStop("preflight report carries no passing non-pilot smoke")
+    if report.get("pilot_runs") != 0:
+        raise PilotStop("preflight report was not frozen before run 0")
+
+    fp = report.get("serving_fingerprint") or {}
+    serving = smoke.get("serving") or {}
+    pairs = (("model_revision", "model_revision"),
+             ("dependency_lock_sha256", "dependency_lock_sha256"),
+             ("serving_config_sha256", "serving_config_sha256"),
+             ("vllm_pid", "vllm_pid"))
+    for smoke_key, fp_key in pairs:
+        if str(serving.get(smoke_key, "")) != str(fp.get(fp_key, "")):
+            raise PilotStop(
+                f"smoke {smoke_key} does not match fingerprint {fp_key}")
+    _live_serving_session(fp)
+
+    tasks = list(report.get("drawn_tasks") or [])
+    digests = dict(report.get("image_digests") or {})
+    if not tasks or set(tasks) != set(digests):
+        raise PilotStop("preflight draw and image digests do not name the same tasks")
+    if serving.get("model_name") != fp.get("model"):
+        raise PilotStop("smoke model does not match the fingerprint")
+    cfg = BackendConfig(
+        image_digests=digests,
+        work_dir=work_dir,
+        model_base_url=str(serving.get("model_base_url") or ""),
+        model_name=str(fp.get("model") or ""),
+        model_revision=str(fp.get("model_revision") or ""),
+    )
+    return build(cfg), tasks
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="seism pilot", description=__doc__)
     ap.add_argument("--out", default="data/runs/pilot")
     ap.add_argument("--resolve-only", action="store_true")
     ap.add_argument("--backend", choices=("fake", "real"), default="fake")
     ap.add_argument("--execute-registered-pilot", action="store_true")
+    ap.add_argument("--preflight-report",
+                    help="verified READY report that binds the real backend")
     ap.add_argument("--tasks", nargs="*", default=None)
     args = ap.parse_args(argv)
     out = Path(args.out)
@@ -233,15 +319,26 @@ def main(argv=None) -> int:
         raise SystemExit(
             "refusing: --backend real requires --execute-registered-pilot. "
             "This spends money against a live serving stack.")
-    if args.backend == "real":
-        raise SystemExit(
-            "the real backend is wired on the instance, after the six "
-            "deployment checks. Nothing here runs an agent.")
+    if args.backend == "real" and not args.preflight_report:
+        raise SystemExit("refusing: --backend real requires --preflight-report")
 
     # Synthetic runs never share a directory with real ones.
     out = out / "synthetic" if args.backend == "fake" else out
     log = RunLog(out / "run.jsonl")
     budget = Budget(log, PILOT_THRESHOLDS)
+    if args.backend == "real":
+        try:
+            backend, task_ids = real_backend_from_preflight(
+                Path(args.preflight_report), out / "backend")
+            rep = run_pilot(out, backend, task_ids, False, log, budget)
+        except (BudgetStop, PilotStop) as e:
+            kind = getattr(e, "kind", type(e).__name__)
+            log.append("stopped", stop_kind=kind, detail=str(e))
+            print(f"stopped: {kind}: {e}", file=sys.stderr)
+            return 1
+        print(json.dumps(rep, indent=2, sort_keys=True))
+        return 0
+
     if budget.baseline() is None:
         budget.record_baseline(0.0, billing_period="synthetic",
                                note="fake backend; no real spend")
