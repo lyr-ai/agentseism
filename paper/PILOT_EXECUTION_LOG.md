@@ -646,6 +646,18 @@ Every added gate checked a *part*. The smoke test exercised the chain through
 actually take — `agentseism.pilot --backend real` — was never executed by
 anything, on any host, at any point.
 
+## Summary
+
+> The registered pilot terminated before run 0 because its production entry
+> point could not invoke the validated backend. It produced infrastructure
+> evidence but no evidence about either intervention.
+
+The infrastructure evidence is worth having and is worth less than a valid
+pilot would have been. For building the system these findings are valuable;
+for the paper's claims they are not a substitute for outcome data, and a null
+M1 or M2 would have supported more than this does. Both halves belong in the
+record.
+
 ## Status
 
 `infrastructure_feasibility_stop_before_run_0`. This pre-registered pilot is
