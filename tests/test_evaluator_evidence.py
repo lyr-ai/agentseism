@@ -192,3 +192,100 @@ def test_completed_cells_rejects_a_cell_with_broken_evidence(tmp_path):
     assert 3 in pilot.completed_cells(out)
     (out / rel).write_text("{}")
     assert 3 not in pilot.completed_cells(out), "a broken report was counted"
+
+
+# ── the retrieval path itself, not a description of it ──
+def _run_dir_with_cells(tmp_path, n=3):
+    """A run directory shaped like a real one: artifacts, digests, reports."""
+    out = tmp_path / "pilot"
+    (out / "runs").mkdir(parents=True)
+    names = []
+    for i in range(n):
+        cell = {"order_index": i, "task": "pytest-dev__pytest-10051",
+                "arm": ["baseline", "M1", "M2"][i], "replicate": 0}
+        src = tmp_path / f"src{i}.json"
+        src.write_text(json.dumps(REPORT, indent=2) + "\n")
+        c = RB.BackendConfig(image_digests={}, work_dir=out / "backend",
+                             run_dir=out, model_base_url="u", model_name="m",
+                             model_revision="r")
+        rel, sha = RB.preserve_report(cell, src, c)
+        base = RB.report_basename(cell)
+        art = out / "runs" / f"{base}.json"
+        body = json.dumps({"order_index": i, "evaluator_report": rel,
+                           "evaluator_report_sha256": sha},
+                          indent=2, sort_keys=True)
+        art.write_text(body)
+        Path(str(art) + ".sha256").write_text(
+            hashlib.sha256(body.encode()).hexdigest() + "\n")
+        names.append((base, rel, sha))
+    return out, names
+
+
+def _pack(out: Path, bundle: Path) -> None:
+    """The retrieval command the preflight script runs, verbatim in form."""
+    import subprocess
+    subprocess.run(["tar", "czf", str(bundle), "-C", str(out.parent), out.name],
+                   check=True, capture_output=True)
+
+
+def test_the_retrieval_bundle_carries_four_files_per_evaluated_cell(tmp_path):
+    """Read the manifest. A bundle that packs "the whole directory" is a claim
+    about an implementation; this is the file list."""
+    import tarfile
+    out, names = _run_dir_with_cells(tmp_path)
+    bundle = tmp_path / "retrieval.tgz"
+    _pack(out, bundle)
+    with tarfile.open(bundle) as t:
+        manifest = set(t.getnames())
+    for base, rel, _ in names:
+        for wanted in (f"{out.name}/runs/{base}.json",
+                       f"{out.name}/runs/{base}.json.sha256",
+                       f"{out.name}/{rel}",
+                       f"{out.name}/{rel}.sha256"):
+            assert wanted in manifest, f"{wanted} is not in the bundle"
+
+
+def test_the_unpacked_report_reverifies_against_the_artifacts_digest(tmp_path):
+    """Unpack elsewhere and check the evidence with the digest recorded in the
+    artifact -- the anchor, not the sidecar that travelled beside it."""
+    import tarfile
+    out, names = _run_dir_with_cells(tmp_path)
+    bundle = tmp_path / "retrieval.tgz"
+    _pack(out, bundle)
+    far = tmp_path / "far"
+    far.mkdir()
+    with tarfile.open(bundle) as t:
+        t.extractall(far, filter="data")
+    unpacked = far / out.name
+    for base, rel, sha in names:
+        art = json.loads((unpacked / "runs" / f"{base}.json").read_text())
+        assert art["evaluator_report"] == rel
+        report = unpacked / art["evaluator_report"]
+        assert report.is_file(), f"{rel} did not survive retrieval"
+        assert hashlib.sha256(report.read_bytes()).hexdigest() == \
+            art["evaluator_report_sha256"]
+        assert pilot.verify_evaluator_evidence(unpacked, art) is True
+
+
+def test_a_report_damaged_in_transit_is_caught_after_unpacking(tmp_path):
+    import tarfile
+    out, names = _run_dir_with_cells(tmp_path, n=1)
+    bundle = tmp_path / "retrieval.tgz"
+    _pack(out, bundle)
+    far = tmp_path / "far"; far.mkdir()
+    with tarfile.open(bundle) as t:
+        t.extractall(far, filter="data")
+    unpacked = far / out.name
+    base, rel, _ = names[0]
+    (unpacked / rel).write_text("{}")
+    art = json.loads((unpacked / "runs" / f"{base}.json").read_text())
+    assert pilot.verify_evaluator_evidence(unpacked, art) is False
+
+
+def test_the_script_still_packs_the_whole_run_directory():
+    """Ties this test to the command retrieval actually uses: if the packing
+    form changes, the manifest assertions above stop describing it."""
+    script = (Path(__file__).resolve().parents[1]
+              / "inference/stage_b_preflight.sh").read_text()
+    assert 'tar czf "$bundle" -C "$(dirname "$PILOT_DIR")"' in script
+    assert '"$(basename "$PILOT_DIR")"' in script
