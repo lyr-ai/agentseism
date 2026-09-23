@@ -129,11 +129,15 @@ def main() -> int:
     elapsed = round(time.monotonic() - t0, 1)
     srv.shutdown()
 
-    # Read the patch the harness actually applied and check both markers.
+    # The patch belonging to **this** run, found beside its own evaluator
+    # report. Globbing for the newest patch.diff anywhere under logs/ picked
+    # up another probe's run and reported its patch as this one's.
     patch_text = ""
-    for cand in sorted(Path("logs/run_evaluation").rglob("patch.diff"),
-                       key=lambda q: q.stat().st_mtime, reverse=True)[:1]:
-        patch_text = cand.read_text()
+    rp = (result or {}).get("evaluator_report_path") or ""
+    if rp:
+        cand = Path(rp).parent / "patch.diff"
+        if cand.is_file():
+            patch_text = cand.read_text()
     out = {"mode": MODE, "exception": err, "elapsed_seconds": elapsed,
            "http_requests": len(REQUESTS),
            "patch_bytes": len(patch_text),

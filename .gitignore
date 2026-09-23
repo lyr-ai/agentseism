@@ -16,3 +16,7 @@ results/*_experiment.json
 # deliberately not versioned, and the risk of losing them is recorded there.
 data/runs/*/*.archive/
 .venv-eval/
+
+# SWE-bench harness output from local Docker integration tests. Regenerable,
+# per-run, and large; the verdict that matters is copied into the artifact.
+logs/run_evaluation/pilot_*/
