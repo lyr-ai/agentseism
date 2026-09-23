@@ -65,18 +65,25 @@ def test_the_expected_test_count_is_what_the_suite_actually_collects():
         == collected
 
 
-def test_the_skipped_count_is_the_opt_in_docker_suite():
-    """Skips are deliberate and enumerated, not incidental."""
-    r = subprocess.run([sys.executable, "-m", "pytest", "--collect-only", "-q",
-                        "-p", "no:cacheprovider",
-                        "tests/test_docker_integration.py"],
-                       cwd=ROOT, capture_output=True, text=True, timeout=300)
-    n = int(re.search(r"(\d+) tests? collected", r.stdout).group(1))
-    # every Docker-marked test skips without the opt-in
+OPT_IN_DOCKER_MODULES = ("tests/test_docker_integration.py",
+                         "tests/test_real_cli_docker.py")
+
+
+def test_the_skipped_count_is_exactly_the_opt_in_docker_tests():
+    """Skips are deliberate and enumerated, not incidental.
+
+    Counted from the `@requires_docker` decorations themselves, across every
+    opt-in module -- an earlier version counted one file and silently stopped
+    accounting for the skips when a second appeared.
+    """
     import os
     assert not os.environ.get("AGENTSEISM_DOCKER_TESTS"), \
         "run the default suite without the opt-in to check the skip count"
-    assert int(const("EXPECTED_SKIPPED")) <= n
+    marked = sum((ROOT / m).read_text().count("@requires_docker")
+                 for m in OPT_IN_DOCKER_MODULES)
+    assert int(const("EXPECTED_SKIPPED")) == marked, (
+        f"EXPECTED_SKIPPED={const('EXPECTED_SKIPPED')} but "
+        f"{marked} tests are marked across {OPT_IN_DOCKER_MODULES}")
 
 
 def test_the_serving_constants_match_the_serving_config():

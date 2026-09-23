@@ -218,11 +218,29 @@ def _verified_json(path: Path) -> dict:
     return json.loads(body)
 
 
+def _cmdline_of(pid: int) -> bytes:
+    """The process's command line, on Linux and elsewhere.
+
+    `/proc` is Linux-only, and reading it unconditionally made this check --
+    and therefore the whole real-backend path -- impossible to exercise on any
+    other platform. `ps` is the portable fallback; the check itself is
+    unchanged, only how the command line is obtained.
+    """
+    proc = Path(f"/proc/{pid}/cmdline")
+    if proc.exists():
+        return proc.read_bytes().replace(b"\0", b" ")
+    r = subprocess.run(["ps", "-o", "args=", "-p", str(pid)],
+                       capture_output=True, timeout=30)
+    if r.returncode != 0 or not r.stdout.strip():
+        raise OSError(f"no such process: {pid}")
+    return r.stdout
+
+
 def _live_serving_session(fp: dict) -> None:
     """Refuse a fingerprint whose vLLM process is gone or has changed."""
     try:
         pid = int(fp["vllm_pid"])
-        cmdline = Path(f"/proc/{pid}/cmdline").read_bytes().replace(b"\0", b" ")
+        cmdline = _cmdline_of(pid)
     except (KeyError, ValueError, OSError) as e:
         raise PilotStop("the fingerprint's vLLM process is not alive") from e
     for value in (fp.get("model"), fp.get("model_revision")):
