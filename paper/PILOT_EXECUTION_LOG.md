@@ -571,3 +571,83 @@ rented after it does not belong to this pre-registered pilot.**
 host to local. Four artifacts re-verified against their own digests after
 transfer: `smoke_run.json`, `smoke_report.json`, `serving_fingerprint.json`,
 `preflight_report.json`.
+
+## host_5 closed, and the pilot ends
+
+```text
+termination_actor:    user
+termination_method:   manual Lambda console action
+terminated_at_utc:    unknown / not captured
+page_total_at_close:  $16.88 USD
+host_5_cost:          $3.05   ($16.88 − $13.83)
+```
+
+## Final accounting for the pre-registered pilot
+
+```text
+experiment_billing_baseline  $7.16    frozen 2026-09-21T00:49:52Z, never reset
+final page total             $16.88
+cumulative_pilot_spend       $9.72    32% of the $30 absolute stop
+unspent                      $20.28
+billing readings             11
+checkpoints taken            4  (two superseded, with reasons)
+pilot_runs                   0
+pilot_evidence               none
+```
+
+| host | outcome | cost |
+|---|---|---|
+| Gate 9 host | (pre-baseline) | — |
+| `preflight_host_1` | baseline unrecoverable, stopped before pilot | (pre-baseline) |
+| `preflight_host_2` | READY, no runner existed | $2.99 |
+| `host_3` | smoke failure — bare model id reached LiteLLM | $2.12 |
+| `host_4` | smoke failure — cost accounting discarded a successful response | $1.56 |
+| `host_5` | **smoke PASS**, entry point not executable | $3.05 |
+
+No budget stop was ever reached. The pilot did not end because it ran out of
+money; it ended because the registered entry point could not run a cell, and
+because continuing would have meant a fifth fix-and-rent cycle.
+
+## What was established, and what was not
+
+**Established.** The registered serving stack works: the pinned
+`Qwen/Qwen3.6-27B-FP8` under vLLM 0.28.0 with `qwen3_coder` /`qwen3` parsers
+emits usable tool calls; the challenge fires exactly once and the suppressed
+action never executes; recovery happens; the real SWE-bench harness returns an
+explicit verdict; one transport attempt per logical request; a wall-clock cap
+censors without grading. Most of that is now provable on CPU and Docker alone.
+
+**Not established.** Whether reducing `max_steps` or removing the recovery
+hint changes anything. **No cell of the registered 18 was ever executed.** The
+pilot has no outcome data and supports no claim about M1, M2, or the method's
+sensitivity.
+
+## The engineering finding
+
+Across four hosts the same shape recurred: a defect in the execution chain
+that every component test passed over.
+
+| host | defect | the test that should have caught it |
+|---|---|---|
+| 2 | no runner existed | constructibility gate — added after |
+| 3 | bare model id reached LiteLLM | transport check — added after |
+| 4 | cost accounting discarded a response | success-path test — added after |
+| 5 | entry point never wired to the backend | **none existed** |
+
+Two of these — the cost policy and the evaluator's report reader — were
+mechanisms the project had already built and verified elsewhere, and the pilot
+reimplemented or omitted rather than reused.
+
+> The apparatus reliably proves components. It has never proved that the
+> registered entry point is executable end to end.
+
+Every added gate checked a *part*. The smoke test exercised the chain through
+`run_smoke`, which calls `run_cell` directly, so the one path the pilot would
+actually take — `agentseism.pilot --backend real` — was never executed by
+anything, on any host, at any point.
+
+## Status
+
+`infrastructure_feasibility_stop_before_run_0`. This pre-registered pilot is
+closed. `pilot.py` may be repaired as ordinary software work; a host rented
+afterwards is **not** part of this registration and would require its own.
