@@ -15,6 +15,7 @@ the closed pilot's two hashes appear nowhere in what it produced.
 from __future__ import annotations
 
 import dataclasses
+import re
 import json
 import sys
 from pathlib import Path
@@ -273,3 +274,131 @@ def test_the_preflight_resolves_the_selected_experiment():
     """`--resolve-only` without `--experiment` resolves the pilot, so a
     preflight preparing F3 that forgot the flag would check the wrong plan."""
     assert '--resolve-only --experiment "$EXPERIMENT"' in _script()
+
+
+# ── the budget origin is experiment-selected, not the pilot's ──
+def _const(name: str) -> str:
+    m = re.search(rf'^{name}="?([^"\n]+)"?$', _script(), re.M)
+    assert m, f"{name} not found in the preflight"
+    return m.group(1)
+
+
+def test_the_preflight_carries_f3s_own_budget_origin():
+    """The gap that aborted the first F3 launch.
+
+    `--experiment f3` selected the plan identity but not the budget, so step
+    3b would have seeded the pilot's log, matched $7.16, computed
+    18.16-7.16=$11.00 and passed it against $20/$25/$30 -- never consulting
+    $16.88 or $8/$10/$12. It would not have errored, which is worse than a
+    refusal: a silent wrong measurement.
+    """
+    assert _const("F3_BASELINE_USD") == "16.88"
+    assert _const("F3_BASELINE_PERIOD") == "September 2026"
+    assert _const("F3_BASELINE_CURRENCY") == "USD"
+    assert _const("F3_RUN_LOG") == "data/runs/f3/run.jsonl"
+
+
+def test_the_frozen_f3_baseline_is_what_the_preflight_expects():
+    """The literal in the script and the log it will be checked against."""
+    log = Path(__file__).resolve().parents[1] / "data/runs/f3/run.jsonl"
+    base = [json.loads(l) for l in log.read_text().splitlines()
+            if '"billing_baseline"' in l]
+    assert len(base) == 1, "a baseline is entered once and never re-entered"
+    assert base[0]["current_total"] == float(_const("F3_BASELINE_USD"))
+    assert base[0]["billing_period"] == _const("F3_BASELINE_PERIOD")
+    assert base[0]["currency"] == _const("F3_BASELINE_CURRENCY")
+
+
+def test_the_pilots_budget_origin_is_untouched():
+    assert _const("BASELINE_USD") == "7.16"
+    assert _const("PILOT_RUN_LOG") == "data/runs/pilot/run.jsonl"
+
+
+def test_the_preflight_reads_thresholds_from_the_selected_spec():
+    """`from agentseism.pilot import PILOT_THRESHOLDS` in a step that runs for
+    both experiments is the budget equivalent of a module-global hash."""
+    src = _script()
+    assert "import PILOT_THRESHOLDS" not in src
+    assert "PILOT_THRESHOLDS[" not in src
+    assert 'SPECS[os.environ["EXPERIMENT"]]' in src
+
+
+def test_each_experiment_gets_its_own_run_directory():
+    """Neither can resume from, or overwrite, the other's log and artifacts."""
+    assert 'PILOT_DIR="$WORK/$EXPERIMENT"' in _script()
+    assert 'PILOT_DIR="$WORK/pilot"' not in _script()
+
+
+def test_the_run_log_is_seeded_from_the_selected_experiments_tree():
+    assert 'cp "$REPO/$EXP_RUN_LOG_SRC"' in _script()
+
+
+# ── the smoke artifact carries the identity it was run for ──
+def test_the_smoke_artifact_is_stamped_with_the_selected_experiment(tmp_path):
+    """The third place the identity leaked.
+
+    `smoke.py` stamped `P.protocol_hash()` unconditionally, so an F3 host's
+    smoke evidence would have carried the closed pilot's hash.
+    """
+    import agentseism.smoke as smoke_mod
+    assert "P.protocol_hash()" not in \
+        Path(smoke_mod.__file__).read_text()
+    # The *invocation*, not the `from agentseism.smoke import SMOKE_TASK`
+    # that appears earlier in the file.
+    invocation = _script().split("-m agentseism.smoke", 1)[1][:200]
+    assert '--experiment "$EXPERIMENT"' in invocation
+
+
+@pytest.mark.parametrize("name,spec_of", [("pilot", lambda: P.SPEC),
+                                          ("f3", lambda: F.SPEC)])
+def test_smoke_stamps_whichever_registration_it_was_run_for(name, spec_of):
+    import inspect
+
+    import agentseism.smoke as smoke_mod
+    src = inspect.getsource(smoke_mod.run_smoke)
+    assert "sp = spec if spec is not None else P.SPEC" in src
+    assert '"protocol_hash": sp.protocol_hash' in src
+    assert '"order_hash": sp.order_hash' in src
+    assert spec_of().name == name
+
+
+# ── the audit: every experiment-dependent value is classified ──
+def test_no_unclassified_pilot_literal_survives_on_the_budget_path():
+    """Category 3 of the audit -- reachable only by the pilot -- has to be
+    provably unreachable for F3, not merely unlikely.
+
+    The values below are the ones that decide what F3 measures and where it
+    writes. Any of them left pilot-specific is another paid discovery.
+    """
+    src = _script()
+    for forbidden in ('cp "$REPO/data/runs/pilot/run.jsonl"',
+                      # the *use* site, not the pilot branch's assignment
+                      'BASELINE_USD="$BASELINE_USD" \\',
+                      "from agentseism.pilot import PILOT_THRESHOLDS"):
+        assert forbidden not in src, forbidden
+    # and the pilot branch still assigns its own origin
+    assert 'EXP_BASELINE_USD="$BASELINE_USD"' in src
+
+
+def test_the_shared_values_are_shared_on_purpose():
+    """Category 2 -- intentionally common to both registrations, and proved
+    here so that sharing is a decision rather than an oversight."""
+    assert F.RUN_TIMEOUT_SECONDS == P.RUN_TIMEOUT_SECONDS   # the run cap
+    assert F.ARMS is P.ARMS                                 # the arms
+    assert F.HINT_SHA256 is P.HINT_SHA256                   # the hint texts
+    assert F.EXIT_STATUS_MAP is P.EXIT_STATUS_MAP           # exit mapping
+    assert _const("DATASET") == "SWE-bench/SWE-bench_Verified"
+    assert _const("EXPECTED_UNIVERSE") == "500"
+    # The billing period and currency are the same page, not a shared default.
+    assert _const("F3_BASELINE_PERIOD") == _const("BASELINE_PERIOD")
+    assert _const("F3_BASELINE_CURRENCY") == _const("BASELINE_CURRENCY")
+
+
+def test_the_draw_sizing_constants_are_unreachable_under_f3():
+    """Category 3. `TASKS_WANTED=3` is the pilot's draw; F3 registers its task
+    and returns from `draw_tasks` before any of those checks run."""
+    src = _script()
+    f3_branch = src.split('if [ "$EXPERIMENT" = "f3" ]; then', 1)[1]
+    early_return = f3_branch.split("return 0", 1)[0]
+    assert "TASKS_WANTED" not in early_return
+    assert 'printf \'%s\\n\' "$F3_TASK" > "$drawn"' in early_return

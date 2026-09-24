@@ -130,11 +130,18 @@ def evaluate_chain(result: dict) -> dict:
 
 
 def run_smoke(config: RB.BackendConfig, out_dir: Path | str = SMOKE_DIR,
-              backend=None, serving: dict | None = None) -> dict:
+              backend=None, serving: dict | None = None, spec=None) -> dict:
     """Execute the one smoke cell, freeze it, and report on the chain.
 
     One execution. No retry, here or below: `run_cell` runs the agent once and
     the evaluator once, and a failure is reported rather than attempted again.
+
+    `spec` is the registration the smoke is being run *for*. It defaults to
+    the pilot, which is what every existing smoke artifact was written under,
+    but it is not optional in effect: the artifact carries a `protocol_hash`
+    and an `order_hash`, and stamping the pilot's onto an F3 host would put a
+    closed experiment's identity into new evidence. The same defect as the
+    preflight's plan and budget identities, in a third place.
 
     `serving` records the stack that answered it -- endpoint, model, revision,
     the vLLM pid, the dependency lock and the serving config. The pilot must
@@ -154,12 +161,14 @@ def run_smoke(config: RB.BackendConfig, out_dir: Path | str = SMOKE_DIR,
     result = (backend or RB.run_cell)(cell, config)
     RB.validate_result(result)
 
+    sp = spec if spec is not None else P.SPEC
     payload = {
         "schema_version": P.SCHEMA_VERSION,
         "smoke": True,
         "pilot_evidence": False,
-        "protocol_hash": P.protocol_hash(),
-        "order_hash": P.ORDER_HASH,
+        "experiment": sp.name,
+        "protocol_hash": sp.protocol_hash,
+        "order_hash": sp.order_hash,
         "order_index": ORDER_INDEX,
         "task": cell["task"], "arm": cell["arm"],
         "step_limit": cell["step_limit"], "hint": cell["hint"],
@@ -177,6 +186,11 @@ def run_smoke(config: RB.BackendConfig, out_dir: Path | str = SMOKE_DIR,
     report = {
         "smoke": True,
         "pilot_evidence": False,
+        # The preflight embeds this report, and the CLI reads it from there.
+        # It has to say which registration it proved a chain for.
+        "experiment": sp.name,
+        "protocol_hash": sp.protocol_hash,
+        "order_hash": sp.order_hash,
         "task": SMOKE_TASK, "arm": SMOKE_ARM, "runs": 1,
         "artifact": str(path), "sha256": digest, "artifact_verified": verified,
         "evaluator_resolved": result["evaluator_resolved"],
@@ -207,6 +221,9 @@ def main(argv=None) -> int:
     ap.add_argument("--vllm-pid", default="")
     ap.add_argument("--dependency-lock-sha256", default="")
     ap.add_argument("--serving-config-sha256", default="")
+    ap.add_argument("--experiment", choices=("pilot", "f3"), default="pilot",
+                    help="the registration this smoke is run for; decides the "
+                         "identity stamped on the artifact")
     args = ap.parse_args(argv)
 
     rows = [l.split("\t") for l in
@@ -229,7 +246,9 @@ def main(argv=None) -> int:
         "dependency_lock_sha256": args.dependency_lock_sha256,
         "serving_config_sha256": args.serving_config_sha256,
     }
-    rep = run_smoke(cfg, args.out, serving=serving)
+    from agentseism.pilot import SPECS
+    rep = run_smoke(cfg, args.out, serving=serving,
+                    spec=SPECS[args.experiment])
     for name, _, why in CRITERIA:
         mark = "ok  " if rep["criteria"][name] else "FAIL"
         print(f"  {name:<34} {mark}  {why}")

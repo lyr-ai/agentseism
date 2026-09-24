@@ -40,7 +40,7 @@ F3_PROTOCOL_HASH="c145bebf3e39bc7d"
 F3_ORDER_HASH="a83650caeae31ff6"
 F3_EXPECTED_CELLS=3
 F3_TASK="pytest-dev__pytest-10051"
-EXPECTED_TESTS=805
+EXPECTED_TESTS=817
 EXPECTED_SKIPPED=23
 # The Docker integration tests are collected but skipped unless
 # AGENTSEISM_DOCKER_TESTS is set: preflight must not perform an unregistered
@@ -49,6 +49,16 @@ EXPECTED_SKIPPED=23
 BASELINE_USD="7.16"
 BASELINE_CURRENCY="USD"
 BASELINE_PERIOD="September 2026"
+PILOT_RUN_LOG="data/runs/pilot/run.jsonl"
+
+# F3's budget origin is its own. Selecting the *plan* identity while leaving
+# the budget pilot-specific is how an F3 host would have computed its spend
+# against $7.16 and waved $11.00 through $20/$25/$30 without erroring --
+# a silent wrong measurement, which is worse than a refusal.
+F3_BASELINE_USD="16.88"
+F3_BASELINE_CURRENCY="USD"
+F3_BASELINE_PERIOD="September 2026"
+F3_RUN_LOG="data/runs/f3/run.jsonl"
 EXPECTED_MODEL="Qwen/Qwen3.6-27B-FP8"
 EXPECTED_REVISION="e89b16ebf1988b3d6befa7de50abc2d76f26eb09"
 EXPECTED_MAX_MODEL_LEN=131072
@@ -97,7 +107,7 @@ STEPS="$STATE/steps"
 # reading to the tracked data/runs/pilot/run.jsonl would dirty the worktree,
 # and step 3 refuses to run from a dirty tree -- so the second invocation of
 # this script would fail on the residue of the first.
-PILOT_DIR="$WORK/pilot"
+# PILOT_DIR is set by select_experiment: one directory per experiment.
 
 # ── output helpers ──
 _hr() { printf '──── %s ────\n' "$1"; }
@@ -163,13 +173,25 @@ select_experiment() {
     pilot)
       EXP_PROTOCOL_HASH="$PROTOCOL_HASH"
       EXP_ORDER_HASH="$ORDER_HASH"
-      EXP_CELLS="$EXPECTED_CELLS" ;;
+      EXP_CELLS="$EXPECTED_CELLS"
+      EXP_BASELINE_USD="$BASELINE_USD"
+      EXP_BASELINE_PERIOD="$BASELINE_PERIOD"
+      EXP_BASELINE_CURRENCY="$BASELINE_CURRENCY"
+      EXP_RUN_LOG_SRC="$PILOT_RUN_LOG" ;;
     f3)
       EXP_PROTOCOL_HASH="$F3_PROTOCOL_HASH"
       EXP_ORDER_HASH="$F3_ORDER_HASH"
-      EXP_CELLS="$F3_EXPECTED_CELLS" ;;
+      EXP_CELLS="$F3_EXPECTED_CELLS"
+      EXP_BASELINE_USD="$F3_BASELINE_USD"
+      EXP_BASELINE_PERIOD="$F3_BASELINE_PERIOD"
+      EXP_BASELINE_CURRENCY="$F3_BASELINE_CURRENCY"
+      EXP_RUN_LOG_SRC="$F3_RUN_LOG" ;;
     *) die "unknown experiment '$EXPERIMENT'; expected pilot or f3" 64 ;;
   esac
+  # One directory per experiment. `$WORK/pilot` is unchanged for the pilot;
+  # F3 gets `$WORK/f3`, so neither can resume from or overwrite the other's
+  # run log, artifacts or retrieval bundle.
+  PILOT_DIR="$WORK/$EXPERIMENT"
 }
 
 # Pure: the comparison, separated from the parsing so it can be tested with
@@ -200,6 +222,7 @@ preflight_args() {
   done
   select_experiment
   ok "experiment" "$EXPERIMENT  protocol $EXP_PROTOCOL_HASH  order $EXP_ORDER_HASH  cells $EXP_CELLS"
+  ok "budget origin" "\$$EXP_BASELINE_USD  $EXP_BASELINE_PERIOD  $EXP_BASELINE_CURRENCY  from $EXP_RUN_LOG_SRC"
   [ -n "${EXPECTED_COMMIT:-}" ] || usage \
     "EXPECTED_COMMIT=<sha> is required. The commit is verified, not trusted
    from the branch head, so that a push during the run cannot change what ran."
@@ -307,7 +330,7 @@ check_repo() {
   ok "worktree" "clean"
   mkdir -p "$PILOT_DIR"
   if [ ! -f "$PILOT_DIR/run.jsonl" ]; then
-    cp "$REPO/data/runs/pilot/run.jsonl" "$PILOT_DIR/run.jsonl" \
+    cp "$REPO/$EXP_RUN_LOG_SRC" "$PILOT_DIR/run.jsonl" \
       || die "the frozen baseline is not in the checkout"
     ok "run log" "seeded from the frozen tree into $PILOT_DIR"
   else
@@ -324,20 +347,23 @@ check_repo() {
 record_reading_one() {
   step "3b. billing reading #1"
   cd "$REPO"
-  PYTHONPATH=src READING1_USD="$READING1_USD" BASELINE_USD="$BASELINE_USD" \
-  BASELINE_PERIOD="$BASELINE_PERIOD" BASELINE_CURRENCY="$BASELINE_CURRENCY" \
+  PYTHONPATH=src READING1_USD="$READING1_USD" BASELINE_USD="$EXP_BASELINE_USD" \
+  BASELINE_PERIOD="$EXP_BASELINE_PERIOD" BASELINE_CURRENCY="$EXP_BASELINE_CURRENCY" \
+  EXPERIMENT="$EXPERIMENT" \
   RUN_LOG="$PILOT_DIR/run.jsonl" HOST_ID="$(hostname)@$(uptime -s 2>/dev/null || echo unknown)" \
   python3 - <<'PY' || die "reading #1 refused -- see the message above"
 import os, sys
 from pathlib import Path
 from agentseism.budget import Budget, BudgetStop, RunLog
-from agentseism.pilot import PILOT_THRESHOLDS
+from agentseism.pilot import SPECS
 
+SPEC = SPECS[os.environ["EXPERIMENT"]]
+THRESHOLDS = SPEC.thresholds
 log = RunLog(Path(os.environ["RUN_LOG"]))
-b = Budget(log, PILOT_THRESHOLDS)
+b = Budget(log, THRESHOLDS)
 base = b.baseline()
 if base is None:
-    sys.exit("no frozen baseline in data/runs/pilot/run.jsonl")
+    sys.exit(f"no frozen baseline in the {SPEC.name} run log")
 want = float(os.environ["BASELINE_USD"])
 if abs(base["current_total"] - want) > 1e-9:
     sys.exit(f"baseline is ${base['current_total']}, expected ${want}")
@@ -393,21 +419,21 @@ if obs:
     print(f"  billed since that reading    ${round(usd - o, 2):.2f}")
 else:
     print(f"  launch_reading               ${usd:.2f}  after launch  ({host_id})")
-print(f"  cumulative_pilot_spend       ${spend:.2f}  "
+print(f"  cumulative_{SPEC.name}_spend{'':{max(0, 15 - len(SPEC.name))}}${spend:.2f}  "
       f"= ${usd:.2f} - ${base['current_total']:.2f}")
 if len(hosts) > 1:
     print(f"  hosts so far                 {len(hosts)}; earlier hosts' cost is "
           "inside the figure above and is not forgiven")
-for name, level in (("warning", PILOT_THRESHOLDS["warning"]),
-                    ("no new block", PILOT_THRESHOLDS["no_new_block"]),
-                    ("absolute stop", PILOT_THRESHOLDS["absolute"])):
+for name, level in (("warning", THRESHOLDS["warning"]),
+                    ("no new block", THRESHOLDS["no_new_block"]),
+                    ("absolute stop", THRESHOLDS["absolute"])):
     print(f"  {name:<28} at a page total of "
           f"${base['current_total'] + level:.2f}")
 if spend < 0:
     sys.exit("reading is below the baseline; a cumulative total cannot fall")
-w = PILOT_THRESHOLDS["warning"]
+w = THRESHOLDS["warning"]
 if spend >= w:
-    print(f"  WARNING: pilot spend has already reached ${w:.0f} before run 0")
+    print(f"  WARNING: {SPEC.name} spend has already reached ${w:.0f} before run 0")
 PY
   cd - >/dev/null
 }
@@ -839,7 +865,8 @@ run_smoke_test() {
 
   cd "$REPO"
   PYTHONPATH=src:. HF_HOME="$WORK/hf" "$WORK/.venv-eval/bin/python" \
-    -m agentseism.smoke --digests "$STATE/smoke_digests.tsv" \
+    -m agentseism.smoke --experiment "$EXPERIMENT" \
+    --digests "$STATE/smoke_digests.tsv" \
     --out "$WORK/smoke" --work-dir "$WORK/smoke-work" \
     --model-base-url "http://127.0.0.1:$VLLM_PORT/v1" \
     --model-name "$EXPECTED_MODEL" --model-revision "$EXPECTED_REVISION" \
@@ -1013,13 +1040,13 @@ write_report() {
   #
   # which refuses any reading older than the smoke_completed marker,
   # so the checkpoint covers the smoke test's cost as well as setup's.
-  PYTHONPATH=src RUN_LOG="$PILOT_DIR/run.jsonl" \
+  PYTHONPATH=src RUN_LOG="$PILOT_DIR/run.jsonl" EXPERIMENT="$EXPERIMENT" \
   "$WORK/.venv-eval/bin/python" - <<'PY' || die "could not read the budget state"
 import os
 from pathlib import Path
 from agentseism.budget import Budget, RunLog
-from agentseism.pilot import PILOT_THRESHOLDS
-b = Budget(RunLog(Path(os.environ["RUN_LOG"])), PILOT_THRESHOLDS)
+from agentseism.pilot import SPECS
+b = Budget(RunLog(Path(os.environ["RUN_LOG"])), SPECS[os.environ["EXPERIMENT"]].thresholds)
 log = b.log
 base, last = b.baseline(), log.last_billing()
 mark = [r for r in log.read() if r["kind"] == "phase" and r.get("name") == "smoke_completed"]
