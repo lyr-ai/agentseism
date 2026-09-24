@@ -190,3 +190,86 @@ def test_forbidden_claims_are_registered_not_left_to_tone():
     for word in ("stable", "stability", "reliable", "reliability"):
         assert word in F.FORBIDDEN_CLAIMS
     assert F.PASS_CLAIM == "one_shot_execution_feasibility_established"
+
+
+# ── the launch path: a READY report is a statement about one registration ──
+def _report(**over) -> dict:
+    base = {"experiment": "f3", "protocol_hash": F.SPEC.protocol_hash,
+            "order_hash": F.ORDER_HASH, "expected_cells": 3}
+    base.update(over)
+    return base
+
+
+def test_f3_refuses_a_preflight_report_that_is_the_pilots():
+    """The gap found before paying for a host.
+
+    A preflight proving the 18-cell pilot READY says nothing about a 3-cell
+    run. Binding one to the other is host 5 again: components verified, the
+    thing actually launched never checked.
+    """
+    with pytest.raises(pilot.PilotStop, match="for experiment 'pilot'"):
+        pilot._check_report_identity(
+            _report(experiment="pilot",
+                    protocol_hash=CLOSED_PILOT_PROTOCOL_HASH,
+                    order_hash=CLOSED_PILOT_ORDER_HASH,
+                    expected_cells=18), F.SPEC)
+
+
+def test_f3_refuses_a_legacy_report_with_no_identity_at_all():
+    """Reports written before the preflight recorded an identity carry none of
+    these fields. They cannot prove which registration they came from, so F3
+    refuses them rather than assuming."""
+    with pytest.raises(pilot.PilotStop, match="legacy pilot report"):
+        pilot._check_report_identity({"status": "READY"}, F.SPEC)
+
+
+def test_the_pilot_still_accepts_its_own_legacy_reports():
+    """Unchanged on purpose. Rewriting a closed experiment's audit record to
+    satisfy a new one would damage evidence to save a branch."""
+    pilot._check_report_identity({"status": "READY"}, P.SPEC)
+
+
+@pytest.mark.parametrize("field,value", [
+    ("protocol_hash", CLOSED_PILOT_PROTOCOL_HASH),
+    ("order_hash", CLOSED_PILOT_ORDER_HASH),
+    ("expected_cells", 18),
+])
+def test_each_identity_field_is_checked_not_just_the_name(field, value):
+    """A report could name f3 and carry the pilot's plan."""
+    with pytest.raises(pilot.PilotStop, match=field):
+        pilot._check_report_identity(_report(**{field: value}), F.SPEC)
+
+
+def test_a_matching_f3_report_is_accepted():
+    pilot._check_report_identity(_report(), F.SPEC)
+
+
+# ── the preflight script selects the same identity ──
+def _script() -> str:
+    return (Path(__file__).resolve().parents[1]
+            / "inference/stage_b_preflight.sh").read_text()
+
+
+def test_the_preflight_freezes_f3s_identity_from_the_module():
+    """The script's literals and `f3_protocol` must agree, or the preflight
+    would prove a registration nobody registered."""
+    src = _script()
+    for needle in (f'F3_PROTOCOL_HASH="{F.SPEC.protocol_hash}"',
+                   f'F3_ORDER_HASH="{F.ORDER_HASH}"',
+                   f"F3_EXPECTED_CELLS={F.SPEC.cell_count}",
+                   f'F3_TASK="{F.TASK}"'):
+        assert needle in src, needle
+
+
+def test_the_preflight_report_records_the_identity_it_prepared():
+    src = _script()
+    for field in ("experiment", "protocol_hash", "order_hash",
+                  "expected_cells"):
+        assert f'"{field}": os.environ[' in src or \
+               f'"{field}": int(os.environ[' in src, field
+
+
+def test_the_preflight_resolves_the_selected_experiment():
+    """`--resolve-only` without `--experiment` resolves the pilot, so a
+    preflight preparing F3 that forgot the flag would check the wrong plan."""
+    assert '--resolve-only --experiment "$EXPERIMENT"' in _script()

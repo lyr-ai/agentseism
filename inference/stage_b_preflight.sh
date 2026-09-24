@@ -31,7 +31,16 @@ set -euo pipefail
 PROTOCOL_HASH="b7af66ca3ab783ab"   # moved by P.3, P.5-P.10
 ORDER_HASH="cfe8856c9c9167b5"
 EXPECTED_CELLS=18
-EXPECTED_TESTS=795
+
+# F3 (paper/PREREG_F3.md): a separate registration, not a variant of the above.
+# A preflight that proves the 18-cell pilot READY says nothing about a 3-cell
+# run, and binding one to the other would repeat host 5 exactly -- components
+# verified, the thing actually launched never checked.
+F3_PROTOCOL_HASH="c145bebf3e39bc7d"
+F3_ORDER_HASH="a83650caeae31ff6"
+F3_EXPECTED_CELLS=3
+F3_TASK="pytest-dev__pytest-10051"
+EXPECTED_TESTS=805
 EXPECTED_SKIPPED=23
 # The Docker integration tests are collected but skipped unless
 # AGENTSEISM_DOCKER_TESTS is set: preflight must not perform an unregistered
@@ -149,8 +158,48 @@ sha_of() { sha256sum "$1" | cut -d' ' -f1; }
 # ════════════════════════════════════════════════════════════════════════
 # 0. arguments, before anything is touched
 # ════════════════════════════════════════════════════════════════════════
+select_experiment() {
+  case "$EXPERIMENT" in
+    pilot)
+      EXP_PROTOCOL_HASH="$PROTOCOL_HASH"
+      EXP_ORDER_HASH="$ORDER_HASH"
+      EXP_CELLS="$EXPECTED_CELLS" ;;
+    f3)
+      EXP_PROTOCOL_HASH="$F3_PROTOCOL_HASH"
+      EXP_ORDER_HASH="$F3_ORDER_HASH"
+      EXP_CELLS="$F3_EXPECTED_CELLS" ;;
+    *) die "unknown experiment '$EXPERIMENT'; expected pilot or f3" 64 ;;
+  esac
+}
+
+# Pure: the comparison, separated from the parsing so it can be tested with
+# values the mock cannot produce -- a pilot hash under --experiment f3, an
+# 18-cell count, a mismatched id. Every branch is a die, never a warning.
+check_plan_identity() {
+  local got_exp="$1" got_ph="$2" got_oh="$3" got_cells="$4"
+  [ "$got_exp" = "$EXPERIMENT" ] \
+    || die "the CLI resolved experiment '$got_exp', this preflight is preparing '$EXPERIMENT'"
+  [ "$got_ph" = "$EXP_PROTOCOL_HASH" ] \
+    || die "protocol hash $got_ph != frozen $EXP_PROTOCOL_HASH for $EXPERIMENT"
+  [ "$got_oh" = "$EXP_ORDER_HASH" ] \
+    || die "order hash $got_oh != frozen $EXP_ORDER_HASH for $EXPERIMENT"
+  [ "${got_cells:-0}" -eq "$EXP_CELLS" ] \
+    || die "$got_cells cells, expected $EXP_CELLS for $EXPERIMENT"
+}
+
 preflight_args() {
   step "0. arguments"
+  EXPERIMENT="${EXPERIMENT:-pilot}"
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --experiment) [ -n "${2:-}" ] || usage "--experiment needs a value"
+                    EXPERIMENT="$2"; shift 2 ;;
+      --experiment=*) EXPERIMENT="${1#*=}"; shift ;;
+      *) usage "unknown argument '$1'" ;;
+    esac
+  done
+  select_experiment
+  ok "experiment" "$EXPERIMENT  protocol $EXP_PROTOCOL_HASH  order $EXP_ORDER_HASH  cells $EXP_CELLS"
   [ -n "${EXPECTED_COMMIT:-}" ] || usage \
     "EXPECTED_COMMIT=<sha> is required. The commit is verified, not trusted
    from the branch head, so that a push during the run cannot change what ran."
@@ -456,16 +505,26 @@ verify_plan() {
   cd "$REPO"
   local log="$STATE/resolve_only.log"
   PYTHONPATH=src "$WORK/.venv-eval/bin/python" -m agentseism.pilot \
-    --resolve-only >"$log" 2>&1 || { cat "$log"; die "--resolve-only failed"; }
+    --resolve-only --experiment "$EXPERIMENT" >"$log" 2>&1 \
+    || { cat "$log"; die "--resolve-only failed"; }
   grep -q "RESOLVE-ONLY: PASS" "$log" || { cat "$log"; die "--resolve-only did not pass"; }
 
-  local ph oh cells
+  local exp ph oh cells
+  exp="$(sed -nE 's/^experiment (.+)/\1/p' "$log" | head -1)"
   ph="$(sed -nE 's/^protocol ([0-9a-f]+).*/\1/p' "$log" | head -1)"
   oh="$(sed -nE 's/.*order ([0-9a-f]+).*/\1/p' "$log" | head -1)"
   cells="$(sed -nE 's/.*cells ([0-9]+).*/\1/p' "$log" | head -1)"
-  [ "$ph" = "$PROTOCOL_HASH" ] || die "protocol hash $ph != frozen $PROTOCOL_HASH"
-  [ "$oh" = "$ORDER_HASH" ]    || die "order hash $oh != frozen $ORDER_HASH"
-  [ "${cells:-0}" -eq "$EXPECTED_CELLS" ] || die "$cells cells, expected $EXPECTED_CELLS"
+  check_plan_identity "$exp" "$ph" "$oh" "$cells"
+
+  # The registration module is read directly as well, so the frozen literals
+  # above are checked against their source and not only against the CLI that
+  # also reads it. One path could be edited without the other noticing.
+  local mod; mod="$(PYTHONPATH=src "$WORK/.venv-eval/bin/python" -c \
+    "from agentseism.pilot import SPECS; s = SPECS['$EXPERIMENT']; print(s.name, s.protocol_hash, s.order_hash, s.cell_count)")" \
+    || die "cannot read the $EXPERIMENT registration module"
+  # shellcheck disable=SC2086
+  check_plan_identity $mod
+  ok "experiment" "$exp"
   ok "protocol hash" "$ph"
   ok "order hash" "$oh"
   ok "cells" "$cells"
@@ -567,6 +626,22 @@ PY
   [ "$n" -eq "$EXPECTED_UNIVERSE" ] \
     || die "$DATASET has $n instances, expected $EXPECTED_UNIVERSE -- the candidate set changed and the draw is not the registered one"
   ok "universe" "$n instances  sha $(sha_of "$universe" | cut -c1-16)…"
+
+  # F3 registered its single task rather than drawing one, so there is nothing
+  # to select -- but the id still has to exist in the universe, because a
+  # registration naming an instance the dataset does not contain is a
+  # registration that cannot run.
+  if [ "$EXPERIMENT" = "f3" ]; then
+    grep -qx "$F3_TASK" "$universe" \
+      || die "the registered F3 task $F3_TASK is not in $DATASET"
+    printf '%s\n' "$F3_TASK" > "$drawn"
+    printf 'instance_id\trepository\timage\treason\n' > "$tsv"
+    printf '%s\t%s\t-\tregistered\n' "$F3_TASK" "${F3_TASK%%__*}" >> "$tsv"
+    mark_done draw
+    note "registered task" "$F3_TASK (PREREG_F3 §4; not drawn)"
+    cd - >/dev/null
+    return 0
+  fi
 
   # The rule itself is `pilot_protocol.select_tasks` and is unit-tested; this
   # shell does not reimplement it, it runs it. One pull per candidate the rule
@@ -971,6 +1046,8 @@ PY
 
   STATE="$STATE" COMMIT="$EXPECTED_COMMIT" RUN_LOG="$PILOT_DIR/run.jsonl" \
   SMOKE_REPORT="$WORK/smoke/smoke_report.json" \
+  EXPERIMENT="$EXPERIMENT" EXP_PROTOCOL_HASH="$EXP_PROTOCOL_HASH" \
+  EXP_ORDER_HASH="$EXP_ORDER_HASH" EXP_CELLS="$EXP_CELLS" \
     python3 - <<'PY' || die "report could not be written"
 import hashlib, json, os
 from pathlib import Path
@@ -980,6 +1057,13 @@ def lines(p):
     return f.read_text().splitlines() if f.exists() else []
 rep = {
     "kind": "stage_b_preflight_report",
+    # The identity this READY is a statement about. Without it a report proves
+    # only "some registration passed", and the CLI would have to trust that
+    # the operator launched the same one.
+    "experiment": os.environ["EXPERIMENT"],
+    "protocol_hash": os.environ["EXP_PROTOCOL_HASH"],
+    "order_hash": os.environ["EXP_ORDER_HASH"],
+    "expected_cells": int(os.environ["EXP_CELLS"]),
     "repo_commit": os.environ["COMMIT"],
     "drawn_tasks": lines("drawn.txt"),
     "drawn_repositories": sorted({i.rsplit("-", 1)[0] for i in lines("drawn.txt")}),
@@ -1031,7 +1115,7 @@ PY
 }
 
 main() {
-  preflight_args
+  preflight_args "$@"
   check_host
   check_docker_group
   check_repo

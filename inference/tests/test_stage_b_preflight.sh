@@ -119,6 +119,7 @@ run_scenario() {
         READING1_USD="${SCENARIO_READING:-7.16}" \
         MOCK_SUDO_LOG="$SANDBOX/sudo.log" \
         MOCK_PULLED="$SANDBOX/pulled.txt" \
+        EXPERIMENT="${SCENARIO_EXPERIMENT:-pilot}" \
         bash "$SCRIPT" 2>&1)"
   RC=$?
   kill_mock_servers
@@ -209,7 +210,7 @@ printf '\n──── 1. happy path (real pytest, real resolve-only) ───�
   expect_rc 0 "exits 0"
   expect_out "READY_FOR_MANUAL_PILOT_CONFIRMATION" "reaches the ready banner"
   expect_out "pilot_runs = 0" "reports pilot_runs = 0"
-  expect_out "795 passed, 23 skipped" "runs the real suite and sees the frozen count"
+  expect_out "805 passed, 23 skipped" "runs the real suite and sees the frozen count"
   expect_out "cfe8856c9c9167b5" "verifies the order hash"
   expect_out "b7af66ca3ab783ab" "verifies the protocol hash (moved by P.3)"
   expect_out "cumulative_pilot_spend       \$0.00" "computes spend against the frozen baseline"
@@ -279,16 +280,16 @@ printf '\n──── 5. arguments ────\n'
 # A short sha is what a human copies out of `git log`, and it must be accepted:
 # the first real host run failed here against a tree that was correct.
 ( SCENARIO_COMMIT="$(git -C "$ROOT" rev-parse --short HEAD)"; export SCENARIO_COMMIT
-  export MOCK_PYTEST_PASSED=795
+  export MOCK_PYTEST_PASSED=805
   run_scenario
   expect_rc 0 "a short commit sha is accepted"
   expect_out "$COMMIT" "the record carries the resolved full sha" )
 
 printf '\n──── 6. the frozen counts ────\n'
-( export MOCK_PYTEST_PASSED=794; run_scenario
-  expect_rc 65 "794 passed is not 795"
-  expect_out "expected exactly 795" "says what it wanted" )
-( export MOCK_PYTEST_PASSED=795 MOCK_UNIVERSE_N=499; run_scenario
+( export MOCK_PYTEST_PASSED=804; run_scenario
+  expect_rc 65 "804 passed is not 805"
+  expect_out "expected exactly 805" "says what it wanted" )
+( export MOCK_PYTEST_PASSED=805 MOCK_UNIVERSE_N=499; run_scenario
   expect_rc 65 "a changed candidate universe stops"
   expect_out "the draw is not the registered one" "explains why" )
 
@@ -296,7 +297,7 @@ printf '\n──── 6a. a missing runner must not report READY ────\n
 # Host 2's defect, as a scenario. run_cell exists now, so the gate is provoked
 # by a dependency the backend needs being unimportable -- which is the general
 # case, not the one absence that happened to occur that day.
-( export MOCK_PYTEST_PASSED=795 MOCK_BACKEND_BROKEN=1
+( export MOCK_PYTEST_PASSED=805 MOCK_BACKEND_BROKEN=1
   run_scenario
   expect_rc 65 "preflight fails when the backend is not constructible"
   expect_out "real backend is not constructible" "says why"
@@ -366,12 +367,12 @@ printf '\n──── 6b. repository diversity (amendment P.3) ────\n'
   fi )
 
 printf '\n──── 7. image pulls are recorded, not retried ────\n'
-( export MOCK_PYTEST_PASSED=795 MOCK_PULL_FAIL_ALL=1; run_scenario
+( export MOCK_PYTEST_PASSED=805 MOCK_PULL_FAIL_ALL=1; run_scenario
   expect_rc 65 "no images means no run"
   expect_out "0 of 3 distinct repositories" "reports the shortfall"
   n="$(grep -c "pull_failed" "$SANDBOX/work/state/task_draw.tsv")"
   if [ "$n" -eq 500 ]; then ok "every failed attempt is recorded ($n)"; else bad "expected 500 pull_failed rows, found $n"; fi )
-( export MOCK_PYTEST_PASSED=795 MOCK_PULL_FAIL_GLOB="*astropy_1776_astropy-0000[12]*"; run_scenario
+( export MOCK_PYTEST_PASSED=805 MOCK_PULL_FAIL_GLOB="*astropy_1776_astropy-0000[12]*"; run_scenario
   expect_rc 0 "walks past failures to the next candidates"
   grep -q "astropy__astropy-00001" "$SANDBOX/work/state/drawn.txt"
   assert_false $? "failed candidates are skipped, in order"
@@ -379,12 +380,12 @@ printf '\n──── 7. image pulls are recorded, not retried ────\n'
   assert_true $? "the first success is the first drawn" )
 
 printf '\n──── 8. vLLM refuses the KV pool: stop, do not shrink ────\n'
-( export MOCK_PYTEST_PASSED=795 MOCK_VLLM_OOM=1; run_scenario
+( export MOCK_PYTEST_PASSED=805 MOCK_VLLM_OOM=1; run_scenario
   expect_rc 65 "an OOM at 131072 stops"
   expect_out "Not retrying at a smaller length" "refuses the automatic fallback"
   expect_not_out "65536" "never tries the smaller length"
   expect_out "pilot_runs = 0" "zero runs" )
-( export MOCK_PYTEST_PASSED=795 MOCK_GPU_USED_MIB=40000; run_scenario
+( export MOCK_PYTEST_PASSED=805 MOCK_GPU_USED_MIB=40000; run_scenario
   expect_rc 65 "a busy card stops before vLLM starts"
   expect_out "leftover process" "names the likely cause" )
 
@@ -466,7 +467,7 @@ printf '\n──── 9. resume is idempotent ────\n'
   SANDBOX="$(mktemp -d)"; build_mock_host "$SANDBOX" "$REAL_PYTHON"
   runit() { (cd "$ROOT" && env PATH="$SANDBOX/bin:$PATH" WORK="$SANDBOX/work" \
       REPO_URL="$ROOT" BRANCH="$BRANCH_UNDER_TEST" EXPECTED_COMMIT="$COMMIT" \
-      READING1_USD=7.16 MOCK_PYTEST_PASSED=795 MOCK_PULLED="$SANDBOX/pulled.txt" \
+      READING1_USD=7.16 MOCK_PYTEST_PASSED=805 MOCK_PULLED="$SANDBOX/pulled.txt" \
       bash "$SCRIPT" 2>&1); }
   runit >/dev/null; rc1=$?
   pulls1="$(wc -l < "$SANDBOX/pulled.txt")"
@@ -490,6 +491,57 @@ printf '\n──── 9. resume is idempotent ────\n'
   if [ -f "$SANDBOX/work/state/vllm.pid" ]; then
     kill "$(cat "$SANDBOX/work/state/vllm.pid")" 2>/dev/null || true
   fi )
+
+printf '\n──── 11. F3 launches under its own identity ────\n'
+# The gap this closes was found before paying for a host: a READY that proves
+# the 18-cell pilot says nothing about a 3-cell run, and binding one to the
+# other is host 5 again -- components verified, the thing launched unchecked.
+( export SCENARIO_EXPERIMENT=f3 MOCK_UNIVERSE_INCLUDES_EXCLUDED=1
+  run_scenario
+  expect_rc 0 "F3 reaches ready"
+  expect_out "READY_FOR_MANUAL_PILOT_CONFIRMATION" "F3 reaches the ready banner"
+  expect_out "c145bebf3e39bc7d" "verifies F3's protocol hash"
+  expect_out "a83650caeae31ff6" "verifies F3's order hash"
+  expect_out "cells                              ok  3" "resolves 3 cells, not 18"
+  expect_out "pytest-dev__pytest-10051 (PREREG_F3" "uses the registered task rather than drawing one"
+  # The report is the artifact the CLI reads, so the identity has to be in it
+  # and not merely printed to a terminal nobody keeps.
+  if grep -q '"experiment": "f3"' "$SANDBOX/work/state/preflight_report.json" \
+     && grep -q '"protocol_hash": "c145bebf3e39bc7d"' "$SANDBOX/work/state/preflight_report.json" \
+     && grep -q '"order_hash": "a83650caeae31ff6"' "$SANDBOX/work/state/preflight_report.json" \
+     && grep -q '"expected_cells": 3' "$SANDBOX/work/state/preflight_report.json"
+  then ok "the report records F3's identity"; else bad "the report records F3's identity"; fi
+  if grep -q 'b7af66ca3ab783ab\|cfe8856c9c9167b5' "$SANDBOX/work/state/preflight_report.json"
+  then bad "no closed-pilot hash in an F3 report"; else ok "no closed-pilot hash in an F3 report"; fi )
+
+printf '\n──── 11b. a wrong identity fails closed ────\n'
+# Values the mock cannot produce, applied to the comparison directly. The
+# happy path cannot demonstrate a refusal, and a gate that has never refused
+# anything is an assumption.
+( set +e
+  # shellcheck disable=SC1090
+  STAGE_B_LIB_ONLY=1 . "$SCRIPT"
+  EXPERIMENT=f3; select_experiment
+  for case in \
+    "pilot c145bebf3e39bc7d a83650caeae31ff6 3|the experiment id" \
+    "f3 b7af66ca3ab783ab a83650caeae31ff6 3|the closed pilot's protocol hash" \
+    "f3 c145bebf3e39bc7d cfe8856c9c9167b5 3|the closed pilot's order hash" \
+    "f3 c145bebf3e39bc7d a83650caeae31ff6 18|an 18-cell count"
+  do
+    args="${case%%|*}"; label="${case##*|}"
+    # shellcheck disable=SC2086
+    if ( check_plan_identity $args ) >/dev/null 2>&1
+    then bad "F3 refuses $label"; else ok "F3 refuses $label"; fi
+  done
+  # And the registered values are still accepted, so the gate is not simply
+  # refusing everything.
+  if ( check_plan_identity f3 c145bebf3e39bc7d a83650caeae31ff6 3 ) >/dev/null 2>&1
+  then ok "F3 accepts its own registered identity"; else bad "F3 accepts its own registered identity"; fi
+  # The pilot's own gate is unchanged.
+  # shellcheck disable=SC2034  # read by select_experiment and check_plan_identity
+  EXPERIMENT=pilot; select_experiment
+  if ( check_plan_identity pilot b7af66ca3ab783ab cfe8856c9c9167b5 18 ) >/dev/null 2>&1
+  then ok "the pilot still accepts its own identity"; else bad "the pilot still accepts its own identity"; fi )
 
 printf '\n──── 10. the frozen tree is left clean ────\n'
 if [ -z "$(git -C "$ROOT" status --porcelain data/runs/pilot)" ]; then ok "data/runs/pilot is untouched by the tests"; else bad "data/runs/pilot is untouched by the tests"; fi

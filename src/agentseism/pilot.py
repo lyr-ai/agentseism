@@ -309,7 +309,42 @@ def _current_repo_commit() -> str:
     return r.stdout.strip()
 
 
-def real_backend_from_preflight(report_path: Path, work_dir: Path):
+def _check_report_identity(report: dict, spec) -> None:
+    """A READY report is a statement about one registration, not about a host.
+
+    A preflight that proved the 18-cell pilot READY says nothing about a
+    3-cell run, so accepting it for F3 would put the launch path back where
+    host 5 left it: components verified, the thing actually executed never
+    checked.
+
+    Reports written before the preflight recorded an identity carry none of
+    these fields. Those are the pilot's, and they stay usable by the pilot --
+    rewriting history to satisfy a new experiment would damage an audit record
+    to save a branch. F3 refuses them precisely because they cannot prove
+    which registration they came from.
+    """
+    got = report.get("experiment")
+    if got is None:
+        if spec.name != "pilot":
+            raise PilotStop(
+                f"this preflight report records no experiment identity, so it "
+                f"is a legacy pilot report; it cannot authorise {spec.name}. "
+                f"Re-run the preflight with --experiment {spec.name}")
+        return
+    if got != spec.name:
+        raise PilotStop(
+            f"preflight report is for experiment {got!r}, this run is "
+            f"{spec.name!r}")
+    for field, expected in (("protocol_hash", spec.protocol_hash),
+                            ("order_hash", spec.order_hash),
+                            ("expected_cells", spec.cell_count)):
+        if report.get(field) != expected:
+            raise PilotStop(
+                f"preflight report {field} is {report.get(field)!r}, this "
+                f"run's registration says {expected!r}")
+
+
+def real_backend_from_preflight(report_path: Path, work_dir: Path, spec):
     """Construct the registered backend from the artifact preflight froze.
 
     This is deliberately the only real-CLI adapter.  It does not reconstruct
@@ -328,6 +363,7 @@ def real_backend_from_preflight(report_path: Path, work_dir: Path):
         raise PilotStop("preflight report carries no passing non-pilot smoke")
     if report.get("pilot_runs") != 0:
         raise PilotStop("preflight report was not frozen before run 0")
+    _check_report_identity(report, spec)
 
     fp = report.get("serving_fingerprint") or {}
     serving = smoke.get("serving") or {}
@@ -420,7 +456,7 @@ def main(argv=None) -> int:
     if args.backend == "real":
         try:
             backend, task_ids = real_backend_from_preflight(
-                Path(args.preflight_report), out / "backend")
+                Path(args.preflight_report), out / "backend", spec)
             rep = run_pilot(out, backend, task_ids, False, log, budget,
                             spec)
         except (BudgetStop, PilotStop) as e:

@@ -345,7 +345,7 @@ def test_public_cli_real_backend_produces_a_digest_bearing_artifact(
     monkeypatch.setitem(pilot.SPECS, "pilot", _OneCellSpec(cell))
     monkeypatch.setattr(
         pilot, "real_backend_from_preflight",
-        lambda report, work: (lambda c: fake_backend(c), ["task_1"]))
+        lambda report, work, spec: (lambda c: fake_backend(c), ["task_1"]))
 
     out = tmp_path / "pilot"
     log = RunLog(out / "run.jsonl")
@@ -407,7 +407,8 @@ def test_real_cli_constructs_the_backend_from_the_verified_preflight_report(
     monkeypatch.setattr(pilot, "_current_repo_commit", lambda: "current")
     monkeypatch.setattr(RB, "build",
                         lambda cfg: seen.setdefault("config", cfg) or object())
-    backend, tasks = pilot.real_backend_from_preflight(path, tmp_path / "work")
+    backend, tasks = pilot.real_backend_from_preflight(path, tmp_path / "work",
+                                                      P.SPEC)
     assert tasks == ["task_1"]
     assert backend is seen["config"]
     assert seen["fingerprint"] == fingerprint

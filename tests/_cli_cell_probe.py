@@ -115,6 +115,7 @@ def main() -> int:
     # the same image digest so `_check_images` can verify them without pulling
     # images for cells that will never run. This is a plumbing fixture, not a
     # draw: the real draw is P.3's and produces three different images.
+    spec = pilot.SPECS[EXPERIMENT]
     if EXPERIMENT == "f3":
         # F3 registers its one task rather than drawing it, so there is no
         # multi-name fixture to arrange: three arms over a single task are a
@@ -129,6 +130,13 @@ def main() -> int:
                "dependency_lock_sha256": "lock", "serving_config_sha256": "cfg"}
     report = {
         "status": "READY_FOR_MANUAL_PILOT_CONFIRMATION",
+        # The identity this READY is a statement about. The real preflight
+        # writes these; a report without them is a legacy pilot report and
+        # cannot authorise F3.
+        "experiment": spec.name,
+        "protocol_hash": spec.protocol_hash,
+        "order_hash": spec.order_hash,
+        "expected_cells": spec.cell_count,
         "repo_commit": commit, "pilot_runs": 0,
         "drawn_tasks": tasks,
         "image_digests": {t: IMAGE for t in tasks},
@@ -144,7 +152,6 @@ def main() -> int:
     out = WORK / "pilot"
     out.mkdir(parents=True, exist_ok=True)
     log = RunLog(out / "run.jsonl")
-    spec = pilot.SPECS[EXPERIMENT]
     b = Budget(log, spec.thresholds)
     b.record_baseline(0.0, billing_period="t", currency="USD")
     b.record_reading(0.0, billing_period="t", currency="USD")
