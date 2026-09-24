@@ -635,8 +635,19 @@ PY
     grep -qx "$F3_TASK" "$universe" \
       || die "the registered F3 task $F3_TASK is not in $DATASET"
     printf '%s\n' "$F3_TASK" > "$drawn"
+    # The image name is built by the project's own `image_for`, not restated
+    # here: a second formatter is a second thing that can disagree with the
+    # digests frozen in the next step.
+    local f3_image
+    f3_image="$(PYTHONPATH=src:. "$WORK/.venv-eval/bin/python" -c \
+      "from agentseism.task_draw import image_for; print(image_for('$F3_TASK'))")" \
+      || die "cannot resolve the image name for $F3_TASK"
     printf 'instance_id\trepository\timage\treason\n' > "$tsv"
-    printf '%s\t%s\t-\tregistered\n' "$F3_TASK" "${F3_TASK%%__*}" >> "$tsv"
+    # `selected` is the reason column's value for a row later steps consume;
+    # `registered` records *how* it was chosen. Step 8 reads both, so the
+    # distinction stays visible in the log instead of being flattened away.
+    printf '%s\t%s\t%s\tregistered\n' \
+      "$F3_TASK" "${F3_TASK%%__*}" "$f3_image" >> "$tsv"
     mark_done draw
     note "registered task" "$F3_TASK (PREREG_F3 §4; not drawn)"
     cd - >/dev/null
@@ -682,7 +693,7 @@ freeze_image_digests() {
   local iid img dig
   while read -r iid; do
     [ -n "$iid" ] || continue
-    img="$(awk -F'\t' -v i="$iid" '$1==i && $4=="selected"{print $3}' "$STATE/task_draw.tsv")"
+    img="$(awk -F'\t' -v i="$iid" '$1==i && ($4=="selected" || $4=="registered"){print $3}' "$STATE/task_draw.tsv")"
     [ -n "$img" ] || die "no image recorded for $iid in the draw log"
     dig="$(docker image inspect "$img" --format '{{index .RepoDigests 0}}' 2>/dev/null || true)"
     [ -n "$dig" ] || die "no repo digest for $img -- it cannot be frozen"
