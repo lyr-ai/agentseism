@@ -24,7 +24,9 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from _docker_guard import run_probe
 from agentseism import pilot, pilot_protocol as P
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -40,10 +42,7 @@ EXPECTED_CELLS_IN_BLOCK = 3
 @pytest.fixture(scope="module")
 def run(tmp_path_factory):
     work = tmp_path_factory.mktemp("cli-block")
-    r = subprocess.run([sys.executable, str(PROBE), str(work)], cwd=ROOT,
-                       capture_output=True, text=True, timeout=3600)
-    assert r.returncode == 0, r.stderr[-3000:]
-    return json.loads(r.stdout.strip().splitlines()[-1])
+    return run_probe([sys.executable, str(PROBE), str(work)], cwd=ROOT)
 
 
 # ── the entry point runs, and runs exactly the authorised block ──

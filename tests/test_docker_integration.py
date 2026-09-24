@@ -22,6 +22,9 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from _docker_guard import run_probe  # noqa: E402
 
 from agentseism import pilot_protocol as P
 from agentseism import real_backend as RB
@@ -36,10 +39,7 @@ requires_docker = pytest.mark.skipif(
 
 def probe(mode: str, work: Path) -> dict:
     env = dict(os.environ, PROBE_WORK=str(work))
-    r = subprocess.run([sys.executable, str(PROBE), mode], cwd=ROOT,
-                       capture_output=True, text=True, timeout=1800, env=env)
-    assert r.returncode == 0, r.stderr[-3000:]
-    return json.loads(r.stdout.strip().splitlines()[-1])
+    return run_probe([sys.executable, str(PROBE), mode], cwd=ROOT, env=env)
 
 
 @pytest.fixture(scope="module")
