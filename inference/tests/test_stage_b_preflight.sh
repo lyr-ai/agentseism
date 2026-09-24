@@ -496,7 +496,12 @@ printf '\n──── 11. F3 launches under its own identity ────\n'
 # The gap this closes was found before paying for a host: a READY that proves
 # the 18-cell pilot says nothing about a 3-cell run, and binding one to the
 # other is host 5 again -- components verified, the thing launched unchecked.
-( export SCENARIO_EXPERIMENT=f3 MOCK_UNIVERSE_INCLUDES_EXCLUDED=1
+# $7.16 is the pilot's origin and is *below* F3's $16.88, so the default
+# reading was correctly refused: "a cumulative total cannot fall". $18.16 is
+# the reading the aborted launch actually produced, which makes this scenario
+# mirror the real numbers -- F3 spend $1.28.
+( export SCENARIO_EXPERIMENT=f3 MOCK_UNIVERSE_INCLUDES_EXCLUDED=1 \
+         SCENARIO_READING=18.16
   run_scenario
   expect_rc 0 "F3 reaches ready"
   expect_out "READY_FOR_MANUAL_PILOT_CONFIRMATION" "F3 reaches the ready banner"
@@ -519,7 +524,8 @@ printf '\n──── 11. F3 launches under its own identity ────\n'
   expect_out "budget origin" "names the budget origin it selected"
   expect_out "\$16.88  September 2026  USD  from data/runs/f3/run.jsonl" \
     "uses F3's own baseline, not the pilot's \$7.16"
-  expect_out "cumulative_f3_spend" "measures F3 spend, not pilot spend"
+  expect_out "cumulative_f3_spend          \$1.28" \
+    "measures F3 spend from F3's origin, not the pilot's"
   expect_out "warning                      at a page total of \$24.88" \
     "applies F3's \$8 warning as a page total"
   expect_out "no new block                 at a page total of \$26.88" \
@@ -529,9 +535,11 @@ printf '\n──── 11. F3 launches under its own identity ────\n'
   # And it writes where F3 writes.
   if [ -f "$SANDBOX/work/f3/run.jsonl" ] && [ ! -d "$SANDBOX/work/pilot" ]
   then ok "F3 uses its own run directory"; else bad "F3 uses its own run directory"; fi
-  if grep -q '"experiment": "f3"' "$SANDBOX/work/smoke/smoke_report.json" 2>/dev/null \
-     && ! grep -q 'b7af66ca3ab783ab' "$SANDBOX/work/smoke/smoke_report.json" 2>/dev/null
-  then ok "the smoke artifact is stamped f3"; else bad "the smoke artifact is stamped f3"; fi )
+  # The preflight passed --experiment through to the smoke step. What the
+  # real module then stamps is asserted in tests/test_f3_protocol.py, since
+  # the mock replaces that module entirely.
+  if grep -q '"experiment": "f3"' "$SANDBOX/work/smoke/smoke_report.json" 2>/dev/null
+  then ok "the smoke step is invoked for f3"; else bad "the smoke step is invoked for f3"; fi )
 
 printf '\n──── 11b. a wrong identity fails closed ────\n'
 # Values the mock cannot produce, applied to the comparison directly. The

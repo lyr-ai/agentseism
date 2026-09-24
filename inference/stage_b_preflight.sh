@@ -419,7 +419,11 @@ if obs:
     print(f"  billed since that reading    ${round(usd - o, 2):.2f}")
 else:
     print(f"  launch_reading               ${usd:.2f}  after launch  ({host_id})")
-print(f"  cumulative_{SPEC.name}_spend{'':{max(0, 15 - len(SPEC.name))}}${spend:.2f}  "
+# `cumulative_pilot_spend` keeps the column it has always had: the harness
+# matches the whole line, and a shifted pad is a silent break of an assertion
+# about the pilot, not about F3.
+label = f"cumulative_{SPEC.name}_spend"
+print(f"  {label:<29}${spend:.2f}  "
       f"= ${usd:.2f} - ${base['current_total']:.2f}")
 if len(hosts) > 1:
     print(f"  hosts so far                 {len(hosts)}; earlier hosts' cost is "
