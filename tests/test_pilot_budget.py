@@ -7,12 +7,15 @@ machine passed and missed the entire cost of setup. These pin the guard.
 from __future__ import annotations
 
 import sys
+import time
+import types
 from pathlib import Path
 
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from agentseism import budget as budget_mod
 from agentseism.budget import Budget, BudgetStop, RunLog
 from agentseism import pilot_protocol as P
 from agentseism.pilot import PILOT_THRESHOLDS
@@ -211,14 +214,27 @@ def test_authorisation_returns_the_latest_un_superseded(tmp_path):
     assert got is not None and got["usd"] == 2.0
 
 
-def test_two_records_in_one_second_are_still_distinguishable(tmp_path):
+def test_two_records_in_one_second_are_still_distinguishable(tmp_path,
+                                                             monkeypatch):
     """`ts` has second resolution. It was the supersede key, so a checkpoint
     written in the same second as the annotation's target was swept up with
-    it -- and an authorisation vanished that nobody had superseded."""
+    it -- and an authorisation vanished that nobody had superseded.
+
+    The clock is frozen rather than raced. The two appends previously had to
+    land in the same wall-clock second by luck; straddling a boundary failed
+    the premise assertion below and reported a flake as a defect -- which it
+    did, inside the preflight harness, where the machine is busiest.
+    """
+    # A shim on the *module attribute*, not on the shared `time` module:
+    # patching `time.gmtime` itself made the replacement call the patched
+    # name, which recurses until the process is killed.
+    frozen = types.SimpleNamespace(gmtime=lambda *a: time.gmtime(1_700_000_000),
+                                   strftime=time.strftime)
+    monkeypatch.setattr(budget_mod, "time", frozen)
     log = RunLog(tmp_path / "run.jsonl")
     a = log.append("budget_ok", checkpoint="after_setup", usd=1.0)
     b = log.append("budget_ok", checkpoint="after_setup", usd=2.0)
-    assert a["ts"] == b["ts"], "this test is only meaningful within one second"
+    assert a["ts"] == b["ts"], "the frozen clock makes this exact, not likely"
     assert a["n"] != b["n"]
     log.append("budget_superseded", checkpoint="after_setup",
                supersedes_n=a["n"], supersedes_ts=a["ts"], reason="x")
