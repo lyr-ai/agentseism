@@ -11,6 +11,7 @@ run yet.
 """
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 import sys
@@ -134,3 +135,35 @@ def test_the_budget_constants_match_the_registration():
     body = SCRIPT.read_text()
     for n in ("20", "25", "30"):
         assert f'NO_NEW_BLOCK={n}' not in body and f'ABSOLUTE={n}' not in body
+
+
+def test_the_preflight_can_parse_the_hashes_out_of_resolve_only():
+    """The script's own extraction, applied to the CLI's real output.
+
+    These were coupled by nothing. Adding a word to the front of the
+    `protocol ...` line made `sed -nE 's/^protocol ([0-9a-f]+).*/\\1/p'` yield
+    an **empty** hash, so the preflight died with `protocol hash  != frozen
+    b7af66ca3ab783ab` -- a message whose blank is easy to read past. Only the
+    shell harness caught it; a format contract deserves a cheap test too.
+    """
+    script = (ROOT / "inference/stage_b_preflight.sh").read_text()
+    exprs = {}
+    for field in ("ph", "oh", "cells"):
+        m = re.search(rf"^\s*{field}=\"\$\(sed -nE '(.+?)' ", script, re.M)
+        assert m, f"cannot find the {field} extraction in the script"
+        exprs[field] = m.group(1)
+
+    r = subprocess.run([sys.executable, "-m", "agentseism.pilot",
+                        "--resolve-only"],
+                       cwd=ROOT, capture_output=True, text=True, timeout=120,
+                       env={**os.environ, "PYTHONPATH": str(ROOT / "src")})
+    assert r.returncode == 0, r.stderr[-2000:]
+
+    def extract(expr: str) -> str:
+        out = subprocess.run(["sed", "-nE", expr], input=r.stdout,
+                             capture_output=True, text=True)
+        return out.stdout.splitlines()[0] if out.stdout.splitlines() else ""
+
+    assert extract(exprs["ph"]) == const("PROTOCOL_HASH")
+    assert extract(exprs["oh"]) == const("ORDER_HASH")
+    assert extract(exprs["cells"]) == const("EXPECTED_CELLS")

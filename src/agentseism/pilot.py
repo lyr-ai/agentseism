@@ -381,8 +381,14 @@ def main(argv=None) -> int:
 
     if args.resolve_only:
         cells = spec.verify(args.tasks)
-        print(f"experiment {spec.name}   protocol {spec.protocol_hash}   "
-              f"order {spec.order_hash}   cells {len(cells)}")
+        # The `protocol ...` line stays anchored at column 0 with its fields
+        # in their original positions: `stage_b_preflight.sh` extracts the
+        # hashes with `sed -nE 's/^protocol ([0-9a-f]+).*/\1/p'`, and
+        # prepending a word to it silently yielded an empty hash rather than a
+        # wrong one. The experiment gets its own line instead.
+        print(f"experiment {spec.name}")
+        print(f"protocol {spec.protocol_hash}   order {spec.order_hash}   "
+              f"cells {len(cells)}")
         for c in cells:
             print(f"  {c['order_index']:>2}  rep{c['replicate']}  {c['task']:<26}"
                   f"{c['arm']:<10} step_limit={c['step_limit']:<4} "
