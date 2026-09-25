@@ -177,3 +177,55 @@ a 40-point effect says nothing about whether a real `step_limit` cut produces
 an effect that large. If Stage B fails, sample size is the first hypothesis —
 tested by a new dated declaration afterwards, never by an adjustment during the
 run.
+
+## Deviation, 2026-09-25 — Stage A attempt 1 aborted by infrastructure
+
+Added after the fact and dated. Nothing above this section was changed.
+
+**What happened.** Stage A attempt 1 ran from `/tmp/stageA` against `0d10701`,
+starting 2026-09-24 23:46 PDT. The baseline arm finished at 08:55 (25/25). The
+candidate arm had done 10 invocations and was partway through its 11th when
+macOS rebooted at about 10:01. macOS clears `/tmp` on boot, so the frozen
+baseline (`baselines/main.json`), every `agent_run.json` (cost, steps, exit
+status, invalid flags) and the chain log are gone. The total is roughly
+**35 completed invocations plus 1 interrupted**, at roughly **$7**. The exact
+figure was stored only in the lost `agent_run.json` files.
+
+**What survived, and was not read.** The SWE-bench harness wrote 36
+per-instance directories to `logs/run_evaluation/`. They contain resolved
+labels. They were moved **unopened** to
+`.runs/aborted-stageA-2026-09-25/run_evaluation/` and listed in `MOVED.txt`
+there. That way the new attempt's harness output cannot be mixed up with them.
+No partial result was read or interpreted, and none will be. Rebuilding a
+baseline from these files was considered and rejected: cost and validity are
+missing, and a baseline put together after an interruption is not the one the
+card froze.
+
+**The fix-forward.** This counts as the single fix-forward that stop
+condition 2 allows. Stage A restarts at 0/50 and does not resume.
+
+- State goes to `.runs/stageA` inside the repository (gitignored), not `/tmp`.
+- The whole chain, `analysis/ci_v0/stageA_chain.sh`, runs under `caffeinate`.
+- A watchdog enforces the $25 stop while each arm is running. Attempt 1
+  enforced it only between arms plus a manual monitor.
+  The $25 is a stop target, not a hard ceiling. Spend is read from each
+  finished run's `agent_run.json`, so the run in flight when the threshold is
+  crossed can add up to its own cost (at most mini-swe-agent's per-run
+  `cost_limit` of $3.0). The recorded total can therefore exceed $25 by at
+  most one run.
+- Unchanged: model, the five tasks, contract, thresholds, 5 trials per arm,
+  `step_limit` 250, the $25 Stage A stop, and the decision rule. The money lost
+  in attempt 1 does not reduce the trial count or change any design choice.
+
+**The 75-call bound, clarified.** The "global bound 75 invocations" above means
+**planned, valid evidence runs**: 50 in Stage A and 25 in Stage B. Calls
+aborted by infrastructure are logged here as wasted execution cost. They are
+not counted in that bound and are never part of the statistical sample.
+
+| attempt | invocations | cost | evidence? |
+|---|---|---|---|
+| Stage A attempt 1 | ~35 + 1 interrupted | ~$7 (exact figure lost) | no, aborted, unread |
+| Stage A attempt 2 | up to 50 | measured | yes |
+
+If attempt 2 also ends without a verdict, the milestone is recorded as not
+achieved, as stop condition 2 already says.

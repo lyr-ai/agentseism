@@ -19,3 +19,6 @@ data/runs/*/*.archive/
 
 # SWE-bench harness scratch output. Regenerable, and large.
 logs/run_evaluation/
+
+# Stage A run state. Persistent, local, not versioned (see CI_V0_RUN_CARD.md).
+.runs/
