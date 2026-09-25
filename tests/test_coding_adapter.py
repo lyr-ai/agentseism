@@ -194,3 +194,91 @@ def test_a_non_anthropic_model_is_not_given_cache_control():
     from minisweagent.models import get_model
     m = get_model("openai/gpt-4.1-mini", {"model_kwargs": {"drop_params": True}})
     assert getattr(m.config, "set_cache_control", None) is None
+
+
+# ── an empty patch: the agent's failure, or not a measurement at all ──
+# The harness silently drops empty predictions and writes no report, and the
+# missing report used to come back `invalid`. A step-limit cut -- the CI v0
+# positive control -- ends exactly that way, so the degradation was being
+# counted as an infrastructure fault instead of the failure it is.
+
+def _no_harness(*a, **k):
+    raise AssertionError("an empty patch must be scored without the harness")
+
+
+@pytest.mark.parametrize("patch", ["", "\n", "  \n\t"])
+def test_step_limit_with_an_empty_patch_is_a_failure(tmp_path, monkeypatch, patch):
+    monkeypatch.setattr(EV.subprocess, "run", _no_harness)
+    got = EV.evaluate(_artifact(tmp_path, patch=patch, exit_status="LimitsExceeded"))
+    assert got["success"] == 0 and got["label"] == "FAIL"
+    assert "invalid" not in got
+    assert got["exit_status"] == "LimitsExceeded"
+
+
+def test_an_empty_submission_is_a_failure(tmp_path, monkeypatch):
+    """The agent finished and its diff was empty: it submitted nothing, which
+    is a task failure by the evaluator's documented semantics."""
+    monkeypatch.setattr(EV.subprocess, "run", _no_harness)
+    got = EV.evaluate(_artifact(tmp_path, patch="", exit_status="Submitted"))
+    assert got["success"] == 0 and "invalid" not in got
+
+
+@pytest.mark.parametrize("status", ["TimeExceeded", "RepeatedFormatError",
+                                    "RuntimeError", "UserInterruption", ""])
+def test_an_empty_patch_without_an_agent_level_end_stays_invalid(
+        tmp_path, monkeypatch, status):
+    """Wall-clock limits depend on the host; format errors, exceptions and a
+    missing status are not evidence the agent ran to an end. None of them may
+    become a FAIL just because the patch happens to be empty."""
+    monkeypatch.setattr(EV.subprocess, "run", _no_harness)
+    got = EV.evaluate(_artifact(tmp_path, patch="", exit_status=status))
+    assert got["invalid"] is True and "success" not in got
+    assert got["invalid_reason"]
+
+
+def test_a_real_patch_with_no_harness_report_is_still_invalid(tmp_path, monkeypatch):
+    """The fix is for empty patches only. A patch the harness failed to judge
+    is an evaluation fault and must not be scored."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(EV.subprocess, "run", lambda *a, **k: _FakeProc())
+    got = EV.evaluate(_artifact(tmp_path, exit_status="LimitsExceeded"))
+    assert got["invalid"] is True and "no per-instance report" in got["invalid_reason"]
+
+
+@pytest.mark.parametrize("breakage", ["no_agent_run", "malformed_agent_run",
+                                      "no_patch"])
+def test_a_broken_artifact_is_invalid(tmp_path, breakage):
+    d = _artifact(tmp_path, patch="", exit_status="LimitsExceeded")
+    if breakage == "no_agent_run":
+        (d / "agent_run.json").unlink()
+    elif breakage == "malformed_agent_run":
+        (d / "agent_run.json").write_text("{not json")
+    else:
+        (d / "patch.diff").unlink()
+    out = subprocess.run([sys.executable, str(ROOT / "agents/coding/swebench_evaluator.py"),
+                          str(d)], capture_output=True, text=True)
+    body = json.loads(out.stdout)
+    assert body["invalid"] is True and "success" not in body
+
+
+def test_a_truncated_run_reaches_the_statistics_as_a_failure(tmp_path):
+    """Through the real `run_trials` and the real evaluator subprocess to the
+    per-task rates `seism check` measures: a step-limit run counts as 0, not
+    as a hole in the data."""
+    from agentseism.cli import _rates
+    from agentseism.execution import CallableRunner, run_trials
+
+    def truncated(task_file, artifact_dir):
+        d = Path(artifact_dir)
+        (d / "patch.diff").write_text("")
+        (d / "agent_run.json").write_text(json.dumps(
+            {"instance_id": "pallets__flask-5014", "exit_status": "LimitsExceeded",
+             "step_limit": 40}))
+        return {}
+
+    task = tmp_path / "pallets__flask-5014.json"
+    task.write_text("{}")
+    rs = run_trials(CallableRunner(truncated), ShellEvaluator(EVAL_CMD),
+                    [str(task)], 3, tmp_path / "runs", "candidate")
+    assert [r.invalid for r in rs] == [False, False, False]
+    assert _rates([r.__dict__ for r in rs], "success") == {str(task): [0.0, 0.0, 0.0]}

@@ -16,8 +16,19 @@ scores as a failure. The field is `invalid_reason`, which is what `run_trials`
 reads -- a diagnosis under any other key is dropped, and the operator sees an
 invalid run with no explanation.
 
-An empty patch is scored, not refused: an agent that submitted nothing failed
-the task. Only the harness being unable to judge is invalid.
+An empty patch is scored here, without the harness, and only when the agent's
+own exit status shows it ran to an agent-level end: it spent its step or cost
+budget (`LimitsExceeded`), or it submitted and its diff was empty
+(`Submitted`). Either way the agent failed the task. The harness cannot be
+asked, because it silently drops empty predictions and writes no report, and
+that missing report used to come back as `invalid`. That hid exactly the
+failure a step-limit cut produces.
+
+An empty patch with any other exit status stays `invalid`: wall-clock
+`TimeExceeded` (host speed, not agent budget), `RepeatedFormatError`, an
+unknown status, or none at all. A run that raised never writes
+`agent_run.json` and is invalid before it gets here. Only the harness being
+unable to judge a real patch is invalid on the other path.
 """
 
 from __future__ import annotations
@@ -37,6 +48,9 @@ from experiments.coding.c2h_checker import (  # noqa: E402
 )
 
 DATASET = "SWE-bench/SWE-bench_Verified"
+# Exit statuses after which an empty patch is the agent's failure, not a
+# measurement failure. Deliberately narrow; see the module docstring.
+EMPTY_PATCH_IS_FAILURE = frozenset({"LimitsExceeded", "Submitted"})
 SPLIT = "test"
 MODEL_NAME = "agentseism"
 
@@ -45,6 +59,21 @@ def evaluate(artifact_dir: Path) -> dict:
     run = json.loads((artifact_dir / "agent_run.json").read_text())
     instance = run["instance_id"]
     patch = (artifact_dir / "patch.diff").read_text()
+    status = str(run.get("exit_status") or "")
+
+    if not patch.strip():
+        if status in EMPTY_PATCH_IS_FAILURE:
+            return {"success": 0,
+                    "instance_id": instance,
+                    "label": "FAIL",
+                    "scored_by": "empty_patch",
+                    "patch_bytes": len(patch),
+                    "exit_status": status,
+                    "step_limit": run.get("step_limit")}
+        return {"invalid": True,
+                "invalid_reason": f"empty patch after exit status {status!r}, "
+                                  "which is not an agent-level end",
+                "instance_id": instance}
 
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
