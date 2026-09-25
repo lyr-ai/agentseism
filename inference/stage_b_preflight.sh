@@ -672,6 +672,16 @@ PY
     f3_image="$(PYTHONPATH=src:. "$WORK/.venv-eval/bin/python" -c \
       "from agentseism.task_draw import image_for; print(image_for('$F3_TASK'))")" \
       || die "cannot resolve the image name for $F3_TASK"
+    # And pull it. The pilot's draw pulls every candidate as a side effect of
+    # testing pullability, so returning early here skipped the only pull on
+    # the F3 path: step 8 then had nothing to inspect and the preflight died
+    # on a host. `docker_pull` is the project's own, so the disk guard and the
+    # pull flags stay in one place.
+    PYTHONPATH=src:. "$WORK/.venv-eval/bin/python" -c \
+      "import sys; from agentseism.task_draw import docker_pull;
+sys.exit(0 if docker_pull('$F3_TASK', $MIN_DISK_GB) else 1)" \
+      || die "the registered F3 image did not pull: $f3_image"
+    ok "registered image" "$f3_image (pulled)"
     printf 'instance_id\trepository\timage\treason\n' > "$tsv"
     # `selected` is the reason column's value for a row later steps consume;
     # `registered` records *how* it was chosen. Step 8 reads both, so the

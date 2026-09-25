@@ -535,6 +535,17 @@ printf '\n──── 11. F3 launches under its own identity ────\n'
   # And it writes where F3 writes.
   if [ -f "$SANDBOX/work/f3/run.jsonl" ] && [ ! -d "$SANDBOX/work/pilot" ]
   then ok "F3 uses its own run directory"; else bad "F3 uses its own run directory"; fi
+  # The root cause of the aborted host. The mock store starts empty, so
+  # reaching READY at all proves the F3 branch pulled its registered image and
+  # step 8 could inspect it. Previously the branch returned before the pilot's
+  # draw -- which is where every pull happened -- and the preflight died at
+  # step 8 with nothing to freeze.
+  if grep -q "pytest-dev_1776_pytest-10051" "$SANDBOX/pulled.txt" 2>/dev/null
+  then ok "F3 pulls its registered image from an empty store"
+  else bad "F3 pulls its registered image from an empty store"; fi
+  if grep -q "pytest-dev__pytest-10051" "$SANDBOX/work/state/image_digests.tsv" 2>/dev/null
+  then ok "step 8 froze a digest for the registered image"
+  else bad "step 8 froze a digest for the registered image"; fi
   # The preflight passed --experiment through to the smoke step. What the
   # real module then stamps is asserted in tests/test_f3_protocol.py, since
   # the mock replaces that module entirely.
