@@ -274,3 +274,80 @@ risk, and nothing about the design depended on the estimate.
 
 **Stage B has not been run.** It still needs separate approval. Nothing in the
 Stage B rows above has been changed.
+
+## Deviation before Stage B, 2026-09-25 — evaluator defect found by code audit
+
+Found by a read-only audit after Stage A and before any Stage B call. No run
+exposed it.
+
+**The defect.** A run that hits `step_limit` ends in mini-swe-agent's
+`LimitsExceeded` with an empty submission. The SWE-bench harness silently
+drops empty predictions (`run_evaluation.py:627`) and writes no per-instance
+report. The evaluator therefore returned `invalid`, which contradicted its own
+docstring. Under this contract's `invalid_policy: stop`, a single invalid
+candidate run gives `INSUFFICIENT_EVIDENCE`, and `run_trials` stops after three
+in a row. Stage B's intervention works precisely by making runs hit the limit.
+Run as frozen, Stage B would have been scored as a measurement failure, never
+as a task failure. It would have tested the evaluator's labelling, not the
+decision rule.
+
+**The fix** (`2725192`, stop condition 2: fixed offline with a reproducing test
+before further spend). An empty patch is scored `FAIL` without the harness only
+after an agent-level end: `LimitsExceeded` (step or cost budget) or
+`Submitted` with an empty diff. It stays `invalid` in these cases:
+- an empty patch after `TimeExceeded` (wall clock, host-dependent),
+  `RepeatedFormatError`, an unknown status or no status;
+- a real patch the harness failed to judge;
+- a missing or malformed artifact.
+
+The new tests fail on the old evaluator and pass on the fix, and the full
+suite is 475 passed.
+
+**Zero-cost end-to-end check.** This used a disposable worktree at `2725192`
+with `step_limit` 1, a local stub model that never submits, a real Docker
+container, and the real runner, evaluator, `run_trials`, `_measure` and
+`decide()`. No API was called. The results were:
+- `exit_status: LimitsExceeded`, a 0-byte patch, and the outcome
+  `success: 0, label: FAIL, scored_by: empty_patch`;
+- the run was valid, and `task_success` reached the measurement as 0.00;
+- the verdict was `INSUFFICIENT_EVIDENCE` for being below minimum evidence
+  (1 task, 1 trial), not `invalid_stop`.
+
+This is not Stage B evidence.
+
+**Stage A is unaffected.** All 50 of its runs were valid, so none took the
+empty-patch path, and the fix cannot change its outcome.
+
+**Unchanged:** tasks, model, contract, `practical_threshold` 0.10, minimum
+evidence, paired bootstrap over tasks (seed 0, 2000 resamples), 5 trials, and
+the Stage B intervention `step_limit` 250 → 40.
+
+### What the frozen rule detects, recorded before any Stage B data
+
+REGRESSION on `task_success` requires `effect ≤ −0.10` **and**
+`ci_high ≤ −0.10`, with at least 5 scenarios, at least 3 trials and no invalid
+runs. The interval is a bootstrap over only five tasks, so the rule detects a
+**broad, cross-task** regression and not a concentrated one. Measured with the
+real `_paired_bootstrap` and `decide()`, against the Stage A baseline:
+
+| candidate pattern | effect | interval | verdict |
+|---|---|---|---|
+| one task 5/5 → 0/5 | −0.20 | [−0.60, 0.00] | PASS |
+| two tasks each lose 3/5 | −0.24 | [−0.48, 0.00] | PASS |
+| four tasks lose 1/5, one loses 4/5 | −0.28 | [−0.56, −0.08] | PASS |
+| every task loses 1/5 | −0.20 | [−0.20, −0.20] | REGRESSION |
+| four tasks lose 2/5, one unchanged | −0.32 | [−0.40, −0.16] | REGRESSION |
+
+In words, the product currently answers "did this PR broadly lower
+reliability across these tasks?" It does not answer "did this PR badly break
+at least one task?" Both are legitimate CI questions. This is recorded as a
+limitation and is **not** changed before Stage B: changing the statistics now
+would mean redesigning the experiment after seeing Stage A. A per-task
+severity gate is a question for after Stage B.
+
+It also frames how Stage B will read. A `step_limit` cut that truncates only
+some tasks can produce a large aggregate drop and still PASS under this rule.
+That would be a real result about the rule's sensitivity, not grounds for
+adjustment.
+
+**Stage B has not been run.** It needs separate approval.
