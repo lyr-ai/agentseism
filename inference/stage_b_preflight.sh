@@ -922,7 +922,14 @@ run_smoke_test() {
 
   # The moment `after_setup` must be newer than (P.4): the checkpoint has to
   # cover the smoke test's cost, not only setup's.
-  PYTHONPATH=src RUN_LOG="$PILOT_DIR/run.jsonl" python3 - <<'PY' || die "could not mark smoke_completed"
+  #
+  # `$REPO/src`, not `src`: this runs after the `cd -` above, so the
+  # relative path resolved to nothing and `import agentseism` failed with
+  # ModuleNotFoundError -- after a smoke run that had already passed. The
+  # run was fine and only the bookkeeping could not record it, which cost
+  # a host. An absolute path says what was meant and does not depend on
+  # which directory the surrounding code happens to have left us in.
+  PYTHONPATH="$REPO/src" RUN_LOG="$PILOT_DIR/run.jsonl" python3 - <<'PY' || die "could not mark smoke_completed"
 import os
 from pathlib import Path
 from agentseism.budget import RunLog
