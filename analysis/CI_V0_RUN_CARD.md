@@ -32,11 +32,11 @@ regression on a real stochastic agent.
 | field | value |
 |---|---|
 | branch | `product/ci-v0` |
-| commit | `5e0ecb797818bda3d029823f29829b419f5ed4f8` (this card is one commit later; the run uses the tree at the tip) |
+| commit | config frozen at `5e0ecb7`; model frozen at `e662ffd`; Stage A runs the branch tip |
 | agent | `mini-swe-agent==2.4.6` (exact pin, `pyproject.toml` extra `coding-agent`) |
 | evaluator | `agents/coding/swebench_evaluator.py`, local Docker, **no API cost** |
 | dataset | `SWE-bench/SWE-bench_Verified`, split `test` |
-| model | `anthropic/claude-sonnet-5` (fallback `anthropic/claude-sonnet-4-5-20250929`, mini-swe-agent's pinned default, if litellm does not resolve it) |
+| model | **`anthropic/claude-haiku-4-5-20251001`** — frozen by the probe (`analysis/CI_V0_PROBE.md`), all five criteria held at $0.0995/run |
 | config manifest | `analysis/ci_v0/MANIFEST.sha256`, digest `972846daa4a9f732` |
 | contract | `analysis/ci_v0/contract.yaml`, sha256 `f89a7d43e0606eaa…` |
 | trials per condition | **5** |
@@ -69,21 +69,17 @@ manifest above. Five scenarios is exactly the contract's
 minimum and yields `INSUFFICIENT_EVIDENCE` — which is the correct answer, not a
 reason to substitute a sixth.
 
-## The one open field: the model
+## The model is no longer open
 
-**No API credentials are configured in this environment.** `ANTHROPIC_API_KEY`,
-`OPENAI_API_KEY`, `GEMINI_API_KEY`, `DEEPSEEK_API_KEY`, `TOGETHER_API_KEY` and
-`OPENROUTER_API_KEY` are all unset, and mini-swe-agent's global config carries
-no key either. Stage A cannot start until a model and its credential are
-supplied.
+Frozen to `anthropic/claude-haiku-4-5-20251001` by the pre-registered probe.
+All five criteria held; measured cost **$0.0995 per run** over 24 model calls.
 
-The model identity must be fixed **before** the first call and recorded here,
-because it enters the comparability fingerprint: a model that changed between
-the baseline and candidate arms would make them incomparable, and the contract
-would say so rather than report a regression.
+That measurement revises the Stage A projection from ~$15 to **~$5**, so the
+$25 stop carries roughly 5× headroom rather than being likely to fire. The
+earlier ±2× error bar was too narrow and wrong in the cheap direction: steps
+per run were assumed at ~40 and observed at 24.
 
-The cost estimates below assume a mid-priced frontier model. A cheaper model
-changes the estimate but not the design.
+The probe is **not** Stage A evidence and its artifacts are not Stage A data.
 
 ### Two stages, and the first one can stop the second
 
