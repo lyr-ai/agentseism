@@ -1,0 +1,109 @@
+# AgentSeism on a pull request.
+#
+# Runs the candidate against a baseline that was frozen and committed earlier,
+# posts the report as one sticky comment, and fails the check on REGRESSION.
+#
+# Two deliberate choices:
+#
+#   * A missing baseline fails the job rather than skipping it. A check that
+#     silently passes when it could not measure anything is worse than no check:
+#     it reads as evidence of no regression.
+#   * The verdict comes from `seism check`'s exit code, not from parsing the
+#     report. The exit code is the contract; the markdown is for humans.
+name: AgentSeism
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+# Workflow-level, not `inputs`: `inputs` exists only for workflow_dispatch and
+# workflow_call, and would resolve to empty on a pull_request trigger.
+env:
+  BASELINE: main
+  TRIALS: "5"
+
+jobs:
+  regression-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install AgentSeism
+        run: python -m pip install --quiet .
+
+      - name: Require a frozen baseline
+        run: |
+          if [ ! -f .agentseism/baselines/${BASELINE}.json ]; then
+            echo "::error::no frozen baseline '${BASELINE}'."
+            echo "Run 'seism baseline --name ${BASELINE}' on the base branch and commit"
+            echo ".agentseism/baselines/${BASELINE}.json. AgentSeism will not report a"
+            echo "verdict it did not measure."
+            exit 1
+          fi
+
+      - name: Plan (no calls, no writes)
+        run: seism check --baseline "${BASELINE}" --trials "${TRIALS}" --dry-run
+
+      - name: Check
+        id: check
+        # `seism check` exits 1 on REGRESSION and on INCOMPARABLE. The step is
+        # allowed to fail so the report still gets posted; the job's verdict is
+        # decided at the end from the recorded code.
+        continue-on-error: true
+        run: |
+          set +e
+          seism check --baseline "${BASELINE}" --trials "${TRIALS}"
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agentseism-report
+          path: |
+            .agentseism/runs/last-report.md
+            .agentseism/runs/last-report.json
+          if-no-files-found: warn
+
+      - name: Post the report
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          MARKER='<!-- agentseism-report -->'
+          REPORT=.agentseism/runs/last-report.md
+          if [ -f "$REPORT" ]; then
+            { printf '%s\n' "$MARKER"; cat "$REPORT"; } > /tmp/body.md
+          else
+            { printf '%s\n' "$MARKER"
+              printf '### AgentSeism did not produce a report\n\n'
+              printf 'The check did not reach a verdict. See the job log.\n'
+            } > /tmp/body.md
+          fi
+          # One sticky comment: update the existing one rather than adding a new
+          # comment on every push, which buries the PR conversation.
+          ID=$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
+                 --jq "[.[] | select(.body | startswith(\"$MARKER\"))] | first | .id // empty")
+          if [ -n "$ID" ]; then
+            gh api -X PATCH "repos/$REPO/issues/comments/$ID" -F body=@/tmp/body.md >/dev/null
+            echo "updated comment $ID"
+          else
+            gh api -X POST "repos/$REPO/issues/$PR/comments" -F body=@/tmp/body.md >/dev/null
+            echo "posted a new comment"
+          fi
+
+      - name: Verdict
+        run: |
+          code='${{ steps.check.outputs.exit_code }}'
+          echo "seism check exited $code"
+          exit "${code:-1}"
