@@ -17,6 +17,30 @@ was designed after both results were seen. Its agreement with them is
 consistency by construction, not validation. Validation is the confirmatory
 study in §6, on tasks the rule has never seen.
 
+## Specification freeze — 2026-09-25
+
+Frozen before any confirmatory run. Implemented as `capability-1` in
+`src/agentseism/capability.py`, and exercised by `tests/test_capability.py`,
+which asserts this document's §4 tables.
+
+- **Gate 1:** unchanged from surface-1.
+- **Gate 2, positioned as a catastrophic capability regression gate:**
+  - eligibility: baseline ≥ 7/8 (the fraction 0.875);
+  - a one-sided Fisher exact test, with Bonferroni over the K eligible tasks,
+    K fixed from the baseline;
+  - practical drop ≥ 0.50;
+  - **WARNING at a drop of ≥ 3/8**;
+  - a task with any invalid run is excluded;
+  - the task-specific inference assumptions in §3.2.
+- **Also frozen:** the verdict order (§5), the prediction rule and cost stop
+  semantics (§7), and F1–F4 (§9).
+- **Product claim:** detects near-collapse of a task that reliably worked;
+  the smallest firing drop is 0.75 at n = 8, K ≥ 4. It is **not** "any drop of
+  50 points or more".
+
+The operating characteristics are in `analysis/CI_V1_OPERATING_CHARACTERISTICS.md`.
+**The confirmatory study (§7) has not been run.**
+
 ## 1. What v0 taught, in one line each
 
 - **Stage A:** natural variation is not a regression. seaborn went 3/5 → 2/5
