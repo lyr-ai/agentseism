@@ -15,7 +15,8 @@ because the thing under test is a *repository change*. A pull request that cuts
 Writes into the artifact directory:
 
     patch.diff      the agent's submission, empty if it produced none
-    agent_run.json  instance, exit status, step limit, model, timings
+    agent_run.json  instance, exit status, step limit, model, timings, and the
+                    run's model cost in USD with its call count
 
 Not `run.json`: AgentSeism writes its own `RunResult` under that name into the
 same directory after the evaluator returns, so a runner that used it would have
@@ -70,7 +71,7 @@ def main(argv=None) -> int:
     import yaml
     from minisweagent.agents.default import DefaultAgent
     from minisweagent.environments.docker import DockerEnvironment
-    from minisweagent.models import get_model
+    from minisweagent.models import GLOBAL_MODEL_STATS, get_model
 
     # The prompts come from mini-swe-agent's own SWE-bench config, not from
     # here. Writing our own system and instance templates would change what the
@@ -88,6 +89,10 @@ def main(argv=None) -> int:
     instance = task["instance_id"]
     image = task.get("image") or image_for(instance)
     started = time.time()
+    # Cost is accumulated process-globally by mini-swe-agent, so the reading
+    # is taken as a delta. Recording it is not bookkeeping: the experiment's
+    # external budget stop has nothing to count without it.
+    cost_before, calls_before = GLOBAL_MODEL_STATS.cost, GLOBAL_MODEL_STATS.n_calls
     env = DockerEnvironment(image=image, cwd="/testbed",
                             run_args=["--rm", "--platform=linux/amd64"])
     try:
@@ -119,6 +124,8 @@ def main(argv=None) -> int:
         "model": cfg["model"],
         "patch_bytes": len(submission),
         "seconds": round(time.time() - started, 2),
+        "usd": round(GLOBAL_MODEL_STATS.cost - cost_before, 6),
+        "model_calls": GLOBAL_MODEL_STATS.n_calls - calls_before,
     }, indent=2, sort_keys=True))
     return 0
 
