@@ -71,3 +71,61 @@ Choosing Haiku does not commit us to Stage A at any price the probe reveals.
 
 Stop immediately after the probe. Report the five criteria and the actual cost.
 **Do not start Stage A**, whatever the result.
+
+---
+
+## Result — recorded 2026-09-25, probe commit `e662ffd`
+
+| criterion | required | observed |
+|---|---|---|
+| 1. execution valid | exit 0, `agent_run.json` written | ✅ |
+| 2. repository modification attempted | registered terminal status | ✅ `Submitted` |
+| 3. non-empty patch | `patch_bytes > 0` | ✅ **504** |
+| 4. evaluator completes | JSON with `success`, not `invalid` | ✅ |
+| 5. no infrastructure invalidity | no infra_failure, patch applied | ✅ |
+
+**All five hold. Probe passes. `claude-haiku-4-5-20251001` is frozen as the
+validation model.**
+
+```text
+instance      astropy__astropy-12907
+exit_status   Submitted
+patch_bytes   504
+model_calls   24
+seconds       90.59
+usd           0.099506
+label         PASS   (success 1)
+```
+
+### The cost measurement
+
+**$0.0995 for one run** — inside the pre-declared `≤ $0.50` band, and about 3×
+below the `~$0.30` estimate. At this rate Stage A's 50 invocations project to
+roughly **$5**, and the frozen $25 stop has about 5× headroom rather than
+firing mid-run.
+
+The estimate's stated ±2× error bar was too narrow and wrong in the cheap
+direction. The assumption that overshot was steps per run: ~40 assumed, **24**
+observed. Prompt caching is doing what the fix intended.
+
+### The instance resolved, and that is not the finding
+
+`label: PASS` — the agent produced the correct fix, a one-line change in
+`_cstack`. **This was explicitly not a pass criterion** and must not be read as
+one. n = 1 on one task supports no claim about resolve rate, and the probe was
+designed to exclude only "this model cannot drive this agent".
+
+What it does license, narrowly: the floor worry that motivated choosing between
+Haiku and Sonnet is not realised here. One resolved instance is not a rate, but
+it is incompatible with a model that cannot operate the agent at all.
+
+### What this does not establish
+
+Nothing about AgentSeism. No specificity, no sensitivity, no verdict quality.
+The probe is not Stage A evidence and its artifacts are not Stage A data under
+any later reading.
+
+### Stop
+
+Stage A is **not started**, as pre-registered. Total spend on this probe:
+**$0.0995**.
