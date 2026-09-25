@@ -54,7 +54,7 @@ ENG_BASELINE_USD="16.88"
 ENG_BASELINE_CURRENCY="USD"
 ENG_BASELINE_PERIOD="September 2026"
 ENG_RUN_LOG="data/runs/engineering/run.jsonl"
-EXPECTED_TESTS=834
+EXPECTED_TESTS=835
 EXPECTED_SKIPPED=23
 # The Docker integration tests are collected but skipped unless
 # AGENTSEISM_DOCKER_TESTS is set: preflight must not perform an unregistered
@@ -927,9 +927,11 @@ run_smoke_test() {
   # relative path resolved to nothing and `import agentseism` failed with
   # ModuleNotFoundError -- after a smoke run that had already passed. The
   # run was fine and only the bookkeeping could not record it, which cost
-  # a host. An absolute path says what was meant and does not depend on
-  # which directory the surrounding code happens to have left us in.
-  PYTHONPATH="$REPO/src" RUN_LOG="$PILOT_DIR/run.jsonl" python3 - <<'PY' || die "could not mark smoke_completed"
+  # a host. Both entries are needed: every other call in this script uses
+  # `src:.`, and dropping the second half cost a second host -- inside the
+  # repo `python3 -` puts cwd on sys.path, so `experiments` resolved by
+  # accident and only `agentseism` looked like the problem.
+  PYTHONPATH="$REPO/src:$REPO" RUN_LOG="$PILOT_DIR/run.jsonl" python3 - <<'PY' || die "could not mark smoke_completed"
 import os
 from pathlib import Path
 from agentseism.budget import RunLog

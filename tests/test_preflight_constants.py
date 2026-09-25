@@ -14,6 +14,7 @@ from __future__ import annotations
 import os
 import re
 import subprocess
+import tempfile
 import sys
 from pathlib import Path
 
@@ -167,3 +168,31 @@ def test_the_preflight_can_parse_the_hashes_out_of_resolve_only():
     assert extract(exprs["ph"]) == const("PROTOCOL_HASH")
     assert extract(exprs["oh"]) == const("ORDER_HASH")
     assert extract(exprs["cells"]) == const("EXPECTED_CELLS")
+
+
+def test_the_smoke_marker_imports_from_outside_the_repo():
+    """Two paid hosts died here, at the same step, after a passing smoke.
+
+    The marker runs after the `cd -` that closes the smoke block, so its
+    PYTHONPATH must name both the package root and the repository root. Inside
+    the repo `python3 -` puts cwd on sys.path, which hid the omission
+    completely -- and hid it again after a fix that supplied only `$REPO/src`,
+    because `agentseism` then imported and `experiments` did not.
+
+    So the test runs the imports the marker performs, from a directory that is
+    not the repository, with exactly the PYTHONPATH the script sets.
+    """
+    m = re.search(r'^\s*PYTHONPATH="([^"]+)" RUN_LOG=[^\n]*mark smoke_completed',
+                  (ROOT / "inference/stage_b_preflight.sh").read_text(), re.M)
+    assert m, "the smoke marker's PYTHONPATH is not where this test expects it"
+    pythonpath = m.group(1).replace("$REPO", str(ROOT))
+
+    r = subprocess.run(
+        [sys.executable, "-c",
+         "from agentseism.budget import RunLog; import agentseism; print('ok')"],
+        cwd=tempfile.gettempdir(),          # deliberately not the repository
+        env={**os.environ, "PYTHONPATH": pythonpath},
+        capture_output=True, text=True, timeout=120)
+    assert r.returncode == 0, (
+        f"the marker's imports fail from outside the repo:\n{r.stderr[-1500:]}")
+    assert "ok" in r.stdout
