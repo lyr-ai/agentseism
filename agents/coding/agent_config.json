@@ -1,6 +1,6 @@
 {
-  "step_limit": 250,
-  "model": "openai/Qwen/Qwen3.6-27B-FP8",
+  "_comment": "The agent configuration a pull request would change. `step_limit` is the value the CI v0 positive control cuts to 40; see analysis/CI_V0_PREDECLARATION.md. The model is part of the comparability fingerprint and must not differ between arms. Nothing reads this but agents/coding/swebench_runner.py.",
   "mode": "yolo",
-  "_comment": "The agent configuration a pull request would change. `step_limit` is the value the CI v0 positive control cuts to 40; see analysis/CI_V0_PREDECLARATION.md. Nothing reads this but agents/coding/swebench_runner.py."
+  "model": "anthropic/claude-sonnet-5",
+  "step_limit": 250
 }
