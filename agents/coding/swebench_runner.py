@@ -70,7 +70,7 @@ def main(argv=None) -> int:
     import yaml
     from minisweagent.agents.default import DefaultAgent
     from minisweagent.environments.docker import DockerEnvironment
-    from minisweagent.models.litellm_model import LitellmModel
+    from minisweagent.models import get_model
 
     # The prompts come from mini-swe-agent's own SWE-bench config, not from
     # here. Writing our own system and instance templates would change what the
@@ -91,10 +91,19 @@ def main(argv=None) -> int:
     env = DockerEnvironment(image=image, cwd="/testbed",
                             run_args=["--rm", "--platform=linux/amd64"])
     try:
-        agent = DefaultAgent(
-            LitellmModel(model_name=cfg["model"],
-                         model_kwargs={"drop_params": True}),
-            env, **agent_config)
+        # `get_model`, not `LitellmModel(...)` directly. Constructing the
+        # model class ourselves bypassed mini-swe-agent's defaults -- including
+        # Anthropic prompt caching, which it enables for claude/sonnet/opus
+        # names. On an agent trajectory every step resends a growing prefix, so
+        # losing the cache is roughly a 5-10x cost increase, silently.
+        #
+        # The fix is to use the construction path rather than to copy the one
+        # line that sets it: a future upstream default would otherwise be
+        # bypassed in exactly the same way, and nothing would notice.
+        model = get_model(cfg["model"],
+                          {"model_kwargs": {"drop_params": True}}
+                          | dict(bench.get("model", {})))
+        agent = DefaultAgent(model, env, **agent_config)
         result = agent.run(task=task["problem_statement"])
         submission = result.get("submission") or ""
         exit_status = str(result.get("exit_status") or "")

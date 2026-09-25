@@ -157,3 +157,40 @@ def test_mini_swe_agent_is_pinned_exactly():
     d = tomllib.loads((ROOT / "pyproject.toml").read_text())
     extras = d["project"]["optional-dependencies"]["coding-agent"]
     assert "mini-swe-agent==2.4.6" in extras, extras
+
+
+# ── the caching defect, which cost nothing only because it was caught early ──
+def test_anthropic_models_are_built_with_cache_control():
+    """The adapter constructed `LitellmModel(...)` directly and bypassed
+    mini-swe-agent's defaults, one of which turns on Anthropic prompt caching.
+
+    On an agent trajectory every step resends a growing prefix, so losing the
+    cache is roughly a 5-10x cost increase -- silently, with no error and no
+    behavioural difference to notice.
+    """
+    from minisweagent.models import get_model
+    m = get_model("anthropic/claude-haiku-4-5-20251001",
+                  {"model_kwargs": {"drop_params": True}})
+    assert getattr(m.config, "set_cache_control", None) == "default_end"
+
+
+def test_the_runner_uses_the_supported_construction_path():
+    """Asserted on the source, because the alternative -- copying the one line
+    that sets cache control -- would pass a behavioural test today and be
+    bypassed again the next time upstream changes a default."""
+    import ast
+    tree = ast.parse((ROOT / "agents/coding/swebench_runner.py").read_text())
+    called = {n.func.id for n in ast.walk(tree)
+              if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)}
+    assert "get_model" in called
+    # A source-text check would match the comment that explains this; only the
+    # call matters.
+    assert "LitellmModel" not in called
+
+
+def test_a_non_anthropic_model_is_not_given_cache_control():
+    """The default is Anthropic-specific; asserting it unconditionally would
+    make this test pass for the wrong reason."""
+    from minisweagent.models import get_model
+    m = get_model("openai/gpt-4.1-mini", {"model_kwargs": {"drop_params": True}})
+    assert getattr(m.config, "set_cache_control", None) is None

@@ -43,7 +43,7 @@ regression on a real stochastic agent.
 | baseline `step_limit` | **250** |
 | negative candidate `step_limit` | **250** (identical to baseline — that is the control) |
 | positive candidate `step_limit` | **40** (Stage B only) |
-| Stage A bound | **50 invocations.** The $17 estimate is withdrawn — see below |
+| Stage A stop | **50 invocations or $25 actual accumulated cost, whichever comes first** |
 | global bound | 75 invocations across both stages |
 
 ### The five tasks, chosen before any call
@@ -156,9 +156,15 @@ trial-count change, and any adjustment to the frozen degradation.
 2. **One fix-forward, total.** If a second attempt does not produce a verdict,
    the milestone is recorded as not achieved and the defect is fixed offline
    with a test that reproduces it before any further spend.
-3. **Stage A reaches 50 invocations.** Stop and report the measured cost,
-   whatever the state. There is no dollar stop, by decision: a cost ceiling
-   that truncates runs would confound the control it is meant to protect.
+3. **Stage A reaches 50 invocations, or $25 of actual accumulated cost,
+   whichever comes first.** If the dollar stop fires the outcome is
+   **`COST_STOP / incomplete`**: not a verdict, not a PASS, not a REGRESSION,
+   and the partial data is **not** read as specificity evidence.
+
+   This is an *external* budget on the experiment, measured by accumulating
+   reported spend between invocations. It is a different thing from
+   mini-swe-agent's per-run `cost_limit: 3.0`, which stays untouched —
+   lowering that would truncate individual runs and confound the control.
 4. **Three consecutive invalid runs.** Already enforced in `run_trials`, which
    refuses to spend the rest of a batch proving an infrastructure fault.
 
