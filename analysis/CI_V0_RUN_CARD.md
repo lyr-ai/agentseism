@@ -351,3 +351,88 @@ That would be a real result about the rule's sensitivity, not grounds for
 adjustment.
 
 **Stage B has not been run.** It needs separate approval.
+
+## Stage B result — 2026-09-25
+
+Ran from `.runs/stageB` on branch `stageB/step-limit-40` @ `6a5af4c`.
+That branch is `b2f1bdf` plus the single pre-declared change,
+`step_limit` 250 → 40, and is **not** merged into `product/ci-v0`. It
+started at 21:46:52Z and finished without interruption. The chain is committed
+as `analysis/ci_v0/stageB_chain.sh` for audit.
+
+Before the first paid call the chain checked:
+- Docker and the five images;
+- the task files were byte-identical to the frozen ones;
+- the tree was clean and `step_limit` was 40;
+- the baseline and contract copies were byte-identical to Stage A's (baseline
+  sha256 `373abf2a57e4b288…`, as recorded above);
+- baseline and candidate task keys paired exactly on all five tasks.
+
+Neither the intervention nor anything else was changed during the run, and no
+partial outcome was read.
+
+### Three things, kept separate
+
+| | |
+|---|---|
+| **observed effect** | task_success 0.92 → 0.52: **−0.40**, 95% interval **[−0.72, −0.08]** (paired bootstrap over 5 tasks) |
+| **product verdict** | **PASS** ("no gating feature regressed") |
+| **why** | the frozen rule needs `effect ≤ −0.10` **and** `ci_high ≤ −0.10`. The effect passed (−0.40); `ci_high` was −0.08 and did not, so REGRESSION did not fire |
+
+| | value |
+|---|---|
+| invalid runs | 0 / 25 |
+| `LimitsExceeded` | 12 / 25, all scored `FAIL` via the empty-patch path (`2725192`) |
+| invocations | 25 |
+| cost | $3.56 |
+| comparability | precheck passed; contract `6e9aa552c90a2cda` |
+| report file | `runs/last-report.json` sha256 `16efb971b740a1aa…` |
+
+### By task
+
+| task | baseline (Stage A) | degraded (Stage B) | change | Stage B exits | Stage B steps | Stage A baseline steps |
+|---|---|---|---|---|---|---|
+| astropy__astropy-12907 | 5/5 | 5/5 | 0.0 | 5 Submitted | 29–33 | 28–35 |
+| pallets__flask-5014 | 5/5 | 5/5 | 0.0 | 5 Submitted | 25–38 | 23–44 |
+| matplotlib__matplotlib-13989 | 5/5 | 3/5 | −0.4 | 3 Submitted, 2 LimitsExceeded | 31–40 | 29–42 |
+| mwaskom__seaborn-3069 | 3/5 | 0/5 | −0.6 | 5 LimitsExceeded | 40 ×5 | 98–160 |
+| django__django-10097 | 5/5 | 0/5 | −1.0 | 5 LimitsExceeded | 40 ×5 | 44–102 |
+
+Steps are `model_calls` from each run's `agent_run.json`.
+
+**The mechanism.** Stage A's baseline step counts predict the pattern exactly:
+- tasks the agent solves in under 40 steps (astropy, flask) were untouched;
+- the task that straddles 40 (matplotlib) was hit partially;
+- the tasks that need 44–160 steps (django, seaborn) collapsed completely.
+
+Every run that hit the limit failed, and every run that submitted resolved.
+The degradation is real, large and mechanistically explained. It is also
+**concentrated**: two tasks at −1.0 and −0.6, one at −0.4, and two at 0.
+
+### Conclusion
+
+**CI v0 specificity established; sensitivity not established. Milestone not
+achieved.**
+
+Acceptance requires both halves (see *Acceptance*). The unchanged candidate
+passed. The pre-declared degraded candidate, which lost 40 points with two
+tasks collapsing completely, also passed.
+
+The finding is about the method: **the frozen estimand and decision rule (a
+paired bootstrap over five tasks, requiring the interval's upper end to clear
+−0.10) do not detect a concentrated regression.** This is the case recorded in
+the pre-Stage-B deviation above, before any Stage B data existed, and it
+occurred as described there.
+
+This is not attributed to sample size. That explanation has not been tested
+and is not claimed here. The frozen rule was also not re-run with other
+settings. `ci_high` −0.08 against a −0.10 bar is a PASS under the rule as
+frozen, and it stays one.
+
+### What this does not change
+
+No product decision semantics, threshold, minimum evidence, bootstrap logic,
+task set or product code changed, and the Stage B intervention was not merged.
+Any redesign, starting with what should count as a regression in agent CI
+(broad population regression, severe per-task regression, or both), is a new,
+separately declared stage. It is not a revision of this one.
