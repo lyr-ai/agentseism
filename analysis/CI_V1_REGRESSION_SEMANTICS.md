@@ -17,6 +17,41 @@ was designed after both results were seen. Its agreement with them is
 consistency by construction, not validation. Validation is the confirmatory
 study in §6, on tasks the rule has never seen.
 
+## Revision 3 — 2026-09-25: gate 2's K is the declared suite size
+
+One change: the Bonferroni family for gate 2 is **every task in the declared
+suite**, fixed before any outcome is seen. It was the eligible tasks.
+
+**Why.** Eligibility is decided on the same baseline the test then uses. A
+flaky agent leaves few tasks eligible, α/K relaxes, and the gate loosens
+exactly where noise is highest. Revision 2 false-blocked 3.3–3.8% of
+unchanged PRs on a flaky agent, where the plain count heuristic
+`≥ 7/8 and ≤ 2/8` managed 1.4–2.7%. A decision threshold must not be moved by
+the stochastic outcomes it is judging.
+
+**Basis.** Offline simulation only (`analysis/CI_V1_BASELINE_CHALLENGE.md`
+§3). No fresh data had been seen, so this is a methodology correction, not
+tuning to a result.
+
+**Effect at n = 8:**
+- flaky-agent false block falls to 0.4–0.8%;
+- per-task power at K = 7 is unchanged (0.87 against a collapse to 0.10);
+- at larger K it falls as multiplicity requires (0.75 at K = 10).
+
+**Nothing else changed:**
+- gate 1;
+- eligibility ≥ 7/8;
+- the 0.50 drop threshold;
+- the 3/8 warning;
+- n = 8;
+- the verdict order;
+- the prediction rule;
+- the cost stop;
+- F1–F4.
+
+Implemented as `capability-2`, with `multiplicity: bonferroni_over_suite`.
+The eligible-K option was removed rather than kept as a choice.
+
 ## Specification freeze — 2026-09-25
 
 Frozen before any confirmatory run. Implemented as `capability-1` in
@@ -26,8 +61,8 @@ which asserts this document's §4 tables.
 - **Gate 1:** unchanged from surface-1.
 - **Gate 2, positioned as a catastrophic capability regression gate:**
   - eligibility: baseline ≥ 7/8 (the fraction 0.875);
-  - a one-sided Fisher exact test, with Bonferroni over the K eligible tasks,
-    K fixed from the baseline;
+  - a one-sided Fisher exact test, with Bonferroni over the K tasks of the
+    declared suite (revision 3);
   - practical drop ≥ 0.50;
   - **WARNING at a drop of ≥ 3/8**;
   - a task with any invalid run is excluded;
@@ -63,7 +98,7 @@ These are two different risks, so v1 gives each its own endpoint.
 | practical threshold | 0.10 (unchanged) | observed drop ≥ 0.50 |
 | uncertainty | paired bootstrap over tasks, 95%, seed 0, 2000 resamples (unchanged) | one-sided Fisher exact test on the task's 2×2 of successes by arm |
 | fires when | `effect ≤ −0.10` **and** `ci_high ≤ −0.10` (unchanged) | drop ≥ 0.50 **and** `p ≤ 0.05 / K` |
-| multiplicity | one test | Bonferroni over the K eligible tasks. K is fixed from the baseline before any candidate run |
+| multiplicity | one test | Bonferroni over the K tasks of the declared suite, fixed before any run (revision 3) |
 | critical-task declaration | n/a | not in v1 (§2.2) |
 | invalid runs | `invalid_policy: stop` (unchanged) | any invalid run on a task makes that task ineligible, and it is reported |
 | non-blocking signal | none | eligible task with an observed drop ≥ 0.375 (3/8) that did not fire → WARNING |
@@ -147,7 +182,7 @@ One-sided Fisher p-values:
 
 Highest candidate count that fires, after both conditions are applied:
 
-| K eligible | α/K | from 8/8 | from 7/8 |
+| K (suite size) | α/K | from 8/8 | from 7/8 |
 |---|---|---|---|
 | 1 | 0.0500 | ≤ 4/8 | ≤ 2/8 |
 | 2 | 0.0250 | ≤ 3/8 | ≤ 2/8 |
@@ -240,7 +275,7 @@ in code, with tests, before step 1.
 1. **Baseline:** `step_limit` 250, 7 × 8 = 56 runs.
 2. **Declare from the baseline alone**, dated and committed before any
    candidate run:
-   - K and the eligible set;
+   - the eligible set (K is the suite size, 7, already fixed by revision 3);
    - a projected cost check (step 5 of *Cost* below);
    - for each degraded arm and each task: *collapse predicted* if all eight
      baseline runs used more steps than the arm's limit; *unaffected
@@ -306,7 +341,7 @@ features:
         practical_threshold: 0.50
         test: fisher_exact_one_sided
         alpha: 0.05
-        multiplicity: bonferroni_over_eligible
+        multiplicity: bonferroni_over_suite   # revision 3
         minimum_evidence: {trials_per_condition: 8}
         invalid_policy: exclude_task
         warn_threshold: 0.375
@@ -315,7 +350,8 @@ aggregation: any
 
 Freeze checklist before any code:
 - the table above, including the α, eligibility and warning values;
-- how K is computed, and the fact that it is fixed from the baseline;
+- how K is computed: the declared suite size, fixed before any run
+  (revision 3);
 - the prediction rule in §7, step 2;
 - the $60 stop and the checkpoint;
 - the falsification criteria in §9.

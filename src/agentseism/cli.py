@@ -211,12 +211,17 @@ def _rates(results: list[dict], key: str) -> dict[str, list[float]]:
     return by
 
 
-def _task_counts(base: list[dict], cand: list[dict], key: str) -> dict:
+def _task_counts(base: list[dict], cand: list[dict], key: str,
+                 suite: list[str] | None = None) -> dict:
     """Valid successes and trials per task in both arms, with invalid runs
     counted across both. The capability gate excludes a task with any invalid
-    run rather than scoring around it."""
+    run rather than scoring around it.
+
+    Seeded from the declared `suite`, because the gate's multiplicity K is the
+    suite size. A declared task that produced no row still counts, and is
+    reported as not monitored."""
     from agentseism.capability import TaskCounts
-    acc: dict[str, list[int]] = {}
+    acc: dict[str, list[int]] = {t: [0, 0, 0, 0, 0] for t in suite or []}
     for arm, rows in ((0, base), (1, cand)):
         for r in rows:
             a = acc.setdefault(r["task"], [0, 0, 0, 0, 0])
@@ -275,7 +280,7 @@ def _measure(contract, baseline: dict, candidate: list[dict], tasks: list[str],
                       "trials_per_condition": trials,
                       "eligible_scenarios": len(set(b) & set(c))},
             invalid=sum(1 for r in candidate if r.get("invalid")),
-            per_task=(_task_counts(baseline["results"], candidate, key)
+            per_task=(_task_counts(baseline["results"], candidate, key, tasks)
                       if "capability_regression" in f else None))
         import statistics as st
         detail[name] = {
@@ -356,8 +361,9 @@ def _capability_lines(capability: dict) -> list[str]:
     out = []
     for name, c in capability.items():
         state = "FAIL" if c["fired"] else "PASS"
-        lim = (f"per-task limit p <= {c['alpha_per_task']:.4f} over "
-               f"K={c['k']} eligible task(s)" if c["k"] else "no eligible task")
+        lim = (f"per-task limit p <= {c['alpha_per_task']:.4f} over the "
+               f"K={c['k']} task suite, {len(c['eligible'])} eligible"
+               if c["k"] else "no task declared")
         out.append(f"Capability regression ({name}): **{state}** — {lim}. "
                    "Detects near-collapse of a task that reliably worked.")
         for t in c["fired"] + c["warnings"]:

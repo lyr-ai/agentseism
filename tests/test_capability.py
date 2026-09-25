@@ -77,11 +77,27 @@ def test_at_seven_eligible_tasks_the_smallest_firing_drop_is_three_quarters():
 
 
 # ── eligibility, warnings, and what is not monitored ──
-def test_an_unreliable_baseline_is_not_monitored_and_does_not_count_in_k():
+def test_an_unreliable_baseline_is_not_monitored_but_still_counts_in_k():
+    """Revision 3: K is the declared suite. An ineligible task is not tested,
+    yet it stays in the multiplicity family, which was fixed before any outcome
+    was seen."""
     r = cap.evaluate(SPEC, {"a": T(8, 8, 0, 8), "b": T(6, 8, 0, 8)})
-    assert r["k"] == 1 and r["fired"] == ["a"]
+    assert r["k"] == 2 and r["alpha_per_task"] == 0.025
+    assert r["fired"] == ["a"] and r["eligible"] == ["a"]
     assert r["not_monitored"] == ["b"]
     assert "baseline below" in r["detail"]["b"]["not_monitored"]
+
+
+def test_a_flaky_suite_does_not_loosen_the_gate():
+    """The revision-2 defect. Seven declared tasks, only one reliable: under
+    eligible-K that task was tested at alpha/1, and 8/8 -> 3/8 fired. Under
+    suite-K it is tested at alpha/7 and does not."""
+    flaky = {f"f{i}": T(5, 8, 5, 8) for i in range(6)}
+    r = cap.evaluate(SPEC, flaky | {"t": T(8, 8, 3, 8)})
+    assert r["k"] == 7 and r["eligible"] == ["t"]
+    assert r["fired"] == [] and r["detail"]["t"]["decision"] == "WARNING"
+    assert cap.fisher_one_sided(8, 8, 3, 8) <= 0.05          # would have fired
+    assert cap.fisher_one_sided(8, 8, 3, 8) > 0.05 / 7       # does not now
 
 
 def test_a_task_with_any_invalid_run_is_excluded_not_scored():
@@ -91,7 +107,8 @@ def test_a_task_with_any_invalid_run_is_excluded_not_scored():
 
 def test_fewer_than_the_minimum_trials_is_not_monitored():
     r = cap.evaluate(SPEC, {"a": T(5, 5, 0, 5)})
-    assert r["k"] == 0 and r["fired"] == [] and r["not_monitored"] == ["a"]
+    assert r["k"] == 1 and r["eligible"] == [] and r["fired"] == []
+    assert r["not_monitored"] == ["a"]
 
 
 @pytest.mark.parametrize("cand,decision", [(8, "PASS"), (6, "PASS"),
@@ -169,7 +186,7 @@ def test_a_concentrated_collapse_is_a_regression_the_population_gate_misses():
     assert v["verdict"] == "REGRESSION"
     c = v["capability"]["task_success"]
     assert c["fired"] == ["django"] and c["warnings"] == ["matplotlib"]
-    assert c["not_monitored"] == ["seaborn"] and c["k"] == 4
+    assert c["not_monitored"] == ["seaborn"] and c["k"] == 5
 
 
 def test_the_same_numbers_without_the_block_still_pass():
@@ -223,3 +240,12 @@ def test_task_counts_separate_arms_and_count_invalid_across_both():
     got = _task_counts(base, cand, "success")
     assert got["a"] == T(2, 3, 1, 2, 0)
     assert got["b"] == T(1, 1, 1, 1, 1)
+
+
+def test_a_declared_task_with_no_rows_still_counts_toward_k():
+    """K is the suite that was declared, not the tasks that happened to
+    produce results. A batch stopped early must not shrink the family."""
+    got = _task_counts([], [], "success", ["a", "b", "c"])
+    assert set(got) == {"a", "b", "c"}
+    r = cap.evaluate(SPEC, got)
+    assert r["k"] == 3 and r["not_monitored"] == ["a", "b", "c"]

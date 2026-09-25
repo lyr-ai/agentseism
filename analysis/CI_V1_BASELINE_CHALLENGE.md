@@ -1,6 +1,6 @@
 # Stage C — simple rules against AgentSeism v1
 
-2026-09-25. **No API calls, no runs.** All numbers come from
+2026-09-25. Regenerated under **spec revision 3**, which it motivated (§3). **No API calls, no runs.** All numbers come from
 `analysis/ci_v1/baseline_challenge.py`, which is deterministic and runs in
 under a minute. It reuses the verified engine from the OC study: gate 1
 matched the product's bootstrap 300/300, and gate 2 is the product's
@@ -18,9 +18,9 @@ the simplest rules someone would write instead?
 
 ## Verdict
 
-**Gate 1 earns its complexity. Frozen gate 2 does not, and the challenge
-found why: a design flaw. Once that is fixed, gate 2 does earn it, though at
-K = 7 the margin is modest.**
+**Gate 1 earns its complexity. Revision-2 gate 2 did not, and the challenge
+found why: a design flaw. Revision 3 fixes it, and gate 2 now earns its
+complexity too, though at K = 7 the margin is modest.**
 
 ### 1. Stage A/B cannot tell the rules apart (C1)
 
@@ -33,7 +33,7 @@ discriminate nothing, so the comparison is made on the simulation grid.
 |---|---|---|---|
 | all tasks 0.95 | 0.3–3.5% | 0.1–0.4% | ≤ 0.1% |
 | Stage-A-like (one noisy task) | **1.0–9.1%** | **2.5–2.9%** | ≤ 0.3% |
-| flaky agent, all 0.70 | **9–20%** | **12–20%** | 3.5–5.6% |
+| flaky agent, all 0.70 | **9–20%** | **12–20%** | 0.7–2.2% (rev 2: 3.5–5.6%) |
 
 R1 and R2 buy their sensitivity with false blocks. R1 catches a broad −0.20
 drop with probability 0.95 against v1's 0.46. But on a suite with one noisy
@@ -82,12 +82,17 @@ The machinery's value is that its false-block rate **does not grow** as a
 team adds tasks, and that its boundary is derived rather than hand-picked.
 It is not a large win at seven tasks.
 
-**Proposed before any confirmatory run:** spec revision 3, one change —
-gate 2's K is the number of tasks in the declared suite, not the number
-eligible. This follows from simulation only; no fresh data has been seen, so
-it is design iteration, not tuning to a result. It needs a dated entry in the
-design doc, a code change in `capability.evaluate` with a test, and a rerun of
-the OC and challenge scripts. **Nothing has been changed yet.**
+**Adopted as spec revision 3** (see the design doc). After the rerun, at
+n = 8:
+- gate 2 alone false-blocks 0.4–0.8% on a flaky agent, below R3's 1.8–2.8% at
+  every K;
+- v1 as a whole is 0.7–2.2% there. At K = 5 it is marginally above R3 (2.2%
+  vs 1.8%), because v1 also carries gate 1 (1.7%), which R3 does not have;
+- detection at the design point is unchanged: one task → 0.10 is caught at
+  0.87, and → 0.25 at 0.55.
+
+Tables C1–C4 and C6 now use suite-K. C5 keeps both columns as the record of
+the comparison that motivated the revision.
 
 ---
 
@@ -113,24 +118,24 @@ Frozen v1 requires 8 trials for gate 2, so on 5-trial data it monitors nothing. 
 | all 0.95 | 7 | 8 | 0.010 | 0.003 | 0.000 | 0.000 | 0.000 | 0.000 |
 | all 0.95 | 10 | 5 | 0.018 | 0.009 | 0.001 | 0.000 | 0.000 | 0.000 |
 | all 0.95 | 10 | 8 | 0.003 | 0.004 | 0.000 | 0.000 | 0.000 | 0.000 |
-| Stage-A-like (one 0.6, rest 0.95) | 5 | 5 | 0.108 | 0.052 | 0.006 | 0.003 | 0.002 | 0.001 |
+| Stage-A-like (one 0.6, rest 0.95) | 5 | 5 | 0.108 | 0.052 | 0.006 | 0.002 | 0.002 | 0.000 |
 | Stage-A-like (one 0.6, rest 0.95) | 5 | 8 | 0.091 | 0.025 | 0.004 | 0.002 | 0.001 | 0.002 |
 | Stage-A-like (one 0.6, rest 0.95) | 7 | 5 | 0.059 | 0.053 | 0.006 | 0.001 | 0.001 | 0.000 |
 | Stage-A-like (one 0.6, rest 0.95) | 7 | 8 | 0.030 | 0.029 | 0.007 | 0.003 | 0.001 | 0.002 |
 | Stage-A-like (one 0.6, rest 0.95) | 10 | 5 | 0.043 | 0.056 | 0.007 | 0.001 | 0.000 | 0.001 |
 | Stage-A-like (one 0.6, rest 0.95) | 10 | 8 | 0.010 | 0.025 | 0.006 | 0.001 | 0.000 | 0.001 |
-| flaky agent, all 0.70 | 5 | 5 | 0.215 | 0.179 | 0.024 | 0.037 | 0.017 | 0.021 |
-| flaky agent, all 0.70 | 5 | 8 | 0.202 | 0.116 | 0.018 | 0.056 | 0.017 | 0.042 |
-| flaky agent, all 0.70 | 7 | 5 | 0.175 | 0.239 | 0.038 | 0.041 | 0.011 | 0.031 |
-| flaky agent, all 0.70 | 7 | 8 | 0.128 | 0.142 | 0.018 | 0.044 | 0.006 | 0.037 |
-| flaky agent, all 0.70 | 10 | 5 | 0.159 | 0.338 | 0.048 | 0.034 | 0.005 | 0.028 |
-| flaky agent, all 0.70 | 10 | 8 | 0.092 | 0.203 | 0.028 | 0.035 | 0.003 | 0.033 |
-| spread 0.3–0.95 | 5 | 5 | 0.200 | 0.123 | 0.014 | 0.025 | 0.014 | 0.011 |
-| spread 0.3–0.95 | 5 | 8 | 0.168 | 0.045 | 0.010 | 0.021 | 0.009 | 0.013 |
-| spread 0.3–0.95 | 7 | 5 | 0.164 | 0.174 | 0.022 | 0.021 | 0.007 | 0.013 |
-| spread 0.3–0.95 | 7 | 8 | 0.107 | 0.079 | 0.018 | 0.019 | 0.004 | 0.015 |
-| spread 0.3–0.95 | 10 | 5 | 0.167 | 0.270 | 0.038 | 0.019 | 0.004 | 0.015 |
-| spread 0.3–0.95 | 10 | 8 | 0.090 | 0.114 | 0.026 | 0.021 | 0.001 | 0.020 |
+| flaky agent, all 0.70 | 5 | 5 | 0.215 | 0.179 | 0.024 | 0.018 | 0.017 | 0.001 |
+| flaky agent, all 0.70 | 5 | 8 | 0.202 | 0.116 | 0.018 | 0.022 | 0.017 | 0.007 |
+| flaky agent, all 0.70 | 7 | 5 | 0.175 | 0.239 | 0.038 | 0.014 | 0.011 | 0.003 |
+| flaky agent, all 0.70 | 7 | 8 | 0.128 | 0.142 | 0.018 | 0.015 | 0.006 | 0.008 |
+| flaky agent, all 0.70 | 10 | 5 | 0.159 | 0.338 | 0.048 | 0.009 | 0.005 | 0.004 |
+| flaky agent, all 0.70 | 10 | 8 | 0.092 | 0.203 | 0.028 | 0.007 | 0.003 | 0.004 |
+| spread 0.3–0.95 | 5 | 5 | 0.200 | 0.123 | 0.014 | 0.015 | 0.014 | 0.002 |
+| spread 0.3–0.95 | 5 | 8 | 0.168 | 0.045 | 0.010 | 0.012 | 0.009 | 0.004 |
+| spread 0.3–0.95 | 7 | 5 | 0.164 | 0.174 | 0.022 | 0.010 | 0.007 | 0.003 |
+| spread 0.3–0.95 | 7 | 8 | 0.107 | 0.079 | 0.018 | 0.010 | 0.004 | 0.006 |
+| spread 0.3–0.95 | 10 | 5 | 0.167 | 0.270 | 0.038 | 0.009 | 0.004 | 0.005 |
+| spread 0.3–0.95 | 10 | 8 | 0.090 | 0.114 | 0.026 | 0.006 | 0.001 | 0.005 |
 
 ### C3. Detection against real regressions, baseline 0.95 everywhere (4000 draws per cell)
 
@@ -138,15 +143,15 @@ Frozen v1 requires 8 trials for gate 2, so on 5-trial data it monitors nothing. 
 |---|---|---|---|---|---|---|---|---|
 | broad −0.10 | 7 | 5 | 0.488 | 0.140 | 0.010 | 0.049 | 0.049 | 0.000 |
 | broad −0.10 | 7 | 8 | 0.505 | 0.106 | 0.002 | 0.059 | 0.058 | 0.001 |
-| broad −0.20 | 7 | 5 | 0.898 | 0.460 | 0.090 | 0.327 | 0.323 | 0.006 |
+| broad −0.20 | 7 | 5 | 0.898 | 0.460 | 0.090 | 0.326 | 0.323 | 0.006 |
 | broad −0.20 | 7 | 8 | 0.947 | 0.459 | 0.027 | 0.464 | 0.455 | 0.021 |
-| broad −0.30 | 7 | 5 | 0.988 | 0.787 | 0.258 | 0.710 | 0.706 | 0.029 |
+| broad −0.30 | 7 | 5 | 0.988 | 0.787 | 0.258 | 0.709 | 0.706 | 0.029 |
 | broad −0.30 | 7 | 8 | 0.999 | 0.835 | 0.153 | 0.869 | 0.862 | 0.115 |
 | one task → 0.50 | 7 | 5 | 0.262 | 0.423 | 0.140 | 0.024 | 0.002 | 0.022 |
 | one task → 0.50 | 7 | 8 | 0.227 | 0.529 | 0.128 | 0.099 | 0.001 | 0.099 |
 | one task → 0.25 | 7 | 5 | 0.505 | 0.821 | 0.503 | 0.190 | 0.002 | 0.189 |
 | one task → 0.25 | 7 | 8 | 0.510 | 0.876 | 0.627 | 0.546 | 0.001 | 0.546 |
-| one task → 0.10 | 7 | 5 | 0.656 | 0.958 | 0.717 | 0.461 | 0.001 | 0.461 |
+| one task → 0.10 | 7 | 5 | 0.656 | 0.958 | 0.717 | 0.461 | 0.001 | 0.460 |
 | one task → 0.10 | 7 | 8 | 0.712 | 0.946 | 0.910 | 0.866 | 0.001 | 0.865 |
 | Stage-B-like (0, 0.6, rest same) | 7 | 5 | 0.933 | 0.986 | 0.785 | 0.774 | 0.009 | 0.772 |
 | Stage-B-like (0, 0.6, rest same) | 7 | 8 | 0.971 | 0.965 | 0.954 | 0.954 | 0.006 | 0.954 |

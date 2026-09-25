@@ -1,6 +1,6 @@
 # Stage C — operating characteristics of the surface-2 dual gate
 
-2026-09-25. **No API calls, no runs.** All numbers come from
+2026-09-25, regenerated under **spec revision 3** (gate 2's K is the declared suite size). **No API calls, no runs.** All numbers come from
 `analysis/ci_v1/operating_characteristics.py`, which is deterministic and
 re-runs in about 20 s.
 
@@ -70,7 +70,8 @@ statistical one.
   - realistic profiles (all 0.95, or Stage-A-like with one noisy task):
     **≤ 0.005**;
   - the adversarial profile with task rates spread evenly over 0.3–0.95:
-    **≤ 0.027**.
+    **≤ 0.017**. It was ≤ 0.027 under revision 2's eligible-K; the drop is
+    gate 2's.
 
   In every case this is under the nominal 0.05.
 
@@ -174,23 +175,23 @@ Unchanged candidate, simulated (4000 draws per cell). P(block) for gate 1, gate 
 | all tasks 0.95 | 10 | 8 | 0.0000 | 0.0000 | 0.0000 |
 | all tasks 0.95 | 10 | 10 | 0.0003 | 0.0000 | 0.0003 |
 | Stage-A-like (one task 0.6, rest 0.95) | 5 | 5 | 0.0015 | 0.0003 | 0.0018 |
-| Stage-A-like (one task 0.6, rest 0.95) | 5 | 8 | 0.0022 | 0.0027 | 0.0050 |
+| Stage-A-like (one task 0.6, rest 0.95) | 5 | 8 | 0.0022 | 0.0025 | 0.0047 |
 | Stage-A-like (one task 0.6, rest 0.95) | 5 | 10 | 0.0015 | 0.0035 | 0.0050 |
 | Stage-A-like (one task 0.6, rest 0.95) | 7 | 5 | 0.0005 | 0.0013 | 0.0018 |
 | Stage-A-like (one task 0.6, rest 0.95) | 7 | 8 | 0.0000 | 0.0015 | 0.0015 |
-| Stage-A-like (one task 0.6, rest 0.95) | 7 | 10 | 0.0008 | 0.0020 | 0.0027 |
+| Stage-A-like (one task 0.6, rest 0.95) | 7 | 10 | 0.0008 | 0.0018 | 0.0025 |
 | Stage-A-like (one task 0.6, rest 0.95) | 10 | 5 | 0.0003 | 0.0010 | 0.0013 |
 | Stage-A-like (one task 0.6, rest 0.95) | 10 | 8 | 0.0000 | 0.0005 | 0.0005 |
-| Stage-A-like (one task 0.6, rest 0.95) | 10 | 10 | 0.0000 | 0.0018 | 0.0018 |
-| spread 0.3–0.95 | 5 | 5 | 0.0152 | 0.0115 | 0.0265 |
-| spread 0.3–0.95 | 5 | 8 | 0.0127 | 0.0118 | 0.0243 |
-| spread 0.3–0.95 | 5 | 10 | 0.0075 | 0.0085 | 0.0160 |
-| spread 0.3–0.95 | 7 | 5 | 0.0073 | 0.0163 | 0.0235 |
-| spread 0.3–0.95 | 7 | 8 | 0.0063 | 0.0138 | 0.0198 |
-| spread 0.3–0.95 | 7 | 10 | 0.0022 | 0.0110 | 0.0132 |
-| spread 0.3–0.95 | 10 | 5 | 0.0065 | 0.0143 | 0.0208 |
-| spread 0.3–0.95 | 10 | 8 | 0.0010 | 0.0143 | 0.0152 |
-| spread 0.3–0.95 | 10 | 10 | 0.0015 | 0.0217 | 0.0230 |
+| Stage-A-like (one task 0.6, rest 0.95) | 10 | 10 | 0.0000 | 0.0015 | 0.0015 |
+| spread 0.3–0.95 | 5 | 5 | 0.0152 | 0.0020 | 0.0173 |
+| spread 0.3–0.95 | 5 | 8 | 0.0127 | 0.0027 | 0.0155 |
+| spread 0.3–0.95 | 5 | 10 | 0.0075 | 0.0037 | 0.0112 |
+| spread 0.3–0.95 | 7 | 5 | 0.0073 | 0.0043 | 0.0115 |
+| spread 0.3–0.95 | 7 | 8 | 0.0063 | 0.0047 | 0.0107 |
+| spread 0.3–0.95 | 7 | 10 | 0.0022 | 0.0037 | 0.0060 |
+| spread 0.3–0.95 | 10 | 5 | 0.0065 | 0.0050 | 0.0115 |
+| spread 0.3–0.95 | 10 | 8 | 0.0010 | 0.0040 | 0.0050 |
+| spread 0.3–0.95 | 10 | 10 | 0.0015 | 0.0055 | 0.0070 |
 
 ### T4. Power of the dual gate against two kinds of regression (4000 draws per cell)
 
@@ -198,60 +199,60 @@ Baseline: every task at 0.95.
 
 | scenario | K | n | gate 1 | gate 2 | either |
 |---|---|---|---|---|---|
-| broad: every task −0.20 | 5 | 5 | 0.301 | 0.006 | 0.305 |
-| broad: every task −0.20 | 5 | 8 | 0.441 | 0.021 | 0.450 |
-| broad: every task −0.20 | 5 | 10 | 0.498 | 0.075 | 0.526 |
-| broad: every task −0.20 | 7 | 5 | 0.326 | 0.006 | 0.328 |
+| broad: every task −0.20 | 5 | 5 | 0.301 | 0.004 | 0.303 |
+| broad: every task −0.20 | 5 | 8 | 0.441 | 0.018 | 0.448 |
+| broad: every task −0.20 | 5 | 10 | 0.498 | 0.070 | 0.522 |
+| broad: every task −0.20 | 7 | 5 | 0.326 | 0.005 | 0.328 |
 | broad: every task −0.20 | 7 | 8 | 0.479 | 0.020 | 0.487 |
-| broad: every task −0.20 | 7 | 10 | 0.561 | 0.082 | 0.586 |
+| broad: every task −0.20 | 7 | 10 | 0.561 | 0.081 | 0.585 |
 | broad: every task −0.20 | 10 | 5 | 0.432 | 0.010 | 0.435 |
 | broad: every task −0.20 | 10 | 8 | 0.554 | 0.025 | 0.562 |
-| broad: every task −0.20 | 10 | 10 | 0.651 | 0.070 | 0.671 |
-| broad: every task −0.30 | 5 | 5 | 0.631 | 0.030 | 0.644 |
-| broad: every task −0.30 | 5 | 8 | 0.804 | 0.096 | 0.820 |
-| broad: every task −0.30 | 5 | 10 | 0.862 | 0.295 | 0.893 |
-| broad: every task −0.30 | 7 | 5 | 0.697 | 0.026 | 0.702 |
+| broad: every task −0.20 | 10 | 10 | 0.651 | 0.019 | 0.653 |
+| broad: every task −0.30 | 5 | 5 | 0.631 | 0.020 | 0.636 |
+| broad: every task −0.30 | 5 | 8 | 0.804 | 0.090 | 0.818 |
+| broad: every task −0.30 | 5 | 10 | 0.862 | 0.284 | 0.889 |
+| broad: every task −0.30 | 7 | 5 | 0.697 | 0.026 | 0.701 |
 | broad: every task −0.30 | 7 | 8 | 0.864 | 0.118 | 0.872 |
-| broad: every task −0.30 | 7 | 10 | 0.925 | 0.343 | 0.942 |
+| broad: every task −0.30 | 7 | 10 | 0.925 | 0.340 | 0.941 |
 | broad: every task −0.30 | 10 | 5 | 0.848 | 0.040 | 0.850 |
-| broad: every task −0.30 | 10 | 8 | 0.945 | 0.160 | 0.949 |
-| broad: every task −0.30 | 10 | 10 | 0.980 | 0.324 | 0.983 |
-| one task → 0.10 | 5 | 5 | 0.005 | 0.457 | 0.459 |
+| broad: every task −0.30 | 10 | 8 | 0.945 | 0.155 | 0.948 |
+| broad: every task −0.30 | 10 | 10 | 0.980 | 0.148 | 0.981 |
+| one task → 0.10 | 5 | 5 | 0.005 | 0.448 | 0.450 |
 | one task → 0.10 | 5 | 8 | 0.004 | 0.871 | 0.871 |
 | one task → 0.10 | 5 | 10 | 0.005 | 0.916 | 0.916 |
-| one task → 0.10 | 7 | 5 | 0.002 | 0.464 | 0.465 |
+| one task → 0.10 | 7 | 5 | 0.002 | 0.463 | 0.464 |
 | one task → 0.10 | 7 | 8 | 0.001 | 0.876 | 0.876 |
-| one task → 0.10 | 7 | 10 | 0.001 | 0.893 | 0.893 |
+| one task → 0.10 | 7 | 10 | 0.001 | 0.891 | 0.892 |
 | one task → 0.10 | 10 | 5 | 0.001 | 0.461 | 0.461 |
-| one task → 0.10 | 10 | 8 | 0.000 | 0.797 | 0.797 |
-| one task → 0.10 | 10 | 10 | 0.000 | 0.888 | 0.888 |
-| one task → 0.25 | 5 | 5 | 0.006 | 0.206 | 0.210 |
-| one task → 0.25 | 5 | 8 | 0.006 | 0.551 | 0.553 |
-| one task → 0.25 | 5 | 10 | 0.003 | 0.799 | 0.800 |
-| one task → 0.25 | 7 | 5 | 0.001 | 0.186 | 0.187 |
-| one task → 0.25 | 7 | 8 | 0.000 | 0.552 | 0.552 |
-| one task → 0.25 | 7 | 10 | 0.000 | 0.715 | 0.715 |
+| one task → 0.10 | 10 | 8 | 0.000 | 0.752 | 0.752 |
+| one task → 0.10 | 10 | 10 | 0.000 | 0.883 | 0.883 |
+| one task → 0.25 | 5 | 5 | 0.006 | 0.191 | 0.196 |
+| one task → 0.25 | 5 | 8 | 0.006 | 0.548 | 0.550 |
+| one task → 0.25 | 5 | 10 | 0.003 | 0.797 | 0.797 |
+| one task → 0.25 | 7 | 5 | 0.001 | 0.185 | 0.186 |
+| one task → 0.25 | 7 | 8 | 0.000 | 0.551 | 0.551 |
+| one task → 0.25 | 7 | 10 | 0.000 | 0.709 | 0.709 |
 | one task → 0.25 | 10 | 5 | 0.000 | 0.192 | 0.192 |
-| one task → 0.25 | 10 | 8 | 0.000 | 0.504 | 0.505 |
-| one task → 0.25 | 10 | 10 | 0.000 | 0.664 | 0.664 |
-| two tasks → 0.10 | 5 | 5 | 0.076 | 0.725 | 0.749 |
-| two tasks → 0.10 | 5 | 8 | 0.047 | 0.984 | 0.984 |
+| one task → 0.25 | 10 | 8 | 0.000 | 0.474 | 0.474 |
+| one task → 0.25 | 10 | 10 | 0.000 | 0.613 | 0.613 |
+| two tasks → 0.10 | 5 | 5 | 0.076 | 0.715 | 0.739 |
+| two tasks → 0.10 | 5 | 8 | 0.047 | 0.983 | 0.984 |
 | two tasks → 0.10 | 5 | 10 | 0.035 | 0.993 | 0.993 |
-| two tasks → 0.10 | 7 | 5 | 0.017 | 0.692 | 0.697 |
+| two tasks → 0.10 | 7 | 5 | 0.017 | 0.690 | 0.696 |
 | two tasks → 0.10 | 7 | 8 | 0.006 | 0.980 | 0.980 |
-| two tasks → 0.10 | 7 | 10 | 0.005 | 0.990 | 0.990 |
+| two tasks → 0.10 | 7 | 10 | 0.005 | 0.989 | 0.989 |
 | two tasks → 0.10 | 10 | 5 | 0.005 | 0.701 | 0.702 |
-| two tasks → 0.10 | 10 | 8 | 0.002 | 0.965 | 0.965 |
-| two tasks → 0.10 | 10 | 10 | 0.001 | 0.991 | 0.991 |
-| Stage-B-like (0, 0.6, rest untouched) | 5 | 5 | 0.043 | 0.774 | 0.784 |
-| Stage-B-like (0, 0.6, rest untouched) | 5 | 8 | 0.033 | 0.940 | 0.942 |
-| Stage-B-like (0, 0.6, rest untouched) | 5 | 10 | 0.028 | 0.925 | 0.928 |
+| two tasks → 0.10 | 10 | 8 | 0.002 | 0.940 | 0.940 |
+| two tasks → 0.10 | 10 | 10 | 0.001 | 0.990 | 0.990 |
+| Stage-B-like (0, 0.6, rest untouched) | 5 | 5 | 0.043 | 0.772 | 0.782 |
+| Stage-B-like (0, 0.6, rest untouched) | 5 | 8 | 0.033 | 0.939 | 0.941 |
+| Stage-B-like (0, 0.6, rest untouched) | 5 | 10 | 0.028 | 0.924 | 0.926 |
 | Stage-B-like (0, 0.6, rest untouched) | 7 | 5 | 0.011 | 0.765 | 0.768 |
 | Stage-B-like (0, 0.6, rest untouched) | 7 | 8 | 0.004 | 0.939 | 0.940 |
 | Stage-B-like (0, 0.6, rest untouched) | 7 | 10 | 0.005 | 0.921 | 0.922 |
 | Stage-B-like (0, 0.6, rest untouched) | 10 | 5 | 0.005 | 0.784 | 0.784 |
 | Stage-B-like (0, 0.6, rest untouched) | 10 | 8 | 0.001 | 0.946 | 0.946 |
-| Stage-B-like (0, 0.6, rest untouched) | 10 | 10 | 0.001 | 0.925 | 0.925 |
+| Stage-B-like (0, 0.6, rest untouched) | 10 | 10 | 0.001 | 0.918 | 0.918 |
 
 ### T5. Size and expected cost of the confirmatory study, K = 7
 

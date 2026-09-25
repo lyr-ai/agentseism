@@ -16,13 +16,20 @@ and resamples tasks, not runs. The two are different estimands, so this is not
 a contradiction.
 
 **Rule.** A task is *eligible* when its baseline success rate reaches the
-eligibility bar with enough valid trials and no invalid run in either arm. On
-the K eligible tasks, fixed by the baseline before any candidate run, the gate
-fires on a task when the observed drop reaches the practical threshold **and**
-a one-sided Fisher exact test gives `p <= alpha / K` (Bonferroni). A smaller
-drop that reaches `warn_threshold` without firing is a non-blocking WARNING.
-Ineligible tasks are *not monitored* and are reported as such, never silently
-dropped.
+eligibility bar with enough valid trials and no invalid run in either arm. The
+gate fires on an eligible task when the observed drop reaches the practical
+threshold **and** a one-sided Fisher exact test gives `p <= alpha / K`
+(Bonferroni). A smaller drop that reaches `warn_threshold` without firing is a
+non-blocking WARNING. Ineligible tasks are *not monitored* and are reported as
+such, never silently dropped.
+
+**K is the declared suite size** (spec revision 3). It is every task passed
+in, eligible or not, and it is fixed before any outcome is seen. Revision 2
+counted only eligible tasks, which is decided on the same baseline. A flaky
+agent then left few tasks eligible, alpha/K relaxed, and the gate loosened
+exactly where the noise was highest. See `analysis/CI_V1_BASELINE_CHALLENGE.md`
+§3. Callers must pass the whole declared suite, including tasks that produced
+no rows.
 
 At 8 trials and K >= 4 the exact-test boundary binds before the practical
 threshold does: the smallest observed drop that fires is 0.75 (8/8 -> 2/8,
@@ -38,13 +45,13 @@ from dataclasses import dataclass
 from math import comb
 
 TESTS = ("fisher_exact_one_sided",)
-MULTIPLICITY = ("bonferroni_over_eligible",)
+MULTIPLICITY = ("bonferroni_over_suite",)
 INVALID_POLICY = ("exclude_task",)
 REQUIRED = ("eligibility", "practical_threshold", "test", "alpha",
             "multiplicity", "minimum_evidence", "invalid_policy",
             "warn_threshold")
 
-DEFAULTS_ID = "capability-1"
+DEFAULTS_ID = "capability-2"
 DEFAULTS = {
     "defaults": DEFAULTS_ID,
     "independent_unit": "run_within_scenario",
@@ -53,7 +60,7 @@ DEFAULTS = {
     "practical_threshold": 0.50,
     "test": "fisher_exact_one_sided",
     "alpha": 0.05,
-    "multiplicity": "bonferroni_over_eligible",
+    "multiplicity": "bonferroni_over_suite",
     "minimum_evidence": {"trials_per_condition": 8},
     "invalid_policy": "exclude_task",
     "warn_threshold": 0.375,
@@ -127,7 +134,7 @@ def evaluate(spec: dict, tasks: dict[str, TaskCounts]) -> dict:
             eligible.append(name)
         detail[name] = d
 
-    k = len(eligible)
+    k = len(tasks)                      # the declared suite, not the eligible
     limit = alpha / k if k else None
     fired, warnings = [], []
     for name in eligible:
