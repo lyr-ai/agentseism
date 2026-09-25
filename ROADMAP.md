@@ -1,5 +1,14 @@
 # Roadmap
 
+> **Superseded as the project plan, 2026-09-20.** The current mainline is the
+> product: CI for stochastic agents, deciding whether a candidate change made an
+> agent materially worse than a compatible baseline. See
+> [`docs/DECISION-product-first.md`](docs/DECISION-product-first.md),
+> [`docs/DESIGN-regression-testing-mainline.md`](docs/DESIGN-regression-testing-mainline.md)
+> and [`docs/CONVERGENCE.md`](docs/CONVERGENCE.md).
+>
+> This is the six-week research schedule; its checkboxes track that programme, not open product work. The current roadmap is [`docs/ROADMAP-2026-09-20.md`](docs/ROADMAP-2026-09-20.md). It is retained as history and is **not** the current plan.
+
 Six weeks, four decision points. Full rationale in [DESIGN.md](DESIGN.md) §24-25.
 
 ## Week 1 — One agent · Figure 1

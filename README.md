@@ -63,9 +63,15 @@ That resolves to a complete, auditable contract —
 what gets hashed and reported. Defaults are versioned, so upgrading the tool
 cannot make a differently-resolved contract look like the same one.
 
-**Direction:** see [`docs/CONVERGENCE.md`](docs/CONVERGENCE.md) for why this is
-narrower than the repository's earlier framing, and what the earlier
-experiments contributed to it.
+**Where the plan lives.** Three documents are authoritative:
+[`docs/DECISION-product-first.md`](docs/DECISION-product-first.md) (what the
+next weeks buy), [`docs/DESIGN-regression-testing-mainline.md`](docs/DESIGN-regression-testing-mainline.md)
+(the direction) and [`docs/ROADMAP-2026-09-20.md`](docs/ROADMAP-2026-09-20.md)
+(the schedule). Root-level `DESIGN.md`, `ROADMAP.md` and
+`DESIGN-FEATURE-PROJECTION.md` describe the earlier weak-point research
+programme; they are history, and each carries a banner saying so.
+[`docs/CONVERGENCE.md`](docs/CONVERGENCE.md) explains why the scope narrowed and
+what the earlier experiments contributed.
 
 ## The problem
 

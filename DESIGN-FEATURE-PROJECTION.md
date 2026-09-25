@@ -1,6 +1,6 @@
 # AgentSeism — Execution Feature Projection & Alignment
 
-**Status:** Design Draft v0.2 (amended: §16-§17 partial order)
+**Status:** Design Draft v0.2 (amended: §16-§17 partial order) — **superseded as the project plan 2026-09-20**; retained as the V0 attribution research design. Current mainline: [`docs/DESIGN-regression-testing-mainline.md`](docs/DESIGN-regression-testing-mainline.md).
 **Scope:** V0 alignment and attribution model
 **Related:** [`DESIGN.md`](DESIGN.md)
 
