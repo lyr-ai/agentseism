@@ -27,17 +27,63 @@ So what the paid run buys is **not** "does the plumbing work". It is the one
 thing no stub can answer: whether the decision rule separates noise from a real
 regression on a real stochastic agent.
 
-## The run
+## The run — every identifier frozen
 
-| | |
+| field | value |
 |---|---|
-| branch / commit | `product/ci-v0` @ `b15db36` |
-| agent | mini-swe-agent `2.4.6`, pinned |
-| model | to be named at launch and recorded in the fingerprint |
-| tasks | 5 SWE-bench Verified instances, listed in `.agentseism/tasks.yaml` before the first call |
-| trials per condition | 5 |
-| contract | `contracts/default.yaml`, `task_success` gating, threshold 0.10, paired bootstrap over tasks |
-| evaluator | `agents/coding/swebench_evaluator.py` — deterministic, local Docker, no API cost |
+| branch | `product/ci-v0` |
+| commit | **filled in at the freeze commit below** |
+| agent | `mini-swe-agent==2.4.6` (exact pin, `pyproject.toml` extra `coding-agent`) |
+| evaluator | `agents/coding/swebench_evaluator.py`, local Docker, **no API cost** |
+| dataset | `SWE-bench/SWE-bench_Verified`, split `test` |
+| **model** | **OPEN — the one field not frozen. See "The one open field" below.** |
+| config manifest | `analysis/ci_v0/MANIFEST.sha256`, digest `972846daa4a9f732` |
+| contract | `analysis/ci_v0/contract.yaml`, sha256 `f89a7d43e0606eaa…` |
+| trials per condition | **5** |
+| baseline `step_limit` | **250** |
+| negative candidate `step_limit` | **250** (identical to baseline — that is the control) |
+| positive candidate `step_limit` | **40** (Stage B only) |
+| Stage A hard cap | **$17 and 50 invocations**, whichever comes first |
+| global hard stop | $30 |
+
+### The five tasks, chosen before any call
+
+Rule, applied mechanically and not for any property of the result: the SWE-bench
+Verified instances whose images are **already present locally**, sorted
+ascending by instance id, first five. All twelve local images are from distinct
+repositories, so the first five are too. Using local images removes a pull
+failure as a confound; it does not select for difficulty, which was never
+inspected.
+
+```text
+astropy__astropy-12907
+django__django-10097
+matplotlib__matplotlib-13989
+mwaskom__seaborn-3069
+pallets__flask-5014
+```
+
+Frozen with their problem statements in `analysis/ci_v0/tasks/`, hashed in the
+manifest above. Five scenarios is exactly the contract's
+`minimum_evidence.scenarios`, so a single unusable task drops the run below the
+minimum and yields `INSUFFICIENT_EVIDENCE` — which is the correct answer, not a
+reason to substitute a sixth.
+
+## The one open field: the model
+
+**No API credentials are configured in this environment.** `ANTHROPIC_API_KEY`,
+`OPENAI_API_KEY`, `GEMINI_API_KEY`, `DEEPSEEK_API_KEY`, `TOGETHER_API_KEY` and
+`OPENROUTER_API_KEY` are all unset, and mini-swe-agent's global config carries
+no key either. Stage A cannot start until a model and its credential are
+supplied.
+
+The model identity must be fixed **before** the first call and recorded here,
+because it enters the comparability fingerprint: a model that changed between
+the baseline and candidate arms would make them incomparable, and the contract
+would say so rather than report a regression.
+
+The cost estimates below assume a mid-priced frontier model. A cheaper model
+changes the estimate but not the design.
 
 ### Two stages, and the first one can stop the second
 
@@ -50,7 +96,8 @@ A `REGRESSION` here is a false positive and **ends the milestone**. The degraded
 arm is not run, because a detector that alarms on its own noise cannot be
 measured for sensitivity.
 
-**Stage B — positive control (25 invocations).** Only if Stage A passes.
+**Stage B — positive control (25 invocations). Requires separate approval.**
+Stage A passing does not release it; the data is reviewed first.
 Apply the frozen degradation, `step_limit` 250 → 40 in
 `agents/coding/agent_config.json`, and re-run `seism check --trials 5`.
 
@@ -58,11 +105,11 @@ Required: **REGRESSION**, with `task_success` named, an effect and an interval.
 
 ### Cost
 
-| stage | invocations | estimate |
-|---|---|---|
-| A — baseline + unchanged candidate | 50 | $5–17 |
-| B — degraded candidate | 25 | $2–8 |
-| **total if both run** | **75** | **$7–25** |
+| stage | invocations | estimate | cap |
+|---|---|---|---|
+| A — baseline + unchanged candidate | 50 | $5–17 | **$17 hard** |
+| B — degraded candidate | 25 | $2–8 | separate approval |
+| **total if both run** | **75** | **$7–25** | $30 global |
 
 Evaluation is local Docker throughout and costs nothing. Wall clock 3–5 hours;
 Stage B is faster because it truncates. No GPU, no rented host.
@@ -97,7 +144,8 @@ trial-count change, and any adjustment to the frozen degradation.
 2. **One fix-forward, total.** If a second attempt does not produce a verdict,
    the milestone is recorded as not achieved and the defect is fixed offline
    with a test that reproduces it before any further spend.
-3. **Cost passes $30.** Stop and re-cost, whatever the state.
+3. **Stage A passes $17, or 50 invocations.** Stop, whatever the state.
+   $30 remains the global stop across both stages.
 4. **Three consecutive invalid runs.** Already enforced in `run_trials`, which
    refuses to spend the rest of a batch proving an infrastructure fault.
 

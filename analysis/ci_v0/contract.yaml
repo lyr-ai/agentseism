@@ -1,0 +1,17 @@
+# The frozen CI v0 validation contract. Copied into the run directory as
+# .agentseism/contract.yaml; committed here so the run is reproducible and the
+# hash in the run card can be checked.
+#
+# {python} expands to the interpreter running seism. {runner}/{evaluator}
+# paths are rewritten at setup to absolute paths in this checkout.
+runner:
+  type: shell
+  command: "{python} AGENTSEISM_ROOT/agents/coding/swebench_runner.py --task {task_file} --out {artifact_dir}"
+  timeout: 1800
+evaluator:
+  command: "{python} AGENTSEISM_ROOT/agents/coding/swebench_evaluator.py {artifact_dir}"
+  timeout: 3600
+features:
+  task_success:
+    gate: true
+    regression_threshold: 0.10
