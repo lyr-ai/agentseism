@@ -18,6 +18,11 @@ Initiative = "https://github.com/canis-minor"
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "ruff>=0.5"]
+# The coding agent AgentSeism is validated against. Pinned exactly, not
+# floored: the agent under test is part of the comparability fingerprint, so a
+# version that moves between the baseline and candidate arms would make the two
+# sides incomparable without anything in the contract noticing.
+coding-agent = ["mini-swe-agent==2.4.6", "swebench>=2.1", "datasets"]
 
 [build-system]
 requires = ["hatchling"]
