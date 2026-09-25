@@ -32,7 +32,7 @@ regression on a real stochastic agent.
 | field | value |
 |---|---|
 | branch | `product/ci-v0` |
-| commit | **filled in at the freeze commit below** |
+| commit | `5e0ecb797818bda3d029823f29829b419f5ed4f8` (this card is one commit later; the run uses the tree at the tip) |
 | agent | `mini-swe-agent==2.4.6` (exact pin, `pyproject.toml` extra `coding-agent`) |
 | evaluator | `agents/coding/swebench_evaluator.py`, local Docker, **no API cost** |
 | dataset | `SWE-bench/SWE-bench_Verified`, split `test` |
