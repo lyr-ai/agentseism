@@ -36,15 +36,15 @@ regression on a real stochastic agent.
 | agent | `mini-swe-agent==2.4.6` (exact pin, `pyproject.toml` extra `coding-agent`) |
 | evaluator | `agents/coding/swebench_evaluator.py`, local Docker, **no API cost** |
 | dataset | `SWE-bench/SWE-bench_Verified`, split `test` |
-| **model** | **OPEN — the one field not frozen. See "The one open field" below.** |
+| model | `anthropic/claude-sonnet-5` (fallback `anthropic/claude-sonnet-4-5-20250929`, mini-swe-agent's pinned default, if litellm does not resolve it) |
 | config manifest | `analysis/ci_v0/MANIFEST.sha256`, digest `972846daa4a9f732` |
 | contract | `analysis/ci_v0/contract.yaml`, sha256 `f89a7d43e0606eaa…` |
 | trials per condition | **5** |
 | baseline `step_limit` | **250** |
 | negative candidate `step_limit` | **250** (identical to baseline — that is the control) |
 | positive candidate `step_limit` | **40** (Stage B only) |
-| Stage A hard cap | **$17 and 50 invocations**, whichever comes first |
-| global hard stop | $30 |
+| Stage A bound | **50 invocations.** The $17 estimate is withdrawn — see below |
+| global bound | 75 invocations across both stages |
 
 ### The five tasks, chosen before any call
 
@@ -105,11 +105,23 @@ Required: **REGRESSION**, with `task_success` named, an effect and an interval.
 
 ### Cost
 
-| stage | invocations | estimate | cap |
-|---|---|---|---|
-| A — baseline + unchanged candidate | 50 | $5–17 | **$17 hard** |
-| B — degraded candidate | 25 | $2–8 | separate approval |
-| **total if both run** | **75** | **$7–25** | $30 global |
+| stage | invocations | cost |
+|---|---|---|
+| A — baseline + unchanged candidate | 50 | measured, not capped |
+| B — degraded candidate | 25 | separate approval |
+| **total if both run** | **75** | reported after each stage |
+
+**The $17 estimate is withdrawn, and the reason matters.** It came from a vLLM
+run and was never grounded in Claude pricing. mini-swe-agent's registered
+SWE-bench config sets `cost_limit: 3.0` **per run**, so 50 invocations have a
+$150 ceiling — about nine times the figure the card originally carried.
+
+The bound is therefore **the invocation count, not a dollar figure**: 50 for
+Stage A, 25 for Stage B, and the cost is measured and reported rather than
+predicted. Lowering `cost_limit` to force a dollar cap was considered and
+rejected: a run that hits a cost ceiling truncates, which is exactly what the
+Stage B degradation does, so a truncating baseline would make the specificity
+control measure the cost limit instead of the agent.
 
 Evaluation is local Docker throughout and costs nothing. Wall clock 3–5 hours;
 Stage B is faster because it truncates. No GPU, no rented host.
@@ -144,8 +156,9 @@ trial-count change, and any adjustment to the frozen degradation.
 2. **One fix-forward, total.** If a second attempt does not produce a verdict,
    the milestone is recorded as not achieved and the defect is fixed offline
    with a test that reproduces it before any further spend.
-3. **Stage A passes $17, or 50 invocations.** Stop, whatever the state.
-   $30 remains the global stop across both stages.
+3. **Stage A reaches 50 invocations.** Stop and report the measured cost,
+   whatever the state. There is no dollar stop, by decision: a cost ceiling
+   that truncates runs would confound the control it is meant to protect.
 4. **Three consecutive invalid runs.** Already enforced in `run_trials`, which
    refuses to spend the rest of a batch proving an infrastructure fault.
 
