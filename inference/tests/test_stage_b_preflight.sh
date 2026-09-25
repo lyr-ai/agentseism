@@ -508,7 +508,7 @@ printf '\n──── 11. F3 launches under its own identity ────\n'
   expect_out "c145bebf3e39bc7d" "verifies F3's protocol hash"
   expect_out "a83650caeae31ff6" "verifies F3's order hash"
   expect_out "cells                              ok  3" "resolves 3 cells, not 18"
-  expect_out "pytest-dev__pytest-10051 (PREREG_F3" "uses the registered task rather than drawing one"
+  expect_out "pytest-dev__pytest-10051 (f3; registered, not drawn)" "uses the registered task rather than drawing one"
   # The report is the artifact the CLI reads, so the identity has to be in it
   # and not merely printed to a terminal nobody keeps.
   if grep -q '"experiment": "f3"' "$SANDBOX/work/state/preflight_report.json" \
