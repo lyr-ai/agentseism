@@ -12,7 +12,9 @@ label an infra failure, a missing patch or a patch that did not apply. That
 refusal is the point: those are not correctness outcomes, and a scorer that
 turned them into `FAIL` would report an infrastructure problem as a regression.
 Here a refusal becomes `invalid`, which AgentSeism counts separately and never
-scores as a failure.
+scores as a failure. The field is `invalid_reason`, which is what `run_trials`
+reads -- a diagnosis under any other key is dropped, and the operator sees an
+invalid run with no explanation.
 
 An empty patch is scored, not refused: an agent that submitted nothing failed
 the task. Only the harness being unable to judge is invalid.
@@ -21,6 +23,7 @@ the task. Only the harness being unable to judge is invalid.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -35,10 +38,11 @@ from experiments.coding.c2h_checker import (  # noqa: E402
 
 DATASET = "SWE-bench/SWE-bench_Verified"
 SPLIT = "test"
+MODEL_NAME = "agentseism"
 
 
 def evaluate(artifact_dir: Path) -> dict:
-    run = json.loads((artifact_dir / "run.json").read_text())
+    run = json.loads((artifact_dir / "agent_run.json").read_text())
     instance = run["instance_id"]
     patch = (artifact_dir / "patch.diff").read_text()
 
@@ -47,10 +51,10 @@ def evaluate(artifact_dir: Path) -> dict:
         preds = tmp / "preds.jsonl"
         preds.write_text(json.dumps({
             "instance_id": instance,
-            "model_name_or_path": "agentseism",
+            "model_name_or_path": MODEL_NAME,
             "model_patch": patch,
         }) + "\n")
-        run_id = f"agentseism_{instance}"
+        run_id = f"agentseism_{instance}_{os.getpid()}"
         reports = tmp / "reports"
         reports.mkdir()
         proc = subprocess.run(
@@ -60,18 +64,26 @@ def evaluate(artifact_dir: Path) -> dict:
              "--max_workers", "1", "--timeout", "1800",
              "--report_dir", str(reports)],
             capture_output=True, text=True, timeout=3600)
-        found = sorted(reports.rglob("*.json"))
-        if not found:
+
+        # The **per-instance** report, not the run-level summary `--report_dir`
+        # receives. The summary carries `resolved_ids` and has no entry keyed by
+        # the instance, so reading it yields "report has no entry for ..." -- the
+        # same mistake this project already made once, on a rented host.
+        # The harness writes this tree relative to the working directory.
+        per_instance = (Path("logs/run_evaluation") / run_id / MODEL_NAME
+                        / instance / "report.json")
+        if not per_instance.is_file():
             return {"invalid": True,
-                    "reason": "the harness produced no report",
+                    "invalid_reason": f"no per-instance report at {per_instance}",
                     "stderr": proc.stderr[-800:]}
-        report = json.loads(found[0].read_text())
+        report = json.loads(per_instance.read_text())
 
     try:
         label = label_from_report(report, instance)
     except UnlabelledDonor as exc:
         # Not a correctness verdict. Invalid, never a failure.
-        return {"invalid": True, "reason": str(exc), "instance_id": instance}
+        return {"invalid": True, "invalid_reason": str(exc),
+                "instance_id": instance}
 
     return {"success": int(label == "PASS"),
             "instance_id": instance,
@@ -85,7 +97,7 @@ def main(argv=None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     if len(argv) != 1:
         print(json.dumps({"invalid": True,
-                          "reason": "usage: swebench_evaluator.py <artifact_dir>"}))
+                          "invalid_reason": "usage: swebench_evaluator.py <dir>"}))
         return 2
     d = Path(argv[0])
     try:
@@ -94,7 +106,7 @@ def main(argv=None) -> int:
         # stdout stays JSON even on failure: the contract says anything else is
         # invalid, and a traceback on stdout would be read as a scoring result.
         print(json.dumps({"invalid": True,
-                          "reason": f"{type(exc).__name__}: {exc}"}))
+                          "invalid_reason": f"{type(exc).__name__}: {exc}"}))
         return 1
     return 0
 

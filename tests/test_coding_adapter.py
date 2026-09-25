@@ -76,7 +76,7 @@ def _artifact(tmp_path, patch="diff --git a b\n", exit_status="Submitted"):
     d = tmp_path / "art"
     d.mkdir()
     (d / "patch.diff").write_text(patch)
-    (d / "run.json").write_text(json.dumps(
+    (d / "agent_run.json").write_text(json.dumps(
         {"instance_id": "pytest-dev__pytest-10051", "exit_status": exit_status,
          "step_limit": 250}))
     return d
@@ -90,6 +90,27 @@ def test_a_resolved_report_is_success_one(tmp_path, monkeypatch):
     # contract requires rather than the verdict.
     assert out.stdout.strip().startswith("{")
     json.loads(out.stdout)
+
+
+def test_the_runner_does_not_write_run_json(tmp_path):
+    """AgentSeism writes its own RunResult to `run.json` in the same directory
+    after the evaluator returns. A runner using that name loses its metadata,
+    silently, one trial at a time."""
+    src = (ROOT / "agents/coding/swebench_runner.py").read_text()
+    assert '"run.json"' not in src
+    assert '"agent_run.json"' in src
+
+
+def test_invalid_reasons_use_the_key_the_harness_reads(tmp_path):
+    """`run_trials` reads `invalid_reason`. A diagnosis under `reason` is
+    dropped on the floor and the operator sees an invalid run with no
+    explanation -- which is exactly what happened on the first wiring."""
+    src = (ROOT / "agents/coding/swebench_evaluator.py").read_text()
+    assert '"reason"' not in src
+    assert '"invalid_reason"' in src
+    out = subprocess.run([sys.executable, str(ROOT / "agents/coding/swebench_evaluator.py")],
+                         capture_output=True, text=True)
+    assert "invalid_reason" in json.loads(out.stdout)
 
 
 def test_an_unlabelled_report_becomes_invalid_not_a_failure(tmp_path, monkeypatch):
@@ -126,7 +147,8 @@ def test_stdout_stays_json_even_when_the_evaluator_throws(tmp_path):
 def test_usage_error_is_also_json(tmp_path):
     out = subprocess.run([sys.executable, str(ROOT / "agents/coding/swebench_evaluator.py")],
                          capture_output=True, text=True)
-    assert json.loads(out.stdout)["invalid"] is True
+    body = json.loads(out.stdout)
+    assert body["invalid"] is True and "invalid_reason" in body
 
 
 # ── the pin is real ──

@@ -15,7 +15,14 @@ because the thing under test is a *repository change*. A pull request that cuts
 Writes into the artifact directory:
 
     patch.diff      the agent's submission, empty if it produced none
-    run.json        instance, exit status, step limit, model, timings
+    agent_run.json  instance, exit status, step limit, model, timings
+
+Not `run.json`: AgentSeism writes its own `RunResult` under that name into the
+same directory after the evaluator returns, so a runner that used it would have
+its metadata silently overwritten.
+
+Prompts are mini-swe-agent's registered SWE-bench templates; only `step_limit`
+and the model are taken from `agent_config.json`.
 
 It scores nothing. Whether the patch is correct is the evaluator's question,
 answered separately and deterministically.
@@ -59,9 +66,24 @@ def main(argv=None) -> int:
     out.mkdir(parents=True, exist_ok=True)
     cfg = json.loads(CONFIG.read_text())
 
+    import minisweagent
+    import yaml
     from minisweagent.agents.default import DefaultAgent
     from minisweagent.environments.docker import DockerEnvironment
     from minisweagent.models.litellm_model import LitellmModel
+
+    # The prompts come from mini-swe-agent's own SWE-bench config, not from
+    # here. Writing our own system and instance templates would change what the
+    # agent is while claiming to measure a step-limit change, and the prompt is
+    # part of the comparability fingerprint.
+    bench = yaml.safe_load(
+        (Path(minisweagent.__file__).parent
+         / "config/benchmarks/swebench.yaml").read_text())
+    agent_config = dict(bench.get("agent", {})) | {
+        "step_limit": int(cfg["step_limit"]),
+        "mode": cfg.get("mode", "yolo"),
+        "confirm_exit": False,
+    }
 
     instance = task["instance_id"]
     image = task.get("image") or image_for(instance)
@@ -72,11 +94,7 @@ def main(argv=None) -> int:
         agent = DefaultAgent(
             LitellmModel(model_name=cfg["model"],
                          model_kwargs={"drop_params": True}),
-            env,
-            step_limit=int(cfg["step_limit"]),
-            mode=cfg.get("mode", "yolo"),
-            confirm_exit=False,
-        )
+            env, **agent_config)
         result = agent.run(task=task["problem_statement"])
         submission = result.get("submission") or ""
         exit_status = str(result.get("exit_status") or "")
@@ -84,7 +102,7 @@ def main(argv=None) -> int:
         env.cleanup()
 
     (out / "patch.diff").write_text(submission)
-    (out / "run.json").write_text(json.dumps({
+    (out / "agent_run.json").write_text(json.dumps({
         "instance_id": instance,
         "image": image,
         "exit_status": exit_status,
