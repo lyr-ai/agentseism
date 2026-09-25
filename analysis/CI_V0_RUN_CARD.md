@@ -229,3 +229,48 @@ not counted in that bound and are never part of the statistical sample.
 
 If attempt 2 also ends without a verdict, the milestone is recorded as not
 achieved, as stop condition 2 already says.
+
+## Stage A result, attempt 2 — 2026-09-25
+
+Ran from `.runs/stageA` at `7a3d293`, from 2026-09-25 17:38:40Z to
+about 21:28Z, under `caffeinate`. It finished without interruption. The
+decision rule is the one frozen above. Nothing was read or changed while it
+ran.
+
+**Verdict: PASS** ("no gating feature regressed", no warnings).
+
+| | value |
+|---|---|
+| task_success, baseline → candidate | 0.92 → 0.88 |
+| paired effect [95% interval] | −0.04 [−0.12, +0.00], bootstrap over 5 tasks |
+| invalid runs | 0 / 50 (baseline 25/25 valid, candidate 25/25 valid) |
+| invocations | 50 (25 baseline + 25 unchanged candidate) |
+| cost | $13.07 (baseline $6.96), $25 stop not reached |
+| comparability | precheck passed before the first candidate call; contract `6e9aa552c90a2cda` |
+| baseline file | `baselines/main.json` sha256 `373abf2a57e4b288…` |
+| report file | `runs/last-report.json` sha256 `7fc6b240c3c44bf5…` |
+
+Per-task outcomes (1 = resolved), trials 0–4:
+
+| task | baseline | unchanged candidate |
+|---|---|---|
+| astropy__astropy-12907 | 1 1 1 1 1 | 1 1 1 1 1 |
+| django__django-10097 | 1 1 1 1 1 | 1 1 1 1 1 |
+| matplotlib__matplotlib-13989 | 1 1 1 1 1 | 1 1 1 1 1 |
+| mwaskom__seaborn-3069 | 0 1 1 1 0 | 1 0 0 1 0 |
+| pallets__flask-5014 | 1 1 1 1 1 | 1 1 1 1 1 |
+
+**What it shows, and how far that goes.** On 50 real executions of a
+stochastic coding agent, an unchanged candidate showed natural outcome
+variation (seaborn 3/5 → 2/5) and was not called a regression. That is the
+specificity half of acceptance. It is narrow evidence. Four of the five tasks
+sat at the ceiling in both arms, so the noise the rule absorbed came almost
+entirely from one task. The PASS does not show specificity under broader or
+larger per-task variance.
+
+Cost per run averaged $0.26, against the probe's $0.0995. The single-task
+probe underestimated the five-task mix by about 2.6×. The stop was never at
+risk, and nothing about the design depended on the estimate.
+
+**Stage B has not been run.** It still needs separate approval. Nothing in the
+Stage B rows above has been changed.
