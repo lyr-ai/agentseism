@@ -57,6 +57,16 @@ class Spec:
     no_new_block_usd: float
     absolute_limit_usd: float
     host_wall_clock_seconds: int | None = None
+    experimental_evidence: bool = True
+    """False for an execution namespace that is not an experiment.
+
+    Stamped on every artifact rather than asserted in a directory name: a file
+    that says what it is survives being copied out of the directory that was
+    supposed to explain it.
+    """
+    registered_task: str | None = None
+    """Set when the task is registered rather than drawn, which also means the
+    preflight must pull it explicitly -- the draw is where pulls happen."""
 
     @property
     def cell_count(self) -> int:

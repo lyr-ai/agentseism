@@ -144,7 +144,9 @@ def test_there_is_exactly_one_runner():
     assert not list(src.glob("f3_pilot*.py"))
     assert not list(src.glob("f3_backend*.py"))
     assert not list(src.glob("f3_real_backend*.py"))
-    assert pilot.SPECS == {"pilot": P.SPEC, "f3": F.SPEC}
+    import agentseism.engineering_protocol as E
+    assert pilot.SPECS == {"pilot": P.SPEC, "f3": F.SPEC,
+                           "engineering": E.SPEC}
 
 
 # ── the module agrees with the registration document ──
@@ -398,7 +400,8 @@ def test_the_draw_sizing_constants_are_unreachable_under_f3():
     """Category 3. `TASKS_WANTED=3` is the pilot's draw; F3 registers its task
     and returns from `draw_tasks` before any of those checks run."""
     src = _script()
-    f3_branch = src.split('if [ "$EXPERIMENT" = "f3" ]; then', 1)[1]
+    # keyed on having a registered task now, not on being F3
+    f3_branch = src.split('if [ -n "$EXP_TASK" ]; then', 1)[1]
     early_return = f3_branch.split("return 0", 1)[0]
     assert "TASKS_WANTED" not in early_return
-    assert 'printf \'%s\\n\' "$F3_TASK" > "$drawn"' in early_return
+    assert 'printf \'%s\\n\' "$EXP_TASK" > "$drawn"' in early_return

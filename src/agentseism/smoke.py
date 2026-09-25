@@ -221,7 +221,8 @@ def main(argv=None) -> int:
     ap.add_argument("--vllm-pid", default="")
     ap.add_argument("--dependency-lock-sha256", default="")
     ap.add_argument("--serving-config-sha256", default="")
-    ap.add_argument("--experiment", choices=("pilot", "f3"), default="pilot",
+    ap.add_argument("--experiment",
+                    choices=("pilot", "f3", "engineering"), default="pilot",
                     help="the registration this smoke is run for; decides the "
                          "identity stamped on the artifact")
     args = ap.parse_args(argv)

@@ -92,7 +92,7 @@ def main(argv=None) -> int:
                          "superseded; requires --reason")
     ap.add_argument("--reason", default="")
     ap.add_argument("--cells-in-block", type=int, default=0)
-    ap.add_argument("--experiment", choices=("pilot", "f3"), default="pilot",
+    ap.add_argument("--experiment", choices=tuple(SPECS), default="pilot",
                     help="whose registered thresholds this reading is "
                          "checked against")
     args = ap.parse_args(argv)

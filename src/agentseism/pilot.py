@@ -23,12 +23,15 @@ from pathlib import Path
 
 os.environ.setdefault("MSWEA_COST_TRACKING", "ignore_errors")
 
-from agentseism import f3_protocol, pilot_protocol as P  # noqa: E402
+from agentseism import (  # noqa: E402
+    engineering_protocol, f3_protocol, pilot_protocol as P,
+)
 from agentseism.budget import (  # noqa: E402
     Budget, BudgetStop, RunLog, session_fingerprint, write_atomic,
 )
 
-SPECS = {"pilot": P.SPEC, "f3": f3_protocol.SPEC}
+SPECS = {"pilot": P.SPEC, "f3": f3_protocol.SPEC,
+         "engineering": engineering_protocol.SPEC}
 """The registrations this runner can execute.
 
 Both run the *same* code below. A second runner would have given F3 its
@@ -68,7 +71,11 @@ def artifact(cell: dict, result: dict, identity: dict, synthetic: bool,
     """
     return {
         "schema_version": P.SCHEMA_VERSION,
+        "experiment": spec.name,
         "protocol_hash": spec.protocol_hash, "order_hash": spec.order_hash,
+        # Stamped on the file, not implied by the directory: a copy that
+        # leaves `data/runs/engineering/` still says what it is.
+        "experimental_evidence": spec.experimental_evidence,
         "synthetic": synthetic,
         "order_index": cell["order_index"], "replicate": cell["replicate"],
         "task": cell["task"], "arm": cell["arm"],
@@ -224,6 +231,7 @@ def run_pilot(out: Path, backend, task_ids: list[str], synthetic: bool,
                                             for v in validity.values())
     report = {
         "experiment": spec.name,
+        "experimental_evidence": spec.experimental_evidence,
         "state": (f"complete_{spec.cell_count}" if complete
                   else "censored_feasibility_run"),
         "verdict_allowed": False,     # always: this is a feasibility pilot
@@ -405,15 +413,15 @@ def main(argv=None) -> int:
     ap.add_argument("--preflight-report",
                     help="verified READY report that binds the real backend")
     ap.add_argument("--tasks", nargs="*", default=None)
-    ap.add_argument("--experiment", choices=("pilot", "f3"), default="pilot",
+    ap.add_argument("--experiment", choices=tuple(SPECS), default="pilot",
                     help="which registration to execute; selects the "
                          "protocol and order hashes stamped on evidence")
     args = ap.parse_args(argv)
     out = Path(args.out)
     spec = SPECS[args.experiment]
-    if args.experiment == "f3" and args.tasks is None:
-        # F3 registered its single task; it is not drawn on the host.
-        args.tasks = [f3_protocol.TASK]
+    if spec.registered_task and args.tasks is None:
+        # Registered rather than drawn, so the host does not select it.
+        args.tasks = [spec.registered_task]
 
     if args.resolve_only:
         cells = spec.verify(args.tasks)

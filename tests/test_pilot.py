@@ -323,6 +323,8 @@ class _OneCellSpec:
     replicates = 1
     cell_count = 1
     thresholds = P.SPEC.thresholds
+    experimental_evidence = P.SPEC.experimental_evidence
+    registered_task = P.SPEC.registered_task
 
     def __init__(self, cell):
         self._cell = cell

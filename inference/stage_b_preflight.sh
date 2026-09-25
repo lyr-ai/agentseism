@@ -40,7 +40,21 @@ F3_PROTOCOL_HASH="c145bebf3e39bc7d"
 F3_ORDER_HASH="a83650caeae31ff6"
 F3_EXPECTED_CELLS=3
 F3_TASK="pytest-dev__pytest-10051"
-EXPECTED_TESTS=817
+
+# `engineering` is an execution namespace, not a third experiment: one cell,
+# `experimental_evidence: false`, its own directory. Its billing origin is
+# deliberately the *same* $16.88 the paid validation activity is already
+# anchored to -- separating execution identity must not reset spend
+# accounting, or the provenance fix smuggles in a budget reset.
+ENG_PROTOCOL_HASH="59187ce440a25fe7"
+ENG_ORDER_HASH="2140f30ac3768b4d"
+ENG_EXPECTED_CELLS=1
+ENG_TASK="pytest-dev__pytest-10051"
+ENG_BASELINE_USD="16.88"
+ENG_BASELINE_CURRENCY="USD"
+ENG_BASELINE_PERIOD="September 2026"
+ENG_RUN_LOG="data/runs/engineering/run.jsonl"
+EXPECTED_TESTS=834
 EXPECTED_SKIPPED=23
 # The Docker integration tests are collected but skipped unless
 # AGENTSEISM_DOCKER_TESTS is set: preflight must not perform an unregistered
@@ -177,7 +191,8 @@ select_experiment() {
       EXP_BASELINE_USD="$BASELINE_USD"
       EXP_BASELINE_PERIOD="$BASELINE_PERIOD"
       EXP_BASELINE_CURRENCY="$BASELINE_CURRENCY"
-      EXP_RUN_LOG_SRC="$PILOT_RUN_LOG" ;;
+      EXP_RUN_LOG_SRC="$PILOT_RUN_LOG"
+      EXP_TASK="" ;;
     f3)
       EXP_PROTOCOL_HASH="$F3_PROTOCOL_HASH"
       EXP_ORDER_HASH="$F3_ORDER_HASH"
@@ -185,8 +200,18 @@ select_experiment() {
       EXP_BASELINE_USD="$F3_BASELINE_USD"
       EXP_BASELINE_PERIOD="$F3_BASELINE_PERIOD"
       EXP_BASELINE_CURRENCY="$F3_BASELINE_CURRENCY"
-      EXP_RUN_LOG_SRC="$F3_RUN_LOG" ;;
-    *) die "unknown experiment '$EXPERIMENT'; expected pilot or f3" 64 ;;
+      EXP_RUN_LOG_SRC="$F3_RUN_LOG"
+      EXP_TASK="$F3_TASK" ;;
+    engineering)
+      EXP_PROTOCOL_HASH="$ENG_PROTOCOL_HASH"
+      EXP_ORDER_HASH="$ENG_ORDER_HASH"
+      EXP_CELLS="$ENG_EXPECTED_CELLS"
+      EXP_BASELINE_USD="$ENG_BASELINE_USD"
+      EXP_BASELINE_PERIOD="$ENG_BASELINE_PERIOD"
+      EXP_BASELINE_CURRENCY="$ENG_BASELINE_CURRENCY"
+      EXP_RUN_LOG_SRC="$ENG_RUN_LOG"
+      EXP_TASK="$ENG_TASK" ;;
+    *) die "unknown experiment '$EXPERIMENT'; expected pilot, f3 or engineering" 64 ;;
   esac
   # One directory per experiment. `$WORK/pilot` is unchanged for the pilot;
   # F3 gets `$WORK/f3`, so neither can resume from or overwrite the other's
@@ -657,21 +682,20 @@ PY
     || die "$DATASET has $n instances, expected $EXPECTED_UNIVERSE -- the candidate set changed and the draw is not the registered one"
   ok "universe" "$n instances  sha $(sha_of "$universe" | cut -c1-16)…"
 
-  # F3 registered its single task rather than drawing one, so there is nothing
-  # to select -- but the id still has to exist in the universe, because a
-  # registration naming an instance the dataset does not contain is a
-  # registration that cannot run.
-  if [ "$EXPERIMENT" = "f3" ]; then
-    grep -qx "$F3_TASK" "$universe" \
-      || die "the registered F3 task $F3_TASK is not in $DATASET"
-    printf '%s\n' "$F3_TASK" > "$drawn"
+  # A registered task is not drawn, so there is nothing to select -- but the
+  # id still has to exist in the universe, because naming an instance the
+  # dataset does not contain is a plan that cannot run.
+  if [ -n "$EXP_TASK" ]; then
+    grep -qx "$EXP_TASK" "$universe" \
+      || die "the registered $EXPERIMENT task $EXP_TASK is not in $DATASET"
+    printf '%s\n' "$EXP_TASK" > "$drawn"
     # The image name is built by the project's own `image_for`, not restated
     # here: a second formatter is a second thing that can disagree with the
     # digests frozen in the next step.
     local f3_image
     f3_image="$(PYTHONPATH=src:. "$WORK/.venv-eval/bin/python" -c \
-      "from agentseism.task_draw import image_for; print(image_for('$F3_TASK'))")" \
-      || die "cannot resolve the image name for $F3_TASK"
+      "from agentseism.task_draw import image_for; print(image_for('$EXP_TASK'))")" \
+      || die "cannot resolve the image name for $EXP_TASK"
     # And pull it. The pilot's draw pulls every candidate as a side effect of
     # testing pullability, so returning early here skipped the only pull on
     # the F3 path: step 8 then had nothing to inspect and the preflight died
@@ -679,17 +703,17 @@ PY
     # pull flags stay in one place.
     PYTHONPATH=src:. "$WORK/.venv-eval/bin/python" -c \
       "import sys; from agentseism.task_draw import docker_pull;
-sys.exit(0 if docker_pull('$F3_TASK', $MIN_DISK_GB) else 1)" \
-      || die "the registered F3 image did not pull: $f3_image"
+sys.exit(0 if docker_pull('$EXP_TASK', $MIN_DISK_GB) else 1)" \
+      || die "the registered $EXPERIMENT image did not pull: $f3_image"
     ok "registered image" "$f3_image (pulled)"
     printf 'instance_id\trepository\timage\treason\n' > "$tsv"
     # `selected` is the reason column's value for a row later steps consume;
     # `registered` records *how* it was chosen. Step 8 reads both, so the
     # distinction stays visible in the log instead of being flattened away.
     printf '%s\t%s\t%s\tregistered\n' \
-      "$F3_TASK" "${F3_TASK%%__*}" "$f3_image" >> "$tsv"
+      "$EXP_TASK" "${EXP_TASK%%__*}" "$f3_image" >> "$tsv"
     mark_done draw
-    note "registered task" "$F3_TASK (PREREG_F3 §4; not drawn)"
+    note "registered task" "$EXP_TASK ($EXPERIMENT; registered, not drawn)"
     cd - >/dev/null
     return 0
   fi
