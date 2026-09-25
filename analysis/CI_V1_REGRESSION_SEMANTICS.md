@@ -17,6 +17,34 @@ was designed after both results were seen. Its agreement with them is
 consistency by construction, not validation. Validation is the confirmatory
 study in §6, on tasks the rule has never seen.
 
+## Method freeze and protocol amendment — 2026-09-25, before any Stage C run
+
+**v1 is frozen at `bdd3f93`.** Every Stage C arm checks before its first call
+that `src/` and `agents/coding/` are byte-identical to that commit. From here
+on, no method code, threshold, eligibility, warning or multiplicity changes.
+Near-misses, apparent conservatism and anything else that looks off are
+**recorded, never acted on**. Any change means a v2 with a new study.
+
+**Arm order and spending** (amends §7, which listed the arms without an
+order). Each checkpoint is approved separately, after the previous one is
+reported.
+
+1. **Baseline.** 7 × 8 = 56 runs. Afterwards only the following is read and
+   reported:
+   - per-task success counts and eligibility;
+   - step counts and the step-40 and step-15 predictions derived from them;
+   - validity;
+   - cost, and the projection against the $60 stop.
+2. **Null.** 56 runs, unchanged config. It runs second on purpose: a
+   REGRESSION here is F1, and the study stops before any money is spent on a
+   degraded arm.
+3. **Step 40.** 56 runs. Only if the baseline predicted collapse on at least
+   one eligible task. Attacks gate 2 (F3, F4).
+4. **Step 15.** 56 runs. Attacks gate 1 (F2).
+
+Study configuration: `analysis/ci_v1/stageC/`, with the contract, the seven
+task files, `tasks.yaml` and `MANIFEST.sha256`.
+
 ## Revision 3 — 2026-09-25: gate 2's K is the declared suite size
 
 One change: the Bonferroni family for gate 2 is **every task in the declared
