@@ -23,6 +23,12 @@ that cannot express them.
 * `study_mode: feasibility` with `verdict_authority: descriptive_only` marks a
   contract that must not produce a release verdict — the pilot cannot
   accidentally emit one on three tasks.
+* An outcome gate may add a `capability_regression` block (surface-2): a
+  second, per-task endpoint beside the population one. See `capability.py`.
+  It fires REGRESSION on its own evidence, even when the population gate is
+  below minimum evidence or stopped on invalid runs elsewhere, because a task
+  that fired had no invalid run by construction. A contract without the block
+  decides exactly as before.
 
 Computes verdicts from supplied measurements. Runs no agent, loads no model,
 starts no container.
@@ -34,6 +40,8 @@ import hashlib
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from agentseism import capability as cap
 
 PROTOCOL_VERSION = 1
 
@@ -177,6 +185,13 @@ def validate(raw: dict, path: str | None = None) -> Contract:
         if gate == "true" and f.get("role") != "outcome":
             p.append(f"{name}: gate 'true' is reserved for role 'outcome'; "
                      "only an outcome feature may raise REGRESSION")
+        if "capability_regression" in f:
+            if gate != "true" or f.get("effect") != "risk_difference" \
+                    or f.get("regression_direction") != "decrease":
+                p.append(f"{name}: capability_regression requires gate true, "
+                         "effect risk_difference and direction decrease; it "
+                         "is a per-task success-rate endpoint")
+            p += cap.validate_spec(name, f["capability_regression"])
 
     diags = raw.get("diagnostics") or {}
     for name, d in diags.items():
@@ -219,6 +234,9 @@ class Measurement:
     ci_high: float
     evidence: dict = field(default_factory=dict)   # matches minimum_evidence keys
     invalid: int = 0
+    # Per-task counts for the capability gate. Required only when the feature
+    # declares `capability_regression`; ignored otherwise.
+    per_task: dict[str, cap.TaskCounts] | None = None
 
 
 def _regressed(f: dict, m: Measurement) -> bool:
@@ -288,11 +306,24 @@ def decide(contract: Contract, fingerprint_baseline: dict,
                              for u in unknown])
 
     regressed, insufficient, warnings, stopped = [], [], [], []
+    capability: dict[str, dict] = {}
     for name, f in contract.features.items():
         gate = _gate(f)
         if gate == "false" or name not in measurements:
             continue
         m = measurements[name]
+        if "capability_regression" in f:
+            if m.per_task is None:
+                raise ValueError(f"{name} declares capability_regression; "
+                                 "its measurement must carry per_task counts")
+            capability[name] = cap.evaluate(f["capability_regression"],
+                                            m.per_task)
+            if capability[name]["fired"]:
+                # Task-level evidence stands on its own: a fired task had no
+                # invalid run and full trials. The population gate's stop and
+                # minimum-evidence rules are about the population estimand.
+                regressed.append(name)
+                continue
         if m.invalid and f.get("invalid_policy") == "stop":
             stopped.append(name)
         if gate == "true":
@@ -305,30 +336,32 @@ def decide(contract: Contract, fingerprint_baseline: dict,
         elif gate == "warning" and _sufficient(f, m) and _regressed(f, m):
             warnings.append(name)
 
-    if stopped:
-        return {"verdict": "INSUFFICIENT_EVIDENCE", "invalid_stop": stopped,
-                "insufficient": insufficient, "warnings": warnings, "rca": False,
-                "reason": "invalid runs on a feature whose policy is 'stop': "
-                          + ", ".join(stopped), **prov}
+    extra = {"capability": capability} if capability else {}
 
     fires = (bool(regressed) if contract.aggregation == "any"
              else bool(regressed) and len(regressed) == len(contract.gating))
+    capability_fired = any(c["fired"] for c in capability.values())
+    if stopped and not (capability_fired and fires):
+        return {"verdict": "INSUFFICIENT_EVIDENCE", "invalid_stop": stopped,
+                "insufficient": insufficient, "warnings": warnings, "rca": False,
+                "reason": "invalid runs on a feature whose policy is 'stop': "
+                          + ", ".join(stopped), **extra, **prov}
 
     if fires:
         return {"verdict": "REGRESSION", "regressed": regressed,
                 "warnings": warnings, "insufficient": insufficient, "rca": True,
                 "reason": "gating outcome feature(s) regressed: "
-                          + ", ".join(regressed), **prov}
+                          + ", ".join(regressed), **extra, **prov}
     if insufficient:
         return {"verdict": "INSUFFICIENT_EVIDENCE", "insufficient": insufficient,
                 "warnings": warnings, "rca": False,
                 "reason": "gating feature(s) below minimum evidence: "
-                          + ", ".join(insufficient), **prov}
+                          + ", ".join(insufficient), **extra, **prov}
     changed = sorted(diagnostic_changed or [])
     if changed:
         return {"verdict": "PASS_WITH_CHANGE", "diagnostic_changed": changed,
                 "warnings": warnings, "rca": False,
                 "reason": "outcomes held; diagnostics moved: " + ", ".join(changed),
-                **prov}
+                **extra, **prov}
     return {"verdict": "PASS", "warnings": warnings, "rca": False,
-            "reason": "no gating feature regressed", **prov}
+            "reason": "no gating feature regressed", **extra, **prov}

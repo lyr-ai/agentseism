@@ -211,6 +211,24 @@ def _rates(results: list[dict], key: str) -> dict[str, list[float]]:
     return by
 
 
+def _task_counts(base: list[dict], cand: list[dict], key: str) -> dict:
+    """Valid successes and trials per task in both arms, with invalid runs
+    counted across both. The capability gate excludes a task with any invalid
+    run rather than scoring around it."""
+    from agentseism.capability import TaskCounts
+    acc: dict[str, list[int]] = {}
+    for arm, rows in ((0, base), (1, cand)):
+        for r in rows:
+            a = acc.setdefault(r["task"], [0, 0, 0, 0, 0])
+            v = (r.get("outcome") or {}).get(key)
+            if r.get("invalid") or v is None:
+                a[4] += 1
+                continue
+            a[2 * arm] += int(float(v) >= 1)
+            a[2 * arm + 1] += 1
+    return {t: TaskCounts(*a) for t, a in acc.items()}
+
+
 def _paired_bootstrap(base: dict[str, list[float]], cand: dict[str, list[float]],
                       n: int = 2000, seed: int = 0) -> tuple[float, float, float]:
     """Resample tasks, not runs.
@@ -256,7 +274,9 @@ def _measure(contract, baseline: dict, candidate: list[dict], tasks: list[str],
             evidence={"scenarios": len(set(b) & set(c)),
                       "trials_per_condition": trials,
                       "eligible_scenarios": len(set(b) & set(c))},
-            invalid=sum(1 for r in candidate if r.get("invalid")))
+            invalid=sum(1 for r in candidate if r.get("invalid")),
+            per_task=(_task_counts(baseline["results"], candidate, key)
+                      if "capability_regression" in f else None))
         import statistics as st
         detail[name] = {
             "baseline": st.mean([st.mean(v) for v in b.values()]),
@@ -319,6 +339,7 @@ def cmd_check(args) -> int:
     invalid = sum(1 for r in rows_src if r.get("invalid"))
     if invalid:
         ev_lines.append(f"**{invalid} invalid run(s)** — not scored as failures.")
+    ev_lines += _capability_lines(v.get("capability") or {})
     out = render(v, rows, ev_lines)
     _atomic(root / "runs" / "last-report.md", out)
     _atomic(root / "runs" / "last-report.json",
@@ -327,6 +348,28 @@ def cmd_check(args) -> int:
                        indent=2, sort_keys=True, default=str))
     print(out)
     return 1 if v["verdict"] == "REGRESSION" else 0
+
+
+def _capability_lines(capability: dict) -> list[str]:
+    """One block per feature. States what the gate can detect, because at the
+    frozen settings it detects collapse, not every severe drop."""
+    out = []
+    for name, c in capability.items():
+        state = "FAIL" if c["fired"] else "PASS"
+        lim = (f"per-task limit p <= {c['alpha_per_task']:.4f} over "
+               f"K={c['k']} eligible task(s)" if c["k"] else "no eligible task")
+        out.append(f"Capability regression ({name}): **{state}** — {lim}. "
+                   "Detects near-collapse of a task that reliably worked.")
+        for t in c["fired"] + c["warnings"]:
+            d = c["detail"][t]
+            out.append(f"  - {d['decision']}: `{Path(t).stem}` baseline "
+                       f"{d['baseline']} → candidate {d['candidate']}, "
+                       f"p={d['p']:.4f}")
+        if c["not_monitored"]:
+            out.append("  - not monitored: " + ", ".join(
+                f"`{Path(t).stem}` ({c['detail'][t]['not_monitored']})"
+                for t in c["not_monitored"]))
+    return out
 
 
 def cmd_diagnose(args) -> int:

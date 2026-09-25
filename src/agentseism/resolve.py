@@ -191,6 +191,20 @@ def resolve(surface: dict) -> tuple[dict, dict]:
                 "{command: ...}; an unknown name is not silently defaulted")
         merged["evaluator"] = ev
 
+        # surface-2: `capability_regression: true` takes the frozen per-task
+        # gate; a mapping overrides named fields of it. The expanded block,
+        # with its defaults id, is part of the effective contract and so of
+        # the hash. Absent or false, the feature resolves exactly as surface-1.
+        cr = given.get("capability_regression")
+        if cr is True or isinstance(cr, dict):
+            from agentseism import capability as cap
+            merged["capability_regression"] = (
+                copy.deepcopy(cap.DEFAULTS) | (cr if isinstance(cr, dict) else {}))
+            sources[f"{name}.capability_regression"] = (
+                "author" if isinstance(cr, dict) else "default")
+        elif "capability_regression" in merged:
+            del merged["capability_regression"]
+
         for field in base:
             sources[f"{name}.{field}"] = "author" if field in given else "default"
         sources[f"{name}.practical_threshold"] = "author"
