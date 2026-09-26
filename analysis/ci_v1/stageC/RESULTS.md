@@ -107,3 +107,87 @@ change `step_limit` 250 → 40. The branch is not merged. The arm started at
 
 **Next:** checkpoint 4 (step 15, which attacks gate 1) needs separate
 approval. This verdict does not start it.
+
+## Checkpoint 4 — step 15: **REGRESSION. F2 did not fire.**
+
+The step-15 arm ran from `.runs/stageC_step15` on branch `stageC/step15` @
+`68aec9d`, which is `3db49da` (chain frozen before execution) plus the single
+change `step_limit` 250 → 15. The branch is not merged. The arm started at
+2026-09-26 17:41:43Z and finished without interruption.
+
+- The pre-flight verified method identity with `bdd3f93` plus the
+  intervention.
+- The baseline copy was byte-identical (`4c35321f9ecdef3b…`).
+- The task keys paired exactly. 56 runs, blind.
+
+| | |
+|---|---|
+| **combined v1 verdict** | **REGRESSION** |
+| gate 1, broad reliability | 0.857 → 0.000. Effect −0.857, interval [−1.000, −0.571]. **Fired** |
+| gate 2, capability regression | **Fired on all 6 eligible tasks**, each 8/8 → 0/8, p = 0.0001. pylint not monitored |
+| `LimitsExceeded` | 56 / 56, every run stopped at 15 steps and scored FAIL via the empty-patch path |
+| invalid runs | 0 / 56 |
+| cost | arm \$2.74, **study total \$38.49** of the \$60 stop |
+| report file | `runs/last-report.json` sha256 `4dab5f45f343987e…` |
+
+Every declared step-15 prediction ("collapse" on all seven tasks) held.
+
+As recorded in `PREDICTIONS.md`, this was an easy test of gate 1. It confirms
+that gate 1 fires on a total broad collapse, and nothing about moderate
+broad drops.
+
+---
+
+# Stage C — conclusion
+
+**v1 survived all three testable falsification criteria in the fresh
+confirmatory study. F4 was not testable under the observed baseline.**
+
+| criterion | test | outcome |
+|---|---|---|
+| **F1** null arm returns REGRESSION | fresh unchanged candidate | **survived**: PASS. Neither gate blocked natural variation (sphinx 8/8 → 6/8) |
+| **F2** step-15 arm not REGRESSION | fresh total broad collapse | **survived**: gate 1 fired, −0.857 [−1.000, −0.571] |
+| **F3** gate 2 fires on no predicted collapse | step 40, xarray and pytest predicted | **survived**: both collapsed 8/8 → 0/8, and gate 2 fired on both |
+| **F4** gate 2 fires on a task predicted unaffected | — | **not testable**: the baseline gave no task an "unaffected" prediction |
+
+Other checks held too:
+- no implementation fault: every eligible task at or below the §4 boundary
+  fired, and none above it did;
+- 0 invalid runs in 224;
+- no interruption, no threshold, task or intervention changed, and method
+  code identical to `bdd3f93` in every arm;
+- \$38.49 of the \$60 stop spent.
+
+## What Stage C established
+
+1. **Fresh-data specificity on one unchanged candidate.** It is one draw from
+   the null, consistent with the simulated false-block rate of 1–2% or less.
+   It does not measure that rate.
+2. **Gate 2 identifies pre-declared capability collapse on unseen tasks.**
+   This validates gate 2 as designed. It does **not** show gate 2's value
+   beyond gate 1: in both degraded arms gate 1 fired too, so the overall
+   verdict would have been REGRESSION without gate 2.
+3. **Gate 1 fires on a total broad collapse.**
+4. **Gate 2 has collapse-only resolution on real data.** requests 8/8 → 3/8
+   (−62.5 points) and scikit-learn 8/8 → 4/8 (−50 points) produced WARNING,
+   not REGRESSION, exactly as the OC study said. v1's capability gate is a
+   near-collapse detector, not a severe-regression detector.
+
+## What Stage C did not establish
+
+- **Gate 2's incremental value.** That needs a fresh concentrated collapse on
+  which gate 1 does not fire. CI v0 Stage B had that shape, but it is
+  development data.
+- **Sensitivity to moderate broad regressions.** The OC study says gate 1
+  mostly misses −0.20, and step 15 did not test it.
+- **Generality beyond step-budget degradations.** Every degraded arm here
+  (and in CI v0) cut `step_limit`. Prompt, tool, model or retrieval changes
+  are untested.
+- **Measured false-block rate, cost-per-PR viability, and usefulness to anyone
+  outside the project.**
+
+## Evidence level
+
+**Confirmatory real, for the claims above, on seven SWE-bench Verified tasks,
+one agent (mini-swe-agent 2.4.6), one model (Claude Haiku 4.5), and
+step-budget degradations only.** It is not external-user evidence.
