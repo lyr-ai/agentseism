@@ -5,8 +5,8 @@ import copy
 
 import pytest
 
-from experiments.coding.contract import ContractError, Measurement, decide
-from experiments.coding.resolve import (
+from agentseism.contract import ContractError, Measurement, decide
+from agentseism.resolve import (
     DEFAULTS_VERSION, FEATURE_DEFAULTS, RESOLVED_SCHEMA_VERSION,
     effective_hash, provenance, resolve, resolve_and_validate,
 )
@@ -195,7 +195,7 @@ def test_no_feature_field_can_switch_comparability_off():
     s["features"]["task_success"]["skip_comparability"] = True
     c, _, _ = resolve_and_validate(s)
     assert c.require_same == list(
-        __import__("experiments.coding.resolve", fromlist=["x"]).COMPARABILITY_DEFAULT)
+        __import__("agentseism.resolve", fromlist=["x"]).COMPARABILITY_DEFAULT)
     assert decide(c, FP, FP | {"model_revision": "x"})["verdict"] == "INCOMPARABLE"
 
 

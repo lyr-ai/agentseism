@@ -7,7 +7,7 @@ This prints one object with `success` — the only field the contract's
 `task_success` feature reads — plus fields a human needs to trust it.
 
 It adds **no scoring semantics**. The verdict comes from
-`experiments/coding/c2h_checker.label_from_report`, which already refuses to
+`agents/coding/swebench_labels.label_from_report`, which already refuses to
 label an infra failure, a missing patch or a patch that did not apply. That
 refusal is the point: those are not correctness outcomes, and a scorer that
 turned them into `FAIL` would report an infrastructure problem as a regression.
@@ -43,7 +43,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from experiments.coding.c2h_checker import (  # noqa: E402
+from agents.coding.swebench_labels import (  # noqa: E402
     UnlabelledDonor, label_from_report,
 )
 

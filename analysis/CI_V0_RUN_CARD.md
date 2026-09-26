@@ -436,3 +436,17 @@ task set or product code changed, and the Stage B intervention was not merged.
 Any redesign, starting with what should count as a regression in agent CI
 (broad population regression, severe per-task regression, or both), is a new,
 separately declared stage. It is not a revision of this one.
+
+## Note, 2026-09-26 — the quarantined attempt-1 reports were machine-read once
+
+The Stage A attempt-1 deviation above says its quarantined harness reports
+would never be read. On 2026-09-26, after CI v0 and Stage C had concluded,
+they were parsed by a script. The script verified that the product's
+extracted SWE-bench label rule (`agents/coding/swebench_labels.py`) agrees
+with the research copy on every report recorded on disk: 258 reports, 0
+mismatches.
+
+- The script printed only a combined tally across all 258 reports. No
+  attempt-1 outcome was shown on its own, and none was interpreted.
+- No result in this card depends on those files.
+- Recorded here because the earlier commitment was worded absolutely.

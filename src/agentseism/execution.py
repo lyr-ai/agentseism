@@ -245,8 +245,7 @@ def fingerprint(extra: dict | None = None) -> dict:
     }
     fp |= runtime_identity()
     lock = Path("requirements.lock")
-    for cand in (lock, Path("inference/requirements-vllm.lock.txt"),
-                 Path("uv.lock"), Path("poetry.lock")):
+    for cand in (lock, Path("uv.lock"), Path("poetry.lock")):
         if cand.exists():
             fp["dependency_lock"] = hashlib.sha256(
                 cand.read_bytes()).hexdigest()[:16]

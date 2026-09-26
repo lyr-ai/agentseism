@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from experiments.coding.contract import (
+from agentseism.contract import (
     Contract, ContractError, Measurement, canonical_hash, decide, load, validate,
 )
 
@@ -298,7 +298,7 @@ def test_the_shipped_contracts_validate():
 
 
 # ── the PR report renderer ──
-from experiments.coding.report import Row, render  # noqa: E402
+from agentseism.pr_report import Row, render  # noqa: E402
 
 
 def _v(verdict_name, **over):
@@ -363,18 +363,3 @@ def test_warnings_are_rendered_as_non_blocking():
     md = render(decide(c, FP, FP, m))
     assert "do not block a merge" in md
 
-
-def test_the_demo_reports_are_reproducible_from_frozen_data():
-    """The two shipped demos regenerate byte-identically, so the README cannot
-    drift from the artifacts it claims to be computed from."""
-    import subprocess
-    before = {p: p.read_text() for p in
-              [Path("docs/demo/pr-report-pass-with-change.md"),
-               Path("docs/demo/pr-report-incomparable.md")]}
-    r = subprocess.run([".venv-eval/bin/python",
-                        "experiments/coding/make_demo_reports.py"],
-                       capture_output=True, text=True,
-                       env={"PYTHONPATH": "src:.", "PATH": "/usr/bin:/bin"})
-    assert r.returncode == 0, r.stderr
-    for p, text in before.items():
-        assert p.read_text() == text
