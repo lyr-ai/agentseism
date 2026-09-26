@@ -153,7 +153,7 @@ report says *"not a pass"*.
 | **REGRESSION** | One of two gates fired. The **broad reliability** gate fires when the suite as a whole is confidently worse by at least your threshold. The **capability regression** gate fires when a task that reliably worked in the baseline (at least 7 of 8 runs) collapses in the PR, which with 7 tasks means roughly 2 of 8 runs or fewer. |
 | **PASS** | Neither gate fired. The change is within what this agent does on its own. |
 | **INSUFFICIENT EVIDENCE** | Too few tasks or runs to decide. **Not a pass.** |
-| **INCOMPARABLE** | Model, runtime or dependencies differ between the two sides. No runs are spent. |
+| **INCOMPARABLE** | Model, runtime or dependencies differ between the two sides. The check stops before running the candidate. |
 
 Two things behind these verdicts matter in practice:
 
