@@ -27,6 +27,22 @@ Where evidence is incomplete, leave the article as notes or a draft until the re
 
 ## [ ] Why Agent CI Can't Be Treated Like Deterministic Tests
 
+**Publish first.** This is AgentSeism's public entry point. It opens with the user's
+problem, not with our product or its failures.
+
+**Arc**
+
+1. The same agent with the same configuration: baseline 92%, rerun 88%. Traditional CI
+   reads that as a regression; it is stochastic variation.
+2. The opposite trap: an aggregate can hide a concentrated capability collapse.
+3. So agent CI has to reason about effect size, uncertainty, the experimental unit,
+   and distinct regression risks.
+4. Only then introduce AgentSeism: *we built it to explore what a trustworthy CI decision
+   layer for stochastic agents should look like.*
+
+The reader should come away thinking "this problem is real, and they are working on it
+systematically", not "their tool misses bugs".
+
 **Question**
 
 What fundamentally changes when the system under test is stochastic?
@@ -52,7 +68,7 @@ Why does AgentSeism need to exist instead of simply adding agent evals to GitHub
 
 **Write after**
 
-Stage C null arm is complete.
+Stage C null arm is complete. ✅ Done: fresh null PASS, sphinx 8/8 → 6/8 not blocked.
 
 ---
 
@@ -94,6 +110,19 @@ What evidence should be required before AgentSeism blocks a merge?
 # Priority 2 — Learn from the first method failure
 
 ## [ ] Our Agent Got 40% Worse — and Our CI Still Passed It
+
+**This is the internal working title.** Keep it: it is the most accurate reminder of what v0
+got wrong.
+
+**Public title:** *When the Statistics Are Right but the CI Decision Is Wrong*.
+Alternatives:
+- *The Regression Our First Agent CI Test Missed*
+- *Why One Regression Metric Wasn't Enough for Agent CI*
+
+**Publish third**, after the problem piece and the worldview piece have established what
+AgentSeism is. The body states 92 → 52 plainly. What makes the piece credible is the
+arc: v0 failed → we froze the failure → didn't move the threshold → redesigned the
+estimand → attacked the new design offline → froze v1 → confirmed it on fresh tasks.
 
 **Question**
 
@@ -705,29 +734,25 @@ The methodology is still developing.
 
 Do not write all articles at once.
 
-Recommended sequence after Stage C:
+Publishing order, set 2026-09-26 after Stage C:
 
 ```text
-1. Our Agent Got 40% Worse — and Our CI Still Passed It
-2. Why Agent CI Can't Be Treated Like Deterministic Tests
-3. What Should "Regression" Mean for an AI Agent?
-4. Treat Every Agent PR as an Experiment
-5. Why Running Your Agent More Times Is Not Enough
-6. The Hidden Multiple-Testing Problem in Agent Eval Suites
-7. Why We Let CI Say "I Don't Know"
-8. How Much Evidence Should It Take to Block an AI Agent PR?
+1. Why Agent CI Can't Be Treated Like Deterministic Tests         problem
+2. Treat Every Agent PR as an Experiment                           worldview
+3. When the Statistics Are Right but the CI Decision Is Wrong      real failure
+   (internal: "Our Agent Got 40% Worse — and Our CI Still Passed It")
+4. The Hidden Multiple-Testing Problem in Agent Eval Suites         technical depth
+5. Can Agent CI Be Cheap Enough to Run on Every PR?                economics
+   (only after adaptive-sampling data exists)
 ```
 
-Then choose between:
+The narrative runs **problem → worldview → learning → technical differentiation →
+economics/product**. Do not open with "we missed 40%": a first-time reader would take
+that as the product's definition and stop before the redesign.
 
-```text
-product economics
-methodology
-personal/biostatistics
-benchmarking
-```
-
-based on what the next experiments teach us.
+The rest of the backlog (regression vs noise, what "regression" means, repeated runs,
+"I don't know", how much evidence, methodology, personal/biostatistics, benchmarking)
+is chosen after these, based on what the next experiments teach us.
 
 ---
 
@@ -809,6 +834,9 @@ PUBLISHED
 ---
 
 # Rule
+
+**Titles.** Internal writing uses the harshest honest title, to force clear thinking.
+Public writing enters through the user's problem. The body never hides a failure.
 
 Writing is part of product development when it forces clearer thinking.
 
