@@ -1,8 +1,9 @@
 """The PR report. The thing a developer actually reads.
 
 The decision comes first, then the scorecard, then the evidence, then — only
-for a regression — the localisation. A reader who stops after the first three
-lines should already know whether to merge.
+for a regression, and only when root-cause analysis was actually run — its
+findings. A reader who stops after the first three lines should already know
+whether to merge. The report never points at an analysis it does not contain.
 
 Renders from a verdict (`contract.decide`) and the measurements behind it. It
 computes nothing and decides nothing: a renderer that can change a verdict is a
@@ -34,7 +35,7 @@ HEADLINE = {
 }
 
 ACTION = {
-    "REGRESSION": "Investigate the localised stage below before merging.",
+    "REGRESSION": "Review the regression evidence below before merging.",
     "INSUFFICIENT_EVIDENCE": "Neither safe nor unsafe: the evidence was not "
                              "enough to decide. Add trials or narrow the task "
                              "set — do not read this as a pass.",

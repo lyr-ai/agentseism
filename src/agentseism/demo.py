@@ -1,11 +1,12 @@
 """`seism demo`: see a CI decision in under a minute, at zero cost.
 
-**The agent is simulated. AgentSeism is not.** A deterministic simulator
-stands in for a stochastic agent: each task has a true success probability,
-and each run draws against it with a seed fixed by scenario, arm, task and
-trial, so the demo prints the same thing every time. Everything after the
-draw is the product's own code, exactly as `seism baseline` and `seism check`
-use it:
+**The agent is simulated. AgentSeism is not.** Each scenario is a fixture:
+it writes out every run's outcome explicitly, one `1` or `0` per run and per
+task. That is the kind of pattern a stochastic agent produces, and it is
+stated rather than drawn, so no seed or sample was chosen to make a point.
+A stand-in agent replays those outcomes through the runner contract. What
+they mean is decided by the product's own code, exactly as `seism baseline`
+and `seism check` use it:
 
     resolve_and_validate   the frozen default contract, plus the capability gate
     fingerprint            comparability, checked before any candidate run
@@ -22,7 +23,6 @@ workflow and are **not evidence**. Real-agent evidence lives in
 from __future__ import annotations
 
 import json
-import random
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -30,7 +30,7 @@ from pathlib import Path
 from agentseism.capability import evaluate as capability_evaluate
 from agentseism.contract import _regressed, _sufficient, decide, precheck_comparability
 from agentseism.execution import CallableRunner, fingerprint, run_trials
-from agentseism.pr_report import Row, render
+from agentseism.pr_report import render
 from agentseism.resolve import resolve_and_validate
 
 CONTRACT = {
@@ -42,69 +42,63 @@ CONTRACT = {
 and the frozen capability gate. Nothing here is tuned for the demo."""
 
 
-SEED = 2
-"""Fixes every draw, so the demo prints the same thing on every machine.
-
-Chosen once, openly, as a presentation choice. It is the first seed at which
-scenario 1 shows a drop of typical size: −5.4 points, where this agent's
-median run-to-run change is about 3.6 points. The alternative was a draw of
-exactly zero, which demonstrates nothing. The seed affects no decision rule.
-
-Across seeds 0–199:
-- scenario 1 is PASS 200/200;
-- scenario 3 is INSUFFICIENT_EVIDENCE 200/200;
-- scenario 2 is REGRESSION 184/200. It misses when checkout, truly at 0.95,
-  happens to land below 7/8 in the baseline and so is not eligible for the
-  capability gate. That is the gate's real eligibility rule, not a demo
-  artefact.
-
-The tests pin the output for this seed."""
-
-
 @dataclass(frozen=True)
 class Scenario:
     title: str
     story: str
-    trials: int
-    baseline: dict[str, float]     # task -> true success probability
-    candidate: dict[str, float]
+    baseline: dict[str, str]       # task -> one "1"/"0" per run, in order
+    candidate: dict[str, str]
+
+    @property
+    def trials(self) -> int:
+        return len(next(iter(self.baseline.values())))
 
 
-SUPPORT_AGENT = {"checkout": 0.95, "refund-request": 0.90, "order-status": 1.00,
-                 "address-change": 0.90, "product-search": 0.95,
-                 "return-label": 0.85, "gift-card": 0.90}
+# A customer-support agent's suite. Most tasks usually succeed, a few are
+# flaky: 51 of 56 runs pass.
+BASELINE = {"checkout": "11111111", "refund-request": "11110111",
+            "order-status": "11111111", "address-change": "11111101",
+            "product-search": "11111111", "return-label": "10111101",
+            "gift-card": "01111111"}
+
+# The same agent, rerun with nothing changed. Four tasks lose a run and one
+# gains a run, which is ordinary jitter for a stochastic agent: noise moves
+# both ways. 48 of 56.
+RERUN = BASELINE | {"refund-request": "11010111", "address-change": "11011101",
+                    "product-search": "11111011", "return-label": "10110101",
+                    "gift-card": "11111111"}
 
 SCENARIOS = [
     Scenario(
         "Unchanged candidate: natural run-to-run variation",
         "The PR changes nothing the agent does. Its score still moves, "
         "because the agent is stochastic.",
-        8, SUPPORT_AGENT, SUPPORT_AGENT),
+        BASELINE, RERUN),
     Scenario(
         "One capability collapses",
         "The PR breaks checkout and leaves every other task alone. The "
         "average hides it; the capability gate should not.",
-        8, SUPPORT_AGENT, SUPPORT_AGENT | {"checkout": 0.0}),
+        BASELINE, BASELINE | {"checkout": "00000000"}),
     Scenario(
         "Too little evidence",
         "The score drops, but on three tasks run twice each. That is too "
         "little to call either way.",
-        2, {"checkout": 0.95, "refund-request": 0.90, "order-status": 1.00},
-        {"checkout": 0.95, "refund-request": 0.40, "order-status": 1.00}),
+        {"checkout": "11", "refund-request": "11", "order-status": "11"},
+        {"checkout": "11", "refund-request": "10", "order-status": "11"}),
 ]
 
 
-def _agent(scenario: int, arm: str, probs: dict[str, float]):
+def _agent(outcomes: dict[str, str]):
     """A runner in AgentSeism's runner contract: `(task_file, artifact_dir)`.
-    It writes an artifact, as a real agent would, and scores nothing."""
+    It replays the fixture's next outcome for the task and writes it as an
+    artifact, as a real agent would. It scores nothing."""
     counter: dict[str, int] = {}
 
     def run(task_file: str, artifact_dir: str) -> dict:
         task = Path(task_file).stem
         trial = counter.get(task, 0)
         counter[task] = trial + 1
-        rng = random.Random(f"{SEED}|{scenario}|{arm}|{task}|{trial}")
-        resolved = rng.random() < probs[task]
+        resolved = outcomes[task][trial] == "1"
         (Path(artifact_dir) / "outcome.json").write_text(
             json.dumps({"task": task, "resolved": resolved}))
         return {}
@@ -125,14 +119,14 @@ def run_scenario(i: int, s: Scenario, workdir: Path) -> dict:
     contract, _, _ = resolve_and_validate(CONTRACT)
     tasks = [str(workdir / f"s{i}" / f"{t}.json") for t in s.baseline]
     fp_base = fingerprint()
-    base_rows = run_trials(CallableRunner(_agent(i, "baseline", s.baseline)),
+    base_rows = run_trials(CallableRunner(_agent(s.baseline)),
                            _evaluator, tasks, s.trials, workdir / f"s{i}", "baseline")
     baseline = {"results": [r.__dict__ for r in base_rows]}
 
     incomparable = precheck_comparability(contract, fp_base, fingerprint())
     if incomparable:                                     # same process: never
         return {"verdict": incomparable}
-    cand_rows = run_trials(CallableRunner(_agent(i, "candidate", s.candidate)),
+    cand_rows = run_trials(CallableRunner(_agent(s.candidate)),
                            _evaluator, tasks, s.trials, workdir / f"s{i}", "candidate")
     cand = [r.__dict__ for r in cand_rows]
 
@@ -144,7 +138,7 @@ def run_scenario(i: int, s: Scenario, workdir: Path) -> dict:
     cap = verdict.get("capability", {}).get("task_success") or \
         capability_evaluate(f["capability_regression"], m.per_task)
     return {"verdict": verdict, "detail": detail["task_success"], "broad": broad,
-            "capability": cap, "measurement": m}
+            "capability": cap, "measurement": m, "contract": contract}
 
 
 MARK = {"PASS": "✓ PASS", "REGRESSION": "✗ REGRESSION",
@@ -180,6 +174,10 @@ def _summary(i: int, s: Scenario, r: dict) -> list[str]:
         f"needs {cap_spec_trials()} runs per side to judge a single task"
         if few else
         f"{len(cap['eligible'])} of {cap['k']} tasks reliable enough to monitor"))
+    if cap["fired"] and r["broad"] == "PASS":
+        out.append("      The average fell, but the loss sits in one place, so the "
+                   "suite-wide evidence is not conclusive. The capability gate "
+                   "judges each task directly:")
     for t in cap["fired"] + cap["warnings"]:
         dd = cap["detail"][t]
         out.append(f"      {Path(t).stem:<16} {dd['baseline']} → {dd['candidate']}"
@@ -197,11 +195,9 @@ def cap_spec_trials() -> int:
 def _report(r: dict, s: Scenario) -> str:
     """The same markdown PR report `seism check` writes and posts."""
     d, v = r["detail"], r["verdict"]
-    dec = ("REGRESSION" if "task_success" in v.get("regressed", []) else
-           "INSUFFICIENT" if "task_success" in v.get("insufficient", []) else "PASS")
-    rows = [Row("Task success", f"{d['baseline']:.2f}", f"{d['candidate']:.2f}",
-                f"{d['effect']:+.2f} [{d['ci'][0]:+.2f}, {d['ci'][1]:+.2f}]", dec)]
-    from agentseism.cli import _capability_lines
+    from agentseism.cli import _capability_lines, scorecard_rows
+    rows = scorecard_rows(r["contract"], v, {"task_success": d},
+                          {"task_success": r["measurement"]})
     ev = [f"Synthetic demo: {len(s.baseline)} tasks, {s.trials} trials per side.",
           "Independent unit: scenario. Intervals are paired bootstrap over tasks, "
           "not over runs."] + _capability_lines(v.get("capability") or {})
@@ -210,8 +206,8 @@ def _report(r: dict, s: Scenario) -> str:
 
 def main(report: bool = False, out=print) -> int:
     out("AgentSeism demo: a simulated agent, the real decision engine")
-    out("No API key, no Docker, no network. The agent is a deterministic "
-        "simulator; every verdict below comes from AgentSeism's own contract, "
+    out("No API key, no Docker, no network. The agent replays fixed, stated "
+        "outcomes; every verdict below comes from AgentSeism's own contract, "
         "gates and report code.")
     out("")
     with tempfile.TemporaryDirectory() as tmp:

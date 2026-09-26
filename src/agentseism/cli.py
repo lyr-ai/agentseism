@@ -290,6 +290,44 @@ def _measure(contract, baseline: dict, candidate: list[dict], tasks: list[str],
     return ms, detail
 
 
+def scorecard_rows(contract, verdict: dict, detail: dict, ms: dict) -> list:
+    """One row per gate, each showing that gate's own decision.
+
+    The overall verdict is the report's headline. A row must not repeat it:
+    when the capability gate fires and the population gate does not, the
+    population row says PASS and the capability row says REGRESSION. That
+    difference is the point of having two gates. Row states come from the
+    same predicates `decide` uses; nothing here decides anything new.
+    """
+    from agentseism.contract import _gate, _regressed, _sufficient
+    rows = []
+    for name, d in detail.items():
+        f, m = contract.features[name], ms[name]
+        cap = (verdict.get("capability") or {}).get(name)
+        if m.invalid and f.get("invalid_policy") in ("stop", "insufficient"):
+            dec = "INSUFFICIENT"
+        elif not _sufficient(f, m):
+            dec = "INSUFFICIENT"
+        elif _regressed(f, m):
+            dec = "REGRESSION" if _gate(f) == "true" else "WARNING"
+        else:
+            dec = "PASS"
+        label = name.replace("_", " ").capitalize()
+        rows.append(Row(label + (" (broad)" if cap else ""),
+                        f"{d['baseline']:.2f}", f"{d['candidate']:.2f}",
+                        f"{d['effect']:+.2f} [{d['ci'][0]:+.2f}, {d['ci'][1]:+.2f}]",
+                        dec))
+        if cap:
+            fired = ", ".join(f"`{Path(t).stem}` {cap['detail'][t]['baseline']} → "
+                              f"{cap['detail'][t]['candidate']}" for t in cap["fired"])
+            rows.append(Row(label + " (capability)",
+                            f"{len(cap['eligible'])} of {cap['k']} tasks monitored",
+                            f"{len(cap['fired'])} collapsed", fired or "—",
+                            "REGRESSION" if cap["fired"] else
+                            "PASS" if cap["eligible"] else "NOT MONITORED"))
+    return rows
+
+
 def cmd_check(args) -> int:
     root, c, surface, src, tasks = _load(args)
     if args.dry_run:
@@ -325,15 +363,7 @@ def cmd_check(args) -> int:
     ms, detail = _measure(c, baseline, rows_src, tasks, args.trials)
     v = decide(c, baseline["fingerprint"], cand_fp, ms)
 
-    rows = []
-    for name, d in detail.items():
-        dec = ("REGRESSION" if name in v.get("regressed", []) else
-               "WARNING" if name in v.get("warnings", []) else
-               "INSUFFICIENT" if name in v.get("insufficient", []) else "PASS")
-        rows.append(Row(name.replace("_", " ").capitalize(),
-                        f"{d['baseline']:.2f}", f"{d['candidate']:.2f}",
-                        f"{d['effect']:+.2f} [{d['ci'][0]:+.2f}, {d['ci'][1]:+.2f}]",
-                        dec))
+    rows = scorecard_rows(c, v, detail, ms)
     ev_lines = [
         f"Baseline `{args.baseline}` recorded {baseline['started']}, "
         f"{baseline['trials_per_task']} trials/task.",
@@ -360,7 +390,8 @@ def _capability_lines(capability: dict) -> list[str]:
     frozen settings it detects collapse, not every severe drop."""
     out = []
     for name, c in capability.items():
-        state = "FAIL" if c["fired"] else "PASS"
+        state = ("FAIL" if c["fired"] else "PASS" if c["eligible"]
+                 else "NOT MONITORED")
         lim = (f"per-task limit p <= {c['alpha_per_task']:.4f} over the "
                f"K={c['k']} task suite, {len(c['eligible'])} eligible"
                if c["k"] else "no task declared")

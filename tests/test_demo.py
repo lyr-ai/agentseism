@@ -101,3 +101,48 @@ def test_the_report_flag_prints_the_real_pr_report():
 def test_it_is_a_seism_subcommand(capsys):
     assert main(["demo"]) == 0
     assert "Verdict: ✓ PASS" in capsys.readouterr().out
+
+
+# ── the fixture is stated, not drawn ──
+def test_the_demo_draws_nothing():
+    """Every outcome is written in the fixture: no RNG, no seed to choose."""
+    import inspect
+    src = inspect.getsource(D)
+    assert "import random" not in src and "SEED" not in src
+
+
+def test_the_unchanged_rerun_is_ordinary_two_way_noise():
+    base = sum(o.count("1") for o in D.BASELINE.values())
+    rerun = sum(o.count("1") for o in D.RERUN.values())
+    assert (base, rerun) == (51, 56 - 8)
+    moves = [D.RERUN[t].count("1") - D.BASELINE[t].count("1") for t in D.BASELINE]
+    assert min(moves) == -1 and max(moves) == 1      # small, and both ways
+
+
+# ── the report shows each gate's own decision ──
+def _report_for(i):
+    import tempfile
+    from pathlib import Path
+    with tempfile.TemporaryDirectory() as t:
+        r = D.run_scenario(i, D.SCENARIOS[i - 1], Path(t))
+        return D._report(r, D.SCENARIOS[i - 1])
+
+
+def test_a_capability_collapse_shows_broad_pass_and_capability_regression():
+    md = _report_for(2)
+    broad = next(ln for ln in md.splitlines() if ln.startswith("| Task success (broad)"))
+    capab = next(ln for ln in md.splitlines() if ln.startswith("| Task success (capability)"))
+    assert broad.rstrip(" |").endswith("PASS")
+    assert capab.rstrip(" |").endswith("REGRESSION") and "`checkout` 8/8 → 0/8" in capab
+
+
+def test_a_regression_report_does_not_point_at_analysis_it_lacks():
+    md = _report_for(2)
+    assert "Review the regression evidence below" in md
+    assert "locali" not in md.lower()
+
+
+def test_a_gate_with_nothing_eligible_says_not_monitored_not_pass():
+    md = _report_for(3)
+    assert "Capability regression (task_success): **NOT MONITORED**" in md
+    assert "| Task success (capability) | 0 of 3 tasks monitored" in md
