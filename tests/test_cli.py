@@ -15,10 +15,19 @@ import yaml
 
 from agentseism.cli import main
 
-AGENT = """import sys, json, os, random
+AGENT = """import sys, json, os, random, hashlib
+from pathlib import Path
 task = sys.argv[sys.argv.index("--task")+1]
 out  = sys.argv[sys.argv.index("--out")+1]
-rng = random.Random(hash((task, out)) & 0xffff)
+# Seed on this run's semantic identity -- arm, task, trial -- not on the tmp
+# path it happens to live under, and not via `hash()`, which Python randomises
+# per process. The old seed changed every run, so the pass/fail pattern did
+# too, and the verdict flipped with it: the positive control failed 6 times in
+# 20 fresh processes. Nothing else moves -- same cutoffs, same draw shape, same
+# variation across tasks and trials, still different between the two arms
+# because the arm is part of the identity.
+ident = "/".join(Path(out).parts[-3:]) + "|" + Path(task).stem
+rng = random.Random(int(hashlib.sha256(ident.encode()).hexdigest()[:8], 16))
 ok = rng.random() > (0.55 if os.environ.get("DEGRADED") == "1" else 0.15)
 json.dump({"success": int(ok), "cost": rng.uniform(0.3, 0.6)},
           open(os.path.join(out, "result.json"), "w"))

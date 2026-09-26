@@ -1,0 +1,21 @@
+# The frozen Stage C (v1 confirmatory) contract. Identical to CI v0's except
+# for surface-2's capability gate, which resolves to the frozen capability-2
+# defaults (spec revision 3). Copied into the run directory as
+# .agentseism/contract.yaml; committed so the run is reproducible and the hash
+# can be checked.
+#
+# {python} expands to the interpreter running seism. AGENTSEISM_ROOT is
+# rewritten at setup to this checkout.
+contract_version: surface-2
+runner:
+  type: shell
+  command: "{python} AGENTSEISM_ROOT/agents/coding/swebench_runner.py --task {task_file} --out {artifact_dir}"
+  timeout: 1800
+evaluator:
+  command: "{python} AGENTSEISM_ROOT/agents/coding/swebench_evaluator.py {artifact_dir}"
+  timeout: 3600
+features:
+  task_success:
+    gate: true
+    regression_threshold: 0.10
+    capability_regression: true

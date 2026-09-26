@@ -1,5 +1,14 @@
 # AgentSeism — V0 Design Doc
 
+> **Superseded as the project plan, 2026-09-20.** The current mainline is the
+> product: CI for stochastic agents, deciding whether a candidate change made an
+> agent materially worse than a compatible baseline. See
+> [`docs/DECISION-product-first.md`](docs/DECISION-product-first.md),
+> [`docs/DESIGN-regression-testing-mainline.md`](docs/DESIGN-regression-testing-mainline.md)
+> and [`docs/CONVERGENCE.md`](docs/CONVERGENCE.md).
+>
+> This document describes the V0 weak-point / attribution research design. It is retained as history and is **not** the current plan.
+
 **Status:** Draft v0.1
 **Date:** September 2026
 **Scope:** LLM Agents
