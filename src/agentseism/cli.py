@@ -406,6 +406,13 @@ def main(argv=None) -> int:
     ch.add_argument("--dry-run", action="store_true")
     ch.set_defaults(fn=cmd_check)
 
+    dm = sub.add_parser("demo", help="a zero-cost demo: simulated agent, "
+                                     "real decisions")
+    dm.add_argument("--report", action="store_true",
+                    help="also print the full PR report for each scenario")
+    dm.set_defaults(fn=lambda a: __import__("agentseism.demo", fromlist=["x"])
+                    .main(report=a.report))
+
     d = sub.add_parser("diagnose", help="RCA for a confirmed regression")
     d.add_argument("comparison_id", nargs="?")
     d.set_defaults(fn=cmd_diagnose)
