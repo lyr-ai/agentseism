@@ -1,289 +1,222 @@
-> This repository is part of the **[Reliable Long-Running Agents (RLRA)](https://github.com/canis-minor)** research initiative.
-
 # AgentSeism
 
-**Did this PR make the agent worse — and if so, where?**
+**CI for stochastic AI agents.**
 
-> **What it decides.** Outcomes gate a merge. Traces explain a regression after
-> one is confirmed. When the execution environment changed, the two sides are
-> not compared at all.
+Did this PR make your agent worse, or are you just seeing normal run-to-run noise?
 
-![status: research prototype](https://img.shields.io/badge/status-research%20prototype-orange)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/figures/hero-dark.svg">
+  <img alt="AgentSeism PR check. Overall task success 91% to 77%. Broad reliability: PASS. Capability regression: REGRESSION, because checkout went from 8 of 8 runs to 0 of 8." src="docs/figures/hero-light.svg" width="760">
+</picture>
 
-> Siblings in the RLRA stack —
-> [TypedMem](https://github.com/canis-minor/typedmem) ·
-> [AgentCheck](https://github.com/canis-minor/agentcheck) ·
-> [AgentTrace](https://github.com/canis-minor/agenttrace) ·
-> [ReliAgent Bench](https://github.com/canis-minor/reliagent-bench) ·
-> [AgentLab](https://github.com/canis-minor/agentlab) ·
-> **AgentSeism**
-
-Agents are stochastic. The same agent, unchanged, produces a different
-trajectory almost every run — so "the behaviour changed" is the baseline
-condition, not a finding. AgentSeism decides which changes matter:
-
-| Observation | Verdict |
-|---|---|
-| outcome dropped, environments comparable | `REGRESSION` — and only now, RCA |
-| trace moved, outcome held | `PASS_WITH_CHANGE` — do not block |
-| serving fingerprint changed | `INCOMPARABLE` — zero trials spent |
-| evidence too thin to say | `INSUFFICIENT_EVIDENCE` — not a pass |
-
-Two of those verdicts are demonstrated on frozen data in this repository, with
-no model calls:
-
-- [`docs/demo/pr-report-pass-with-change.md`](docs/demo/pr-report-pass-with-change.md)
-  — four independent runs of one task, **all four resolved the issue**, and a
-  composite trace detector still fires on **6 of 6** pairs.
-- [`docs/demo/pr-report-incomparable.md`](docs/demo/pr-report-incomparable.md)
-  — the agent held completely fixed, only the GPU and driver changed, and
-  **23 of 23** structured actions differ.
-
-`REGRESSION` and `INSUFFICIENT_EVIDENCE` are not demonstrated yet; they need
-the pilot, and inventing them would demonstrate the report rather than the
-method.
-
-## Quick start
-
-Three lines per capability. You name the threshold; the tool names the
-statistics and prints every one of them in the report.
-
-```yaml
-# .agentseism/contract.yaml
-runner:
-  command: "{python} run_agent.py --task {task_file}"
-features:
-  task_success:     {gate: true,    regression_threshold: 0.10}
-  recovery_success: {gate: true,    regression_threshold: 0.15}
-  cost_per_success: {gate: warning, regression_threshold: 0.25}
+```bash
+seism demo      # 1 second, no API key, no Docker, no network
 ```
 
-That resolves to a complete, auditable contract —
-[`contracts/example-resolved.md`](contracts/example-resolved.md) — which is
-what gets hashed and reported. Defaults are versioned, so upgrading the tool
-cannot make a differently-resolved contract look like the same one.
+**Tested on a real agent, in a narrow scope.** In a pre-registered study on 7 SWE-bench tasks it had never seen (224 runs), it passed an unchanged agent and caught every regression it was supposed to. See [Evidence](#evidence) and [Limitations](#limitations).
 
-**Where the plan lives.** Three documents are authoritative:
-[`docs/DECISION-product-first.md`](docs/DECISION-product-first.md) (what the
-next weeks buy), [`docs/DESIGN-regression-testing-mainline.md`](docs/DESIGN-regression-testing-mainline.md)
-(the direction) and [`docs/ROADMAP-2026-09-20.md`](docs/ROADMAP-2026-09-20.md)
-(the schedule). Root-level `DESIGN.md`, `ROADMAP.md` and
-`DESIGN-FEATURE-PROJECTION.md` describe the earlier weak-point research
-programme; they are history, and each carries a banner saying so.
-[`docs/CONVERGENCE.md`](docs/CONVERGENCE.md) explains why the scope narrowed and
-what the earlier experiments contributed.
+[Quickstart](#quickstart) · [Use it on your agent](#use-it-on-your-agent) · [How decisions work](#how-decisions-work) · [Evidence](#evidence) · [Limitations](#limitations)
 
-## The problem
+---
 
-The same agent, on the same task, run twice:
+## Why ordinary CI isn't enough
 
-```text
-Run 1   Input → Evidence A → Hypothesis X → Tool 1 → Outcome X
-Run 2   Input → Evidence B → Hypothesis Y → Tool 2 → Outcome Y
-```
+Run the same agent twice and you get different results. A test that expects the
+same output every time can't tell a broken PR from a normal wobble. Neither can
+a single eval score.
 
-Observability shows both traces. Evaluation says whether each outcome passes.
-Neither answers the engineering question: **which internal difference was
-behaviorally consequential?** A trace contains many differences; most do not
-matter.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/figures/cases-dark.svg">
+  <img alt="Three cases. Normal noise: 91% to 86%, PASS. Capability collapse: 91% to 77%, checkout 8 of 8 to 0 of 8, REGRESSION. Not enough evidence: 100% to 83% on 3 tasks with 2 runs each, NEED EVIDENCE." src="docs/figures/cases-light.svg" width="900">
+</picture>
+
+- **Scores move on their own.** An unchanged agent went from 91% to 86%. That is
+  noise, and blocking the PR would be wrong.
+- **Averages hide breakage.** 91% to 77% could be noise spread across many
+  tasks. Here it is one reliable capability, `checkout`, failing every run.
+- **Sometimes there isn't enough data to decide.** 100% to 83% on three tasks run
+  twice each is not a pass and not a regression. AgentSeism says so instead of
+  guessing.
+
+AgentSeism runs the base branch and the PR several times, keeps each task's
+results together, and returns a CI verdict: **PASS**, **REGRESSION**,
+**INSUFFICIENT EVIDENCE** or **INCOMPARABLE**.
+
+The three cases above come from `seism demo`. It uses a simulated agent with
+fixed, stated outcomes, and passes them through AgentSeism's real decision
+engine. The demo is not evidence; for real-agent results, see [Evidence](#evidence).
 
 ## Quickstart
 
-```python
-from agentseism import scan
-from agents.trajectory import ReActProjector
-
-def my_agent(task, trace):
-    # record the raw execution; the projector turns it into features
-    ...
-
-report = scan(
-    my_agent,
-    cases=["why is checkout slow?", "why did auth fail?"],
-    trials=10,
-    outcome=lambda r: r["answer"],
-    projector=ReActProjector(),
-)
-print(report)
-```
-
-The `trace` parameter is optional. Without it you still get outcome-level
-variation; with it, the raw trace is projected into the adapter's declared
-feature schema and those features are ranked.
-
-```text
-Top Behavioral Weak Points   (score = V x A)
-──────────────────────────────────────────────
-
-1. Execution feature: tool_set
-
-   Local variation           0.47
-   Outcome association       0.87
-
-   Weak-point score          0.41
-
-   Feature family with: tool_sequence
-   These co-vary; count them as one finding, not several.
-
-Excluded from attribution: final_answer (declared outcome, not a step toward it).
-Feature schema: react/1
-```
-
-**High variation ≠ high weakness.** A feature that changes on every run but never
-reaches the outcome scores near zero — that is what the negative-control feature
-(`pre_final_reasoning`) is there to verify.
-
-## How it works
-
-```text
-agent → repeated runs → raw trace → adapter projection → execution features
-      → feature variation → outcome association → ranked weak points
-```
-
-Raw event occurrence is not a cross-run identity: a ReAct agent's third model
-call means something different in every run. So AgentSeism ranks **declared
-execution features**, not raw events (DESIGN-FEATURE-PROJECTION.md):
-
-```text
-positioned feature     W = LocalVariation × OutcomeAssociation × Propagation
-trajectory aggregate   W = LocalVariation × OutcomeAssociation
-```
-
-Adapters declare execution precedence as a partial order — a DAG, not a total
-ordering. A ReAct agent's plan really does precede the evidence it gathers,
-which precedes the reasoning before submission; its tool set, tool sequence and
-call count are whole-trajectory aggregates with no position at all. Aggregates
-get `propagation = None`, printed as `N/A`, never a silent 0 or 1, and the two
-groups are ranked separately because their scores are not comparable.
-
-This is **weak-point localization, not causal attribution**. A high score says a
-feature's variation co-varies with outcome variation — not that intervening
-there would change the outcome. Separating an introduced variation from an
-inherited one is what [`DESIGN-INTERVENTION.md`](DESIGN-INTERVENTION.md) is for.
-
-## Validating the attribution
-
-`agents/synthetic.py` is a controllable agent with exactly one injected
-consequential weak point, plus two decoy points that vary heavily and reach
-nothing. The label is hidden from every ranker:
+Requires **Python 3.11+**. The `python3` that ships with macOS is 3.9, so use
+Homebrew, pyenv or uv if you need a newer one.
 
 ```bash
-python experiments/attribution/ground_truth.py
+git clone https://github.com/lyr-ai/agentseism.git
+cd agentseism
+python3.11 -m venv .venv && source .venv/bin/activate   # or any Python ≥ 3.11
+pip install -e .
+seism demo
 ```
 
-```text
-Table 1 — Ground-truth attribution (40 injected weak points)
+`seism demo --report` also prints the full markdown report that AgentSeism
+posts on a pull request.
 
-Method                 Attribution@1   Attribution@3
-----------------------------------------------------
-agentseism                      1.00            1.00
-random                          0.00            0.50
-first_divergence                0.17            0.25
-largest_diff                    0.00            1.00
-correlation                     0.80            1.00
-```
+## Use it on your agent
 
-Read this as a harness check, not a research result: the synthetic agent is easy
-by construction, and correlation alone already reaches 0.80@1 on it. The number
-that matters comes from real agents with injected interventions (Week 5).
-
-## First agent: a multi-node GAIA LangGraph agent
-
-Target: [MarkAZhang/gaia-agent](https://github.com/MarkAZhang/gaia-agent) —
-LangGraph, multi-node, 41/53 on GAIA Level 1 validation. Setup, keys, cost and
-the exact commands are in [`docs/RUNBOOK-gaia-pilot.md`](docs/RUNBOOK-gaia-pilot.md).
+You provide two commands: one that runs your agent on a task, and one that
+checks the result. AgentSeism handles the repetition, the comparison and the
+verdict.
 
 ```bash
-# offline plumbing check -- no API keys, not evidence for anything
-python experiments/natural_variation/gaia_pilot.py --stub
-
-# the real pilot: 10 tasks x 5 runs (~$30 at that agent's reported $0.61/run)
-python experiments/natural_variation/gaia_pilot.py \
-    --app agentseism_entry:app --system-prompt agentseism_entry:build_system_prompt
+seism init          # creates .agentseism/contract.yaml and tasks.yaml
 ```
 
-**That agent trims its own history.** Its `memory_management` node overwrites
-earlier tool results with `"removed"`, so reading the trajectory from the final
-state would report almost no evidence gathered. The adapter captures the node
-update stream instead, and refuses to project a final-state-only trace.
+```yaml
+# .agentseism/contract.yaml
+runner:     # runs your agent on one task and writes whatever it produced
+  command: "{python} run_agent.py --task {task_file} --out {artifact_dir}"
 
-The pilot answers three questions before the full 50 x 10 slice is worth paying
-for: do traces come back complete, does the answer vary at all, and does the
-projection keep the trajectory? It prints an explicit go/no-go verdict.
+evaluator:  # reads that output and prints one JSON line: {"success": 1} or {"success": 0}
+  command: "{python} check_result.py {artifact_dir}"
 
-Pieces involved:
+features:
+  task_success:
+    gate: true
+    regression_threshold: 0.10     # the smallest drop you care about: 10 points
+    capability_regression: true    # also block when one reliable task collapses
+```
 
-| file | what it does |
+```yaml
+# .agentseism/tasks.yaml: one task file per line, in whatever format your runner reads
+- tasks/checkout.json
+- tasks/refund.json
+```
+
+If a run can't be judged (a crash, a timeout, a broken environment), the evaluator
+prints `{"invalid": true, "invalid_reason": "..."}`. AgentSeism never counts that
+as a failure of your agent.
+
+```bash
+# on your main branch: record a baseline once, and commit it
+seism baseline --trials 8
+git add .agentseism/baselines/main.json
+
+# on a PR branch: rerun and compare
+seism check --trials 8
+```
+
+`--dry-run` on either command shows what would run and how many agent calls it
+would take, without running anything. The capability gate needs 8 runs per task
+on each side; with fewer, the report says so rather than guessing.
+
+## GitHub Actions
+
+[`.github/workflows/agentseism.yml`](.github/workflows/agentseism.yml) runs
+`seism check` on every pull request. It posts the report as a single comment
+that updates on each push, and fails the check on **REGRESSION** or
+**INCOMPARABLE**. Copy it into your repository, then:
+
+- set `TRIALS: "8"` if you use the capability gate;
+- commit a baseline, because without one the job fails instead of passing on a
+  comparison it never made;
+- make your agent's API keys available as repository secrets.
+
+Today **INSUFFICIENT EVIDENCE exits 0**, so the check stays green while the posted
+report says *"not a pass"*.
+
+## How decisions work
+
+```text
+              your PR
+                 │
+       ┌─────────┴─────────┐
+       ▼                   ▼
+   baseline            candidate
+   N runs/task         N runs/task
+       └─────────┬─────────┘
+                 ▼
+       same environment?  ── no ──▶  INCOMPARABLE
+                 │ yes
+                 ▼
+     enough evidence?  ── no ──▶  INSUFFICIENT EVIDENCE
+                 │ yes
+                 ▼
+   broad drop, or one capability collapsed?
+          │ no                  │ yes
+          ▼                     ▼
+        PASS               REGRESSION
+```
+
+| Verdict | Meaning |
 |---|---|
-| `agents/langgraph_adapter.py` | wraps any compiled LangGraph app; duck-typed, no langchain import |
-| `agents/trajectory.py` | records the raw ReAct trace, and projects it into the §8 feature schema |
-| `agents/gaia.py` | GAIA state, answer extraction, formatting-insensitive answer equivalence |
-| `agents/gaia_markazhang.py` | the multi-node graph's feature schema: evidence, retries, termination |
-| `benchmarks/gaia.py` | Level-1 slice spec (task ids only — GAIA is gated, so no data is vendored) |
+| **REGRESSION** | One of two gates fired. The **broad reliability** gate fires when the suite as a whole is confidently worse by at least your threshold. The **capability regression** gate fires when a task that reliably worked in the baseline (at least 7 of 8 runs) collapses in the PR, which with 7 tasks means roughly 2 of 8 runs or fewer. |
+| **PASS** | Neither gate fired. The change is within what this agent does on its own. |
+| **INSUFFICIENT EVIDENCE** | Too few tasks or runs to decide. **Not a pass.** |
+| **INCOMPARABLE** | Model, runtime or dependencies differ between the two sides. No runs are spent. |
 
-**ReAct loops are not fixed workflows.** One run takes three iterations, another
-takes seven, so occurrence-index alignment would pair a run's third model call
-with another run's detour. AgentSeism projects instead: `tool_set`,
-`tool_sequence`, `tool_call_count`, `evidence_set`, `initial_plan`,
-`pre_final_reasoning`. Loop length becomes behavior rather than missing data,
-and `tool_set` separates *which capabilities* from *which path*. The full raw
-trace is still stored, untruncated, for the intervention work in V1.
+Two things behind these verdicts matter in practice:
 
-**The comparator is not a grader.** Two runs that are identically wrong are
-behaviorally consistent, and AgentSeism says so. Correctness against the GAIA
-reference answer is recorded separately, as context.
+- **Tasks are the unit of evidence.** Running one task 50 times tells you a lot
+  about that task and almost nothing about the rest of the suite. The broad gate
+  measures uncertainty across tasks, not across runs.
+- **Blocking a merge takes strong evidence.** A CI check that fails healthy PRs
+  gets ignored. The false-block rate is under about 1–2% in simulation. The
+  trade-off is that moderate drops (a task falling from 100% to 75%) are usually
+  not blocked, and the capability gate catches *near-collapse*, not every severe
+  drop.
 
-## Known limitations (V0)
+The statistics (a paired bootstrap over tasks, and per-task exact tests with a
+multiple-comparison correction) are specified in
+[`analysis/CI_V1_REGRESSION_SEMANTICS.md`](analysis/CI_V1_REGRESSION_SEMANTICS.md).
+Their measured behaviour is in
+[`analysis/CI_V1_OPERATING_CHARACTERISTICS.md`](analysis/CI_V1_OPERATING_CHARACTERISTICS.md).
 
-- **Propagated variation looks like source variation.** A point downstream of the
-  real weak point inherits high propagation and outcome association. Separating
-  source from consequence needs intervention, not association.
-- **Features are hand-defined and frozen per adapter version.** Automatic
-  feature discovery is out of scope for V0; schemas must be fixed before
-  outcomes are examined, and results from different schema versions are never
-  mixed.
-- **Correlated features are one finding.** `tool_set`, `tool_sequence` and
-  `tool_call_count` often reflect the same underlying change, so the report
-  groups them into a feature family instead of claiming three findings.
-- **No semantic comparator by default.** Text similarity is token overlap; pass
-  your own comparator for anything that needs meaning.
-- **The correlation baseline may already be enough.** For aggregates the score
-  is correlation re-weighted by local variation, and even with a propagation
-  term the ranking can match correlation-only. The pilot checks this within each
-  scoring group and says so out loud. If it holds on real agents, the answer is
-  intervention, not another factor in the product
-  (DESIGN-FEATURE-PROJECTION.md §22).
+## Evidence
 
-## Layout
+The v1 decision rule was frozen before a fresh, pre-registered study on tasks it
+had never seen. That study used 7 SWE-bench Verified tasks, 8 runs per task per
+side, and 224 agent runs, with 0 invalid, for $38.49. The agent was
+mini-swe-agent with Claude Haiku 4.5.
 
-```text
-src/agentseism/
-  runner/        repeated execution + local persistence
-  trace/         optional instrumentation
-  alignment/     event correspondence across runs
-  variation/     outcome- and event-level variation
-  attribution/   weak-point ranking + baselines
-  metrics/       comparators
-agents/          agent adapters (synthetic ground-truth agent today)
-experiments/     natural_variation · perturbation · attribution · mitigation
-paper/           claims, experiment log, figures
-```
+| Test | Expected | Result |
+|---|---|---|
+| Unchanged agent (natural noise) | no false block | **PASS** |
+| Step budget cut to 40: two tasks predicted in advance to collapse | catch both | **REGRESSION**: both caught |
+| Step budget cut to 15: everything collapses | catch it | **REGRESSION** |
 
-## Status
+For the full protocol, the predictions, every per-task count and what the study
+did *not* establish, see
+[`analysis/ci_v1/stageC/RESULTS.md`](analysis/ci_v1/stageC/RESULTS.md).
 
-Research prototype, pre-v0.1. V0 is a **localization heuristic** that produces
-candidate weak points; the intervention contract that turns candidates into
-causal claims is specified in
-[`DESIGN-INTERVENTION.md`](DESIGN-INTERVENTION.md) and not yet implemented. The six-week go/no-go plan and explicit success
-criteria are in [DESIGN.md](DESIGN.md) §24-25 — including the conditions under
-which this project should be stopped.
+The earlier version of this rule missed a real 40-point regression. That
+failure is what led to the capability gate, and it is written up in
+[`analysis/CI_V0_RUN_CARD.md`](analysis/CI_V0_RUN_CARD.md).
 
-## Install
+## Limitations
 
-```bash
-pip install -e ".[dev]"
-pytest
-```
+- **One agent, one model, one kind of regression.** All evidence so far comes
+  from mini-swe-agent with Claude Haiku 4.5 on SWE-bench tasks, with regressions
+  induced by cutting the step budget. Prompt, tool, model and retrieval
+  regressions are untested.
+- **Moderate regressions are hard to catch.** By design, the capability gate
+  catches near-collapse, and the broad gate needs a clear suite-wide drop.
+- **The capability gate hasn't yet shown its value on its own in real data.** In
+  the real-agent study the broad gate also fired whenever the capability gate
+  did.
+- **It isn't cheap yet.** 8 runs per task on both sides is a validation design,
+  not an optimised CI budget. Cost and time per PR are open problems.
+- **No external users yet.** You would be the first. Issues are welcome.
+
+## Methodology and history
+
+- [`docs/EXPERIMENTAL_PRODUCT_DEVELOPMENT.md`](docs/EXPERIMENTAL_PRODUCT_DEVELOPMENT.md): how this project is run.
+- [`analysis/`](analysis/): the CI v0 run card, and the v1 design, simulations, simple-baseline comparison and confirmatory study.
+- [`research/`](research/README.md): the pre-product research line this grew
+  out of (variation localisation, GAIA/OpenRCA pilots, GPU inference). It is
+  archived and is not part of the product.
+
+Part of the [Reliable Long-Running Agents (RLRA)](https://github.com/canis-minor) research initiative.
 
 ## License
 

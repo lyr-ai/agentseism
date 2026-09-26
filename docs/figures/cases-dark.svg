@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="216" viewBox="0 0 900 216" role="img" aria-label="Three demo scenarios: normal noise PASS, capability collapse REGRESSION, not enough evidence INSUFFICIENT_EVIDENCE">
+<rect width="900" height="216" fill="#0d1117"/>
+<rect x="12.0" y="12" width="281.3333333333333" height="192" rx="10" fill="#0d1117" stroke="#30363d"/>
+<rect x="12.0" y="12" width="281.3333333333333" height="5" rx="2" fill="#3fb950"/>
+<text x="32.0" y="50" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#9198a1" text-anchor="start">NORMAL NOISE</text>
+<text x="32.0" y="96" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="26" font-weight="600" fill="#e6edf3" text-anchor="start">91% → 86%</text>
+<text x="32.0" y="122" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#9198a1" text-anchor="start">task success, baseline → PR</text>
+<rect x="32.0" y="145" width="73" height="26" rx="13" fill="#12261e" stroke="#3fb950" stroke-width="1"/><text x="68.5" y="163" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#3fb950" text-anchor="middle">✓ PASS</text>
+<text x="32.0" y="188" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="400" fill="#e6edf3" text-anchor="start">↕ ordinary run-to-run wobble</text>
+<rect x="309.3333333333333" y="12" width="281.3333333333333" height="192" rx="10" fill="#0d1117" stroke="#30363d"/>
+<rect x="309.3333333333333" y="12" width="281.3333333333333" height="5" rx="2" fill="#f85149"/>
+<text x="329.3333333333333" y="50" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#9198a1" text-anchor="start">CAPABILITY COLLAPSE</text>
+<text x="329.3333333333333" y="96" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="26" font-weight="600" fill="#e6edf3" text-anchor="start">91% → 77%</text>
+<text x="329.3333333333333" y="122" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#9198a1" text-anchor="start">task success, baseline → PR</text>
+<rect x="329.3333333333333" y="145" width="124" height="26" rx="13" fill="#2d1215" stroke="#f85149" stroke-width="1"/><text x="391.3333333333333" y="163" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#f85149" text-anchor="middle">✕ REGRESSION</text>
+<text x="329.3333333333333" y="188" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="400" fill="#e6edf3" text-anchor="start">checkout 8/8 → 0/8</text>
+<rect x="606.6666666666666" y="12" width="281.3333333333333" height="192" rx="10" fill="#0d1117" stroke="#30363d"/>
+<rect x="606.6666666666666" y="12" width="281.3333333333333" height="5" rx="2" fill="#d29922"/>
+<text x="626.6666666666666" y="50" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#9198a1" text-anchor="start">NOT ENOUGH EVIDENCE</text>
+<text x="626.6666666666666" y="96" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="26" font-weight="600" fill="#e6edf3" text-anchor="start">100% → 83%</text>
+<text x="626.6666666666666" y="122" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#9198a1" text-anchor="start">task success, baseline → PR</text>
+<rect x="626.6666666666666" y="145" width="150" height="26" rx="13" fill="#2b2111" stroke="#d29922" stroke-width="1"/><text x="701.6666666666666" y="163" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#d29922" text-anchor="middle">? NEED EVIDENCE</text>
+<text x="626.6666666666666" y="188" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="400" fill="#e6edf3" text-anchor="start">3 tasks × 2 runs per side</text>
+</svg>
