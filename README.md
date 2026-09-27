@@ -21,7 +21,7 @@ seism demo      # 1 second, no API key, no Docker, no network
 >
 > The scope is narrow: one agent, one model, step-budget regressions only. See [Evidence](#evidence) and [Limitations](#limitations).
 
-**[▶ Try the demo](#quickstart)** · **[See real PRs](#see-it-on-a-real-pull-request)** · **[Read the evidence](#evidence)** · **[Roadmap](ROADMAP.md)** · **[Open an issue](https://github.com/lyr-ai/agentseism/issues)**
+**[▶ Try the demo](#quickstart)** · **[See real PRs](#see-it-on-a-real-pull-request)** · **[Read the evidence](#evidence)** · **[Roadmap](ROADMAP.md)** · **[Discussions](https://github.com/lyr-ai/agentseism/discussions)** · **[Open an issue](https://github.com/lyr-ai/agentseism/issues)**
 
 [Use it on your agent](#use-it-on-your-agent) · [How decisions work](#how-decisions-work) · [Limitations](#limitations)
 
@@ -91,6 +91,10 @@ python3.11 -m venv .venv && source .venv/bin/activate   # or any Python ≥ 3.11
 pip install -e .
 seism demo
 ```
+
+What you'll see:
+
+<img alt="Animated terminal running seism demo: an unchanged candidate, 91% to 86%, verdict PASS; one capability collapses, 91% to 77%, broad PASS, checkout 8/8 to 0/8, verdict REGRESSION; too little evidence, 3 tasks times 2 runs, 100% to 83%, verdict NEED EVIDENCE." src="docs/figures/demo-terminal.svg" width="760">
 
 `seism demo --report` also prints the full markdown report that AgentSeism
 posts on a pull request.

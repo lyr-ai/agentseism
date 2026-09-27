@@ -198,6 +198,67 @@ def social(r: dict, c: dict) -> str:
     return "\n".join(s)
 
 
+def terminal(rs: list[dict]) -> str:
+    """`seism demo`, condensed and animated: lines appear in order, hold, loop.
+
+    Pure SVG + CSS, so it plays inside the README with no video file. The lines
+    are the demo's real results, not typed text."""
+    T = 13.0                                   # seconds per loop
+    c = THEMES["dark"]
+    one, two, three = rs
+    cap = two["capability"]
+    task = cap["fired"][0]
+    dd = cap["detail"][task]
+
+    def score(r):
+        return f'{pct(r["detail"]["baseline"])} → {pct(r["detail"]["candidate"])}'
+    lines = [  # (seconds, x, text, colour key, weight)
+        (0.3, 0, "$ seism demo", "text", 600),
+        (1.3, 0, "unchanged candidate", "muted", 400),
+        (1.8, 0, f"  task success   {score(one)}", "text", 400),
+        (2.4, 0, f"  verdict        {STATUS[one['verdict']['verdict']][0]}", "green", 700),
+        (3.6, 0, "one capability collapses", "muted", 400),
+        (4.1, 0, f"  task success   {score(two)}", "text", 400),
+        (4.7, 0, f"  broad          {STATUS[two['broad']][0]}", "green", 400),
+        (5.4, 0, f"  {Path(task).stem:<14} {dd['baseline']} → {dd['candidate']}", "red", 600),
+        (6.1, 0, f"  verdict        {STATUS[two['verdict']['verdict']][0]}", "red", 700),
+        (7.3, 0, "too little evidence (3 tasks × 2 runs)", "muted", 400),
+        (7.8, 0, f"  task success   {score(three)}", "text", 400),
+        (8.4, 0, f"  verdict        {STATUS[three['verdict']['verdict']][0]}", "amber", 700),
+        (9.6, 0, "AgentSeism — CI for stochastic AI agents", "text", 700),
+    ]
+    gap_before = {1, 4, 9, 12}                 # a blank-ish line between blocks
+    ys, y = [], 64
+    for i in range(len(lines)):
+        y += 10 if i in gap_before else 0
+        ys.append(y)
+        y += 22
+    W, H = 760, y + 12
+    css, body = [], []
+    for i, (at, x, text, key, weight) in enumerate(lines):
+        a = at / T * 100
+        css.append(f"@keyframes l{i}{{0%,{a - 0.01:.2f}%{{opacity:0}}"
+                   f"{a + 1.5:.2f}%,93%{{opacity:1}}97%,100%{{opacity:0}}}}"
+                   f".l{i}{{opacity:0;animation:l{i} {T}s linear infinite}}")
+        body.append(f'<g class="l{i}">' + t(28 + x, ys[i], text, size=15,
+                    fill=c[key], weight=weight, font=MONO) + "</g>")
+    dots = "".join(f'<circle cx="{24 + j * 18}" cy="22" r="6" fill="{col}"/>'
+                   for j, col in enumerate(("#ff5f57", "#febc2e", "#28c840")))
+    return "\n".join([
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" '
+        f'viewBox="0 0 {W} {H}" xml:space="preserve" role="img" '
+        f'aria-label="Animated terminal: seism '
+        f'demo prints PASS for an unchanged candidate, REGRESSION when checkout '
+        f'collapses {dd["baseline"]} to {dd["candidate"]}, and NEED EVIDENCE for '
+        f'3 tasks times 2 runs.">',
+        f"<style>text{{white-space:pre}}{''.join(css)}</style>",
+        f'<rect width="{W}" height="{H}" rx="10" fill="{c["bg"]}" '
+        f'stroke="{c["border"]}"/>', dots,
+        t(W / 2, 27, "seism demo · synthetic scenarios, real decision engine",
+          size=12, fill=c["muted"], anchor="middle"),
+        *body, "</svg>"])
+
+
 def build() -> dict[str, str]:
     rs = results()
     out = {}
@@ -205,6 +266,7 @@ def build() -> dict[str, str]:
         out[f"hero-{theme}.svg"] = hero(rs[1], c)
         out[f"cases-{theme}.svg"] = cases(rs, c)
     out["social-preview.svg"] = social(rs[1], THEMES["dark"])
+    out["demo-terminal.svg"] = terminal(rs)
     return out
 
 
