@@ -1,6 +1,6 @@
 [project]
 name = "agentseism"
-version = "0.1.0"
+version = "0.1.1"
 description = "AgentSeism — turn stochastic agent runs into trustworthy CI decisions"
 requires-python = ">=3.11"
 authors = [{ name = "Ruxi Zhang", email = "ruxiz2018@gmail.com" }]

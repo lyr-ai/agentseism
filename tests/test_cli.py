@@ -183,7 +183,7 @@ def test_fingerprint_mismatch_runs_zero_candidate_trials(repo, monkeypatch, caps
 # ── 9-11. the three measured verdicts, from real runs ──
 def test_pass_when_nothing_changed(repo, capsys):
     main(["baseline", "--trials", "3"])
-    main(["check", "--trials", "3"])
+    assert main(["check", "--trials", "3"]) == 0
     assert "AgentSeism: PASS" in capsys.readouterr().out
 
 
@@ -199,9 +199,31 @@ def test_insufficient_evidence_when_scenarios_are_too_few(repo, capsys):
     (repo / ".agentseism/tasks.yaml").write_text(
         yaml.safe_dump([f"tasks/t{i}.json" for i in range(3)]))
     main(["baseline", "--trials", "3"])
-    main(["check", "--trials", "3"])
+    # Not a pass, so it must not exit 0 (a green CI check reads as "safe to
+    # merge"). And not a regression, so it must not share REGRESSION's code.
+    assert main(["check", "--trials", "3"]) == 3
     out = capsys.readouterr().out
     assert "INSUFFICIENT EVIDENCE" in out and "not a pass" in out
+    assert "AgentSeism: REGRESSION" not in out
+
+
+def test_every_verdict_has_a_ci_exit_code_and_only_passes_are_zero():
+    from agentseism.cli import EXIT_CODES
+    from agentseism.contract import VERDICTS
+    assert set(EXIT_CODES) == set(VERDICTS)
+    assert {v for v, c in EXIT_CODES.items() if c == 0} == {"PASS", "PASS_WITH_CHANGE"}
+    assert EXIT_CODES["INSUFFICIENT_EVIDENCE"] not in (0, 1, 2)
+
+
+def test_the_github_action_defaults_to_the_capability_gates_trials():
+    """The README's recommended contract turns the capability gate on, and
+    that gate needs 8 runs per task per side. A default of fewer would ship a
+    configuration that always reports insufficient evidence for it."""
+    from pathlib import Path
+    wf = (Path(__file__).resolve().parents[1]
+          / ".github/workflows/agentseism.yml").read_text()
+    assert 'TRIALS: "8"' in wf
+    assert "3) echo \"::error title=AgentSeism needs more evidence" in wf
 
 
 # ── 12-14. authority and boundaries ──

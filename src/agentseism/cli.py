@@ -328,6 +328,16 @@ def scorecard_rows(contract, verdict: dict, detail: dict, ms: dict) -> list:
     return rows
 
 
+EXIT_CODES = {"PASS": 0, "PASS_WITH_CHANGE": 0, "REGRESSION": 1,
+              "INCOMPARABLE": 1, "INSUFFICIENT_EVIDENCE": 3}
+"""`seism check`'s exit code, which is its CI contract.
+
+INSUFFICIENT_EVIDENCE blocks a merge, because a green check reads as "safe to
+merge" and this verdict is explicitly not a pass. It has its own code (3), so a
+workflow can tell "needs more evidence" from "regressed". Exit 2 is reserved
+for configuration errors (no verdict at all)."""
+
+
 def cmd_check(args) -> int:
     root, c, surface, src, tasks = _load(args)
     if args.dry_run:
@@ -351,7 +361,7 @@ def cmd_check(args) -> int:
                       "No candidate trials were run."])
         _atomic(root / "runs" / "last-report.md", out)
         print(out)
-        return 1
+        return EXIT_CODES["INCOMPARABLE"]
 
     runner, ev = _build(surface, args)
     results = run_trials(runner, ev, tasks, args.trials,
@@ -382,7 +392,7 @@ def cmd_check(args) -> int:
                         "provenance": provenance(c, surface, src)},
                        indent=2, sort_keys=True, default=str))
     print(out)
-    return 1 if v["verdict"] == "REGRESSION" else 0
+    return EXIT_CODES[v["verdict"]]
 
 
 def _capability_lines(capability: dict) -> list[str]:
@@ -431,7 +441,11 @@ def main(argv=None) -> int:
     b.add_argument("--dry-run", action="store_true")
     b.set_defaults(fn=cmd_baseline)
 
-    ch = sub.add_parser("check", help="compare a candidate against a baseline")
+    ch = sub.add_parser(
+        "check", help="compare a candidate against a baseline",
+        description="Exit codes: 0 PASS; 1 REGRESSION or INCOMPARABLE; "
+                    "3 INSUFFICIENT_EVIDENCE (blocks the merge, but is not a "
+                    "regression); 2 configuration error.")
     ch.add_argument("--baseline", default="main")
     ch.add_argument("--trials", type=int, default=5)
     ch.add_argument("--dry-run", action="store_true")

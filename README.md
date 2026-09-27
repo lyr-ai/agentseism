@@ -13,7 +13,7 @@ Did this PR make your agent worse, or are you just seeing normal run-to-run nois
 seism demo      # 1 second, no API key, no Docker, no network
 ```
 
-**Tested on a real agent, in a narrow scope.** In a pre-registered study on 7 SWE-bench tasks it had never seen (224 runs), it passed an unchanged agent and caught every regression it was supposed to. See [Evidence](#evidence) and [Limitations](#limitations).
+**Tested on a real agent, in a narrow scope.** In a pre-registered study on 7 SWE-bench tasks it had never seen (224 runs), it passed the unchanged control and detected every pre-specified degradation tested in that study. See [Evidence](#evidence) and [Limitations](#limitations).
 
 [Quickstart](#quickstart) · [Use it on your agent](#use-it-on-your-agent) · [How decisions work](#how-decisions-work) · [Evidence](#evidence) · [Limitations](#limitations)
 
@@ -113,17 +113,18 @@ on each side; with fewer, the report says so rather than guessing.
 ## GitHub Actions
 
 [`.github/workflows/agentseism.yml`](.github/workflows/agentseism.yml) runs
-`seism check` on every pull request. It posts the report as a single comment
-that updates on each push, and fails the check on **REGRESSION** or
-**INCOMPARABLE**. Copy it into your repository, then:
+`seism check` on every pull request, with 8 runs per task by default. It posts
+the report as a single comment that updates on each push. Copy it into your
+repository, then:
 
-- set `TRIALS: "8"` if you use the capability gate;
 - commit a baseline, because without one the job fails instead of passing on a
   comparison it never made;
 - make your agent's API keys available as repository secrets.
 
-Today **INSUFFICIENT EVIDENCE exits 0**, so the check stays green while the posted
-report says *"not a pass"*.
+The check is green only on **PASS**. **REGRESSION** and **INCOMPARABLE** fail it
+(exit 1). **INSUFFICIENT EVIDENCE** fails it too (exit 3), labelled *"AgentSeism
+needs more evidence"*: not enough evidence to call a change safe is not a pass,
+and it is also not a regression.
 
 ## How decisions work
 
@@ -151,8 +152,8 @@ report says *"not a pass"*.
 | Verdict | Meaning |
 |---|---|
 | **REGRESSION** | One of two gates fired. The **broad reliability** gate fires when the suite as a whole is confidently worse by at least your threshold. The **capability regression** gate fires when a task that reliably worked in the baseline (at least 7 of 8 runs) collapses in the PR, which with 7 tasks means roughly 2 of 8 runs or fewer. |
-| **PASS** | Neither gate fired. The change is within what this agent does on its own. |
-| **INSUFFICIENT EVIDENCE** | Too few tasks or runs to decide. **Not a pass.** |
+| **PASS** | Neither gate found sufficient evidence of a material regression. |
+| **INSUFFICIENT EVIDENCE** | Too few tasks or runs to decide. **Not a pass**, and it blocks the merge. |
 | **INCOMPARABLE** | Model, runtime or dependencies differ between the two sides. The check stops before running the candidate. |
 
 Two things behind these verdicts matter in practice:
@@ -215,8 +216,6 @@ failure is what led to the capability gate, and it is written up in
 - [`research/`](research/README.md): the pre-product research line this grew
   out of (variation localisation, GAIA/OpenRCA pilots, GPU inference). It is
   archived and is not part of the product.
-
-Part of the [Reliable Long-Running Agents (RLRA)](https://github.com/canis-minor) research initiative.
 
 ## License
 

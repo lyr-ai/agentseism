@@ -24,10 +24,11 @@ permissions:
 # workflow_call, and would resolve to empty on a pull_request trigger.
 env:
   BASELINE: main
-  TRIALS: "5"
+  TRIALS: "8"      # the capability gate needs 8 runs per task on each side
 
 jobs:
-  regression-check:
+  agentseism:
+    name: AgentSeism
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -54,7 +55,8 @@ jobs:
 
       - name: Check
         id: check
-        # `seism check` exits 1 on REGRESSION and on INCOMPARABLE. The step is
+        # `seism check` exits 1 on REGRESSION or INCOMPARABLE and 3 on
+        # INSUFFICIENT_EVIDENCE; 0 only on a pass. The step is
         # allowed to fail so the report still gets posted; the job's verdict is
         # decided at the end from the recorded code.
         continue-on-error: true
@@ -105,5 +107,10 @@ jobs:
       - name: Verdict
         run: |
           code='${{ steps.check.outputs.exit_code }}'
-          echo "seism check exited $code"
+          case "$code" in
+            0) echo "AgentSeism: PASS" ;;
+            1) echo "::error title=AgentSeism::REGRESSION or INCOMPARABLE, see the report comment" ;;
+            3) echo "::error title=AgentSeism needs more evidence::Not a regression, and not a pass: too few tasks or runs to decide. See the report comment." ;;
+            *) echo "::error title=AgentSeism::the check did not reach a verdict (exit ${code:-none}), see the job log" ;;
+          esac
           exit "${code:-1}"

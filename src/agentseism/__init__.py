@@ -1,9 +1,14 @@
-"""AgentSeism -- localizing where LLM-agent executions are behaviorally fragile.
+"""AgentSeism: CI decisions for stochastic AI agents.
 
-AgentSeism does not judge whether an outcome is correct. It projects each run
-into comparable execution features, measures how those features vary across
-repeated runs, and ranks the ones whose variation is most associated with
-downstream outcome variation.
+AgentSeism runs a baseline and a candidate several times each and decides
+whether the candidate made the agent worse: PASS, REGRESSION, INSUFFICIENT
+EVIDENCE or INCOMPARABLE. The product entry point is the `seism` CLI
+(`agentseism.cli`). The decision rule is in `agentseism.contract` and
+`agentseism.capability`.
+
+The run-level analysis API re-exported below (`scan`, feature projection) is
+the earlier research tooling the product grew out of. It is kept for
+compatibility and is not part of the CI decision.
 """
 
 from agentseism.scan import analyze, divergence_tables, scan
@@ -21,7 +26,7 @@ from agentseism.projection import EventProjector, Projector, project_run
 from agentseism.intervention import Intervenable, InterventionResult
 from agentseism.types import Event, Experiment, Run, Task
 
-__version__ = "0.2.0"
+__version__ = "0.1.1"
 
 __all__ = [
     "scan",

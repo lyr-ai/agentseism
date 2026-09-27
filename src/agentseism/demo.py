@@ -144,10 +144,11 @@ def run_scenario(i: int, s: Scenario, workdir: Path) -> dict:
 MARK = {"PASS": "✓ PASS", "REGRESSION": "✗ REGRESSION",
         "INSUFFICIENT_EVIDENCE": "? INSUFFICIENT EVIDENCE"}
 MEANING = {
-    "PASS": "The movement is within normal stochastic variation. Safe to merge.",
-    "REGRESSION": "The evidence shows this PR made the agent worse. Block the merge.",
-    "INSUFFICIENT_EVIDENCE": "Not a pass. There is too little evidence to call "
-                             "it either way: run more trials or more tasks.",
+    "PASS": "Neither gate found sufficient evidence of a material regression.",
+    "REGRESSION": "The evidence shows this PR made the agent worse. The check fails.",
+    "INSUFFICIENT_EVIDENCE": "Not a pass, and not a regression: too little "
+                             "evidence to decide. The check fails until there "
+                             "are more trials or tasks.",
 }
 
 
