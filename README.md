@@ -62,6 +62,21 @@ The three cases above come from `seism demo`. It uses a simulated agent with
 fixed, stated outcomes, and passes them through AgentSeism's real decision
 engine. The demo is not evidence; for real-agent results, see [Evidence](#evidence).
 
+## See it on a real pull request
+
+[`lyr-ai/agentseism-example`](https://github.com/lyr-ai/agentseism-example) runs
+AgentSeism as a GitHub check on two pull requests. Its agent is simulated (real
+handler code, fixed success rates, no API cost). The check, the baseline and the
+report are the real product.
+
+| [A docs-only change → **PASS**](https://github.com/lyr-ai/agentseism-example/pull/1) | [A one-line bug in checkout → **REGRESSION**](https://github.com/lyr-ai/agentseism-example/pull/2) |
+|---|---|
+| <img alt="Pull request 1: AgentSeism PASS, broad and capability gates both pass" src="docs/figures/example-pr-pass.png" width="420"> | <img alt="Pull request 2: AgentSeism REGRESSION, broad gate PASS, capability gate REGRESSION on checkout 8/8 to 0/8" src="docs/figures/example-pr-regression.png" width="420"> |
+
+In the second PR the overall score fell from 0.93 to 0.68 and the broad gate
+still passed, because the loss sits in one task. The capability gate caught
+`checkout` failing every run.
+
 ## Quickstart
 
 Requires **Python 3.11+**. The `python3` that ships with macOS is 3.9, so use
