@@ -14,7 +14,6 @@ agentseism = "agentseism.cli:main"   # alias, kept so existing scripts do not br
 
 [project.urls]
 Homepage = "https://github.com/lyr-ai/agentseism"
-Initiative = "https://github.com/canis-minor"
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "ruff>=0.5"]
