@@ -21,7 +21,9 @@ seism demo      # 1 second, no API key, no Docker, no network
 >
 > The scope is narrow: one agent, one model, step-budget regressions only. See [Evidence](#evidence) and [Limitations](#limitations).
 
-[Quickstart](#quickstart) · [Use it on your agent](#use-it-on-your-agent) · [How decisions work](#how-decisions-work) · [Evidence](#evidence) · [Limitations](#limitations)
+**[▶ Try the demo](#quickstart)** · **[See real PRs](#see-it-on-a-real-pull-request)** · **[Read the evidence](#evidence)** · **[Roadmap](ROADMAP.md)** · **[Open an issue](https://github.com/lyr-ai/agentseism/issues)**
+
+[Use it on your agent](#use-it-on-your-agent) · [How decisions work](#how-decisions-work) · [Limitations](#limitations)
 
 ---
 
@@ -242,6 +244,7 @@ failure is what led to the capability gate, and it is written up in
 
 ## Methodology and history
 
+- [`ROADMAP.md`](ROADMAP.md): what's next, and what isn't planned.
 - [`docs/EXPERIMENTAL_PRODUCT_DEVELOPMENT.md`](docs/EXPERIMENTAL_PRODUCT_DEVELOPMENT.md): how this project is run.
 - [`analysis/`](analysis/): the CI v0 run card, and the v1 design, simulations, simple-baseline comparison and confirmatory study.
 - [`research/`](research/README.md): the pre-product research line this grew
