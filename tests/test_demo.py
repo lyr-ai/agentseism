@@ -42,6 +42,7 @@ def test_it_says_it_is_a_demonstration_and_points_at_real_evidence():
     assert "simulated agent, the real decision engine" in out
     assert "not evidence" in out
     assert "analysis/ci_v1/stageC/RESULTS.md" in out
+    assert D.EXPLORER in out
 
 
 def test_the_output_is_identical_on_every_run():

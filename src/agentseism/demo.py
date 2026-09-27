@@ -42,6 +42,10 @@ CONTRACT = {
 and the frozen capability gate. Nothing here is tuned for the demo."""
 
 
+EXPLORER = "https://lyr-ai.github.io/agentseism/explorer/?s=collapse"
+"""The same scenarios, drawn: the interactive Regression Explorer."""
+
+
 @dataclass(frozen=True)
 class Scenario:
     title: str
@@ -223,4 +227,5 @@ def main(report: bool = False, out=print) -> int:
     out("Real-agent evidence (7 unseen SWE-bench tasks, 224 runs, pre-registered):")
     out("  analysis/ci_v1/stageC/RESULTS.md")
     out("To see the full PR report for each scenario: seism demo --report")
+    out(f"To watch the collapse scenario, run by run: {EXPLORER}")
     return 0

@@ -21,7 +21,7 @@ seism demo      # 1 second, no API key, no Docker, no network
 >
 > The scope is narrow: one agent, one model, step-budget regressions only. See [Evidence](#evidence) and [Limitations](#limitations).
 
-**[▶ Try the demo](#quickstart)** · **[See real PRs](#see-it-on-a-real-pull-request)** · **[Read the evidence](#evidence)** · **[Roadmap](ROADMAP.md)** · **[Discussions](https://github.com/lyr-ai/agentseism/discussions)** · **[Open an issue](https://github.com/lyr-ai/agentseism/issues)**
+**[▶ Try the demo](#quickstart)** · **[Explore a regression](https://lyr-ai.github.io/agentseism/explorer/?s=collapse)** · **[See real PRs](#see-it-on-a-real-pull-request)** · **[Read the evidence](#evidence)** · **[Roadmap](ROADMAP.md)** · **[Discussions](https://github.com/lyr-ai/agentseism/discussions)** · **[Open an issue](https://github.com/lyr-ai/agentseism/issues)**
 
 [Use it on your agent](#use-it-on-your-agent) · [How decisions work](#how-decisions-work) · [Limitations](#limitations)
 
