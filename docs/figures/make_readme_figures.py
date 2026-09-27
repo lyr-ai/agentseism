@@ -165,12 +165,46 @@ def cases(rs: list[dict], c: dict) -> str:
     return "\n".join(s)
 
 
+def social(r: dict, c: dict) -> str:
+    """GitHub's social preview (1280x640): what a shared link unfurls to.
+    Large type, few words, the collapse scenario."""
+    d, cap = r["detail"], r["capability"]
+    task = cap["fired"][0]
+    name = Path(task).stem
+    b, k = (int(v) for v in cap["detail"][task]["baseline"].split("/"))
+    a, _ = (int(v) for v in cap["detail"][task]["candidate"].split("/"))
+    W, H = 1280, 640
+    s = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" '
+         f'viewBox="0 0 {W} {H}">',
+         f'<rect width="{W}" height="{H}" fill="{c["bg"]}"/>',
+         t(80, 150, "AgentSeism", size=84, fill=c["text"], weight=700),
+         t(84, 215, "CI for stochastic AI agents", size=40, fill=c["muted"]),
+         f'<rect x="80" y="280" width="{W - 160}" height="250" rx="18" '
+         f'fill="{c["card"]}" stroke="{c["border"]}" stroke-width="2"/>',
+         t(130, 350, "Overall", size=30, fill=c["muted"]),
+         t(330, 350, f'{pct(d["baseline"])} → {pct(d["candidate"])}', size=40,
+           fill=c["text"], weight=600, font=MONO),
+         t(130, 410, "Broad", size=30, fill=c["muted"]),
+         t(330, 410, STATUS[r["broad"]][0], size=34, fill=c[STATUS[r["broad"]][1]],
+           weight=700),
+         t(130, 480, name, size=34, fill=c["text"], weight=600, font=MONO),
+         t(330, 480, f"{b}/{k} → {a}/{k}", size=40, fill=c["red"], weight=700,
+           font=MONO),
+         t(W - 130, 480, "✕ REGRESSION", size=46, fill=c["red"], weight=800,
+           anchor="end"),
+         t(W - 80, 600, "demo scenario · github.com/lyr-ai/agentseism", size=22,
+           fill=c["muted"], anchor="end"),
+         "</svg>"]
+    return "\n".join(s)
+
+
 def build() -> dict[str, str]:
     rs = results()
     out = {}
     for theme, c in THEMES.items():
         out[f"hero-{theme}.svg"] = hero(rs[1], c)
         out[f"cases-{theme}.svg"] = cases(rs, c)
+    out["social-preview.svg"] = social(rs[1], THEMES["dark"])
     return out
 
 

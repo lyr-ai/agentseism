@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640">
+<rect width="1280" height="640" fill="#0d1117"/>
+<text x="80" y="150" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="84" font-weight="700" fill="#e6edf3" text-anchor="start">AgentSeism</text>
+<text x="84" y="215" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="40" font-weight="400" fill="#9198a1" text-anchor="start">CI for stochastic AI agents</text>
+<rect x="80" y="280" width="1120" height="250" rx="18" fill="#0d1117" stroke="#30363d" stroke-width="2"/>
+<text x="130" y="350" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="30" font-weight="400" fill="#9198a1" text-anchor="start">Overall</text>
+<text x="330" y="350" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="40" font-weight="600" fill="#e6edf3" text-anchor="start">91% → 77%</text>
+<text x="130" y="410" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="30" font-weight="400" fill="#9198a1" text-anchor="start">Broad</text>
+<text x="330" y="410" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="34" font-weight="700" fill="#3fb950" text-anchor="start">✓ PASS</text>
+<text x="130" y="480" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="34" font-weight="600" fill="#e6edf3" text-anchor="start">checkout</text>
+<text x="330" y="480" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="40" font-weight="700" fill="#f85149" text-anchor="start">8/8 → 0/8</text>
+<text x="1150" y="480" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="46" font-weight="800" fill="#f85149" text-anchor="end">✕ REGRESSION</text>
+<text x="1200" y="600" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="400" fill="#9198a1" text-anchor="end">demo scenario · github.com/lyr-ai/agentseism</text>
+</svg>

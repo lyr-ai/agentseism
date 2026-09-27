@@ -13,7 +13,13 @@ Did this PR make your agent worse, or are you just seeing normal run-to-run nois
 seism demo      # 1 second, no API key, no Docker, no network
 ```
 
-**Tested on a real agent, in a narrow scope.** In a pre-registered study on 7 SWE-bench tasks it had never seen (224 runs), it passed the unchanged control and detected every pre-specified degradation tested in that study. See [Evidence](#evidence) and [Limitations](#limitations).
+> **Fresh real-agent validation.** The rule was frozen first, then tested on tasks it had never seen.
+>
+> `224 runs` · `7 unseen SWE-bench tasks` · `0 invalid` · `$38.49`
+>
+> ✓ unchanged agent → **PASS** &nbsp;·&nbsp; ✓ predicted capability collapse → **REGRESSION** &nbsp;·&nbsp; ✓ broad collapse → **REGRESSION**
+>
+> The scope is narrow: one agent, one model, step-budget regressions only. See [Evidence](#evidence) and [Limitations](#limitations).
 
 [Quickstart](#quickstart) · [Use it on your agent](#use-it-on-your-agent) · [How decisions work](#how-decisions-work) · [Evidence](#evidence) · [Limitations](#limitations)
 
@@ -41,6 +47,16 @@ a single eval score.
 AgentSeism runs the base branch and the PR several times, keeps each task's
 results together, and returns a CI verdict: **PASS**, **REGRESSION**,
 **INSUFFICIENT EVIDENCE** or **INCOMPARABLE**.
+
+### Why not just run your eval 5 times?
+
+Repeating an eval gives you more numbers. It doesn't tell you:
+- which runs are independent evidence (tasks, not reruns of one task);
+- how big a change has to be before it matters;
+- how to avoid false alarms when you monitor 50 capabilities at once;
+- when you don't yet have enough evidence to decide.
+
+**AgentSeism turns repeated evals into a merge decision.**
 
 The three cases above come from `seism demo`. It uses a simulated agent with
 fixed, stated outcomes, and passes them through AgentSeism's real decision
